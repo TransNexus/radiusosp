@@ -1,0 +1,83 @@
+AC_PREREQ([2.53])
+AC_INIT(rlm_osp.c)
+AC_REVISION($Revision$)
+AC_DEFUN(modname,[rlm_osp])
+
+fail=
+SMART_LIBS=
+SMART_CLFAGS=
+
+if test x$with_[]modname != xno; then
+
+	AC_PROG_CC
+
+	dnl # extra argument: --with-osptk-includes=dir
+	osptk_inc_dir=
+	AC_ARG_WITH(osptk-includes,
+		[  --with-osptk-includes=DIR      Directory to look for OSPToolkit include files],
+		[ case "$withval" in
+			*) osptk_inc_dir="$withval"
+			;;
+		  esac ]
+	)
+
+	dnl # extra argument: --with-osptk-libraries=dir
+	osptk_lib_dir=
+	AC_ARG_WITH(osptk-libraries,
+		[  --with-osptk-libraries=DIR     Directory to look for OSPToolkit library files],
+		[ case "$withval" in
+			*) osptk_lib_dir="$withval"
+			;;
+		  esac ]
+	)
+
+	dnl # Check for OpenSSL support
+	AC_MSG_CHECKING(for OpenSSL support)
+	if test "x$OPENSSL_LIBS" != "x"; then
+		AC_MSG_RESULT(yes)
+	else
+		AC_MSG_RESULT(no)
+		fail="$fail OpenSSL"
+	fi
+
+	dnl # Check for OSPToolkit headers
+	smart_try_dir="$osptk_inc_dir"
+	FR_SMART_CHECK_INCLUDE(osp/osp.h)
+	if test "x$ac_cv_header_osp_osp_h" != "xyes"; then
+		fail="$fail osp.h"
+	fi
+
+	dnl # Check for OSPToolkit libraries
+	org_LIBS=$LIBS
+	LIBS="$OPENSSL_LIBS $LIBS"
+	smart_try_dir="$osptk_lib_dir"
+	FR_SMART_CHECK_LIB(osptk, OSPPInit)
+	if test "x$ac_cv_lib_osptk_OSPPInit" != "xyes"; then
+		fail="$fail libosptk"
+	fi
+	LIBS=$org_LIBS
+
+	targetname=modname
+else
+	targetname=
+	echo \*\*\* module modname is disabled.
+fi
+
+dnl  Don't change this section.
+if test x"$fail" != x""; then
+	if test x"${enable_strict_dependencies}" = x"yes"; then
+		AC_MSG_ERROR([set --without-]modname[ to disable it explicitly.])
+	else
+		AC_MSG_WARN([silently not building ]modname[.])
+		AC_MSG_WARN([FAILURE: ]modname[ requires: $fail.]);
+		targetname=""
+	fi
+fi
+
+osp_cflags=$SMART_CFLAGS
+osp_ldflags=$SMART_LIBS
+
+AC_SUBST(osp_cflags)
+AC_SUBST(osp_ldflags)
+AC_SUBST(targetname)
+AC_OUTPUT(Makefile)
