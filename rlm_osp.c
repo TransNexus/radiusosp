@@ -1685,12 +1685,14 @@ static time_t osp_format_time(
 
     DEBUG("rlm_osp: osp_format_time start");
 
+    memset(&tm, 0, sizeof(tm));
+
     switch (format) {
         case OSP_TIMESTR_T:
             value = atol(timestr);
             break;
         case OSP_TIMESTR_C:
-            strptime(timestr, "%a%n%b%n%d%n%T%n%Y", &tmp);
+            strptime(timestr, "%a %b %d %T %Y", &tmp);
             value = mktime(&tmp);
             break;
         case OSP_TIMESTR_NTP:
