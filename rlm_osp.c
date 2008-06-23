@@ -837,24 +837,35 @@ static int osp_check_mapitem (
         if (level == OSP_ITEM_MUSTDEF) {
             radlog(L_ERR, "rlm_osp: Failed to check mapping item.");
             return -1;
-        }
-    } else {
-        if (*item != '%') {
-            radlog(L_ERR, 
-                "rlm_osp: Failed to check mapping item '%s'.",
-                item);
-            return -1;
         } else {
-            last = strlen(item) - 1;
-            if (((item[1] == '{') && (item[last] != '}')) || 
-                ((item[1] != '{') && (item[last] == '}')))
-            {
-                radlog(L_ERR, 
-                    "rlm_osp: Failed to check mapping item '%s'.",
-                    item);
-                return -1;
-            }
+            DEBUG("rlm_osp: osp_check_mapitem success");
+            return 0;
         }
+    }
+
+    if (*item != '%') {
+        radlog(L_ERR, 
+            "rlm_osp: Failed to check mapping item '%s'.",
+            item);
+        return -1;
+    }
+
+    last = strlen(item) - 1;
+
+    if ((item[1] != '{') && (last != 1)) {
+        radlog(L_ERR, 
+            "rlm_osp: Failed to check mapping item '%s'.",
+            item);
+        return -1;
+    }
+
+    if (((item[1] == '{') && (item[last] != '}')) || 
+        ((item[1] != '{') && (item[last] == '}')))
+    {
+        radlog(L_ERR, 
+            "rlm_osp: Failed to check mapping item '%s'.",
+            item);
+        return -1;
     }
 
    DEBUG("rlm_osp: osp_check_mapitem success");
@@ -1685,7 +1696,7 @@ static time_t osp_format_time(
 
     DEBUG("rlm_osp: osp_format_time start");
 
-    memset(&tm, 0, sizeof(tm));
+    memset(&tmp, 0, sizeof(tmp));
 
     switch (format) {
         case OSP_TIMESTR_T:
