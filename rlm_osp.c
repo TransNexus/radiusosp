@@ -101,6 +101,14 @@ RCSID("$Id$")
 #define OSP_MAP_RLOSTFRAC       NULL                        /* Lost receive packet fraction */
 
 /*
+ * OSP mapping item level
+ */
+typedef enum osp_itemlevel_t {
+    OSP_ITEM_MUSTDEF = 0,   /* Mapping item must be defined */
+    OSP_ITEM_DEFINED        /* Mapping item may be defined */
+} osp_itemlevel_t;
+
+/*
  * OSP time string types
  */
 typedef enum osp_timestr_t {
@@ -316,7 +324,7 @@ static const CONF_PARSER module_config[] = {
  */
 static int osp_check_provider(osp_provider_t* provider);
 static int osp_check_mapping(osp_mapping_t* mapping);
-static int osp_check_mapitem(char* item);
+static int osp_check_mapitem(char* item, osp_itemlevel_t level);
 static int osp_create_provider(osp_provider_t* provider);
 static int osp_get_usagebase(rlm_osp_t* data, REQUEST* request, osp_usagebase_t* base);
 static void osp_format_device(char* device, char* buffer, int buffersize);
@@ -453,7 +461,7 @@ static int osp_check_provider(
     /*
      * If privatekey is undefined, then fail.
      */
-    if ((provider->privatekey == NULL) || (provider->privatekey[0] == '\0')) {
+    if ((provider->privatekey == NULL) || (*(provider->privatekey) == '\0')) {
         radlog(L_ERR, "rlm_osp: 'privatekey' must be defined.");
         return -1;
     }
@@ -462,7 +470,7 @@ static int osp_check_provider(
     /*
      * If localcert is undefined, then fail.
      */
-    if ((provider->localcert == NULL) || (provider->localcert[0] == '\0')) {
+    if ((provider->localcert == NULL) || (*(provider->localcert) == '\0')) {
         radlog(L_ERR, "rlm_osp: 'localcert' must be defined.");
         return -1;
     }
@@ -584,14 +592,18 @@ static int osp_check_mapping(
     DEBUG("rlm_osp: osp_check_mapping start");
 
     /*
-     * Nothing to check for transaction ID.
+     * If transaction ID is incorrect, then fail.
      */
+    if (osp_check_mapitem(mapping->transid, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'transactionid'.");
+        return -1;
+    }
     DEBUG("rlm_osp: transactionid = '%s'", mapping->transid);
 
     /*
      * If Call-ID is undefined, then fail.
      */
-    if (osp_check_mapitem(mapping->callid) < 0) {
+    if (osp_check_mapitem(mapping->callid, OSP_ITEM_MUSTDEF) < 0) {
         radlog(L_ERR, "rlm_osp: 'callid' must be defined properly.");
         return -1;
     }
@@ -605,7 +617,7 @@ static int osp_check_mapping(
     /*
      * If calling number is undefined, then fail.
      */
-    if (osp_check_mapitem(mapping->calling) < 0) {
+    if (osp_check_mapitem(mapping->calling, OSP_ITEM_MUSTDEF) < 0) {
         radlog(L_ERR, "rlm_osp: 'callingnumber' must be defined properly.");
         return -1;
     }
@@ -619,7 +631,7 @@ static int osp_check_mapping(
     /*
      * If called number is undefined, then fail.
      */
-    if (osp_check_mapitem(mapping->called) < 0) {
+    if (osp_check_mapitem(mapping->called, OSP_ITEM_MUSTDEF) < 0) {
         radlog(L_ERR, "rlm_osp: 'callednumber' must be defined properly.");
         return -1;
     }
@@ -628,21 +640,25 @@ static int osp_check_mapping(
     /*
      * If source device is undefined, then fail.
      */
-    if (osp_check_mapitem(mapping->srcdev) < 0) {
+    if (osp_check_mapitem(mapping->srcdev, OSP_ITEM_MUSTDEF) < 0) {
         radlog(L_ERR, "rlm_osp: 'sourcedevice' must be defined properly.");
         return -1;
     }
     DEBUG("rlm_osp: sourcedevice = '%s'", mapping->srcdev);
 
     /*
-     * Nothing to check for source.
+     * If source is incorrect, then fail.
      */
+    if (osp_check_mapitem(mapping->source, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'source'.");
+        return -1;
+    }
     DEBUG("rlm_osp: source = '%s'", mapping->source);
 
     /*
      * If destination is undefined, then fail.
      */
-    if (osp_check_mapitem(mapping->destination) < 0) {
+    if (osp_check_mapitem(mapping->destination, OSP_ITEM_MUSTDEF) < 0) {
         radlog(L_ERR, "rlm_osp: 'destination' must be defined properly.");
         return -1;
     }
@@ -650,13 +666,21 @@ static int osp_check_mapping(
     DEBUG("rlm_osp: destination = '%s'", mapping->destination);
 
     /*
-     * Nothing to check for destination device.
+     * If destination device is incorrect, then fail.
      */
+    if (osp_check_mapitem(mapping->destdev, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'destinationdevice'.");
+        return -1;
+    }
     DEBUG("rlm_osp: destinationdevice = '%s'", mapping->destdev);
 
     /*
-     * Nothing to check for destination count.
+     * If destination count is incorrect, then fail.
      */
+    if (osp_check_mapitem(mapping->destcount, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'destinationcount'.");
+        return -1;
+    }
     DEBUG("rlm_osp: destinationcount = '%s'", mapping->destcount);
 
     /*
@@ -675,78 +699,118 @@ static int osp_check_mapping(
     /*
      * If call start time is undefined, then fail.
      */
-    if (osp_check_mapitem(mapping->start) < 0) {
+    if (osp_check_mapitem(mapping->start, OSP_ITEM_MUSTDEF) < 0) {
         radlog(L_ERR, "rlm_osp: 'starttime' must be defined properly.");
         return -1;
     }
     DEBUG("rlm_osp: starttime = '%s'", mapping->start);
 
     /*
-     * Nothing to check for call alert time.
+     * If call alert time is incorrect, then fail.
      */
+    if (osp_check_mapitem(mapping->alert, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'alerttime'.");
+        return -1;
+    }
     DEBUG("rlm_osp: alerttime = '%s'", mapping->alert);
 
     /*
-     * Nothing to check for call connect time.
+     * If call connect time is incorrect, then fail.
      */
+    if (osp_check_mapitem(mapping->connect, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'connecttime'.");
+        return -1;
+    }
     DEBUG("rlm_osp: connecttime = '%s'", mapping->connect);
 
     /*
      * If call end time is undefined, then fail.
      */
-    if (osp_check_mapitem(mapping->end) < 0) {
+    if (osp_check_mapitem(mapping->end, OSP_ITEM_MUSTDEF) < 0) {
         radlog(L_ERR, "rlm_osp: 'endtime' must be defined properly.");
         return -1;
     }
     DEBUG("rlm_osp: endtime = '%s'", mapping->end);
 
     /*
-     * Nothing to check for call duration.
+     * If call duration is incorrect, then fail.
      */
+    if (osp_check_mapitem(mapping->duration, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'duration'.");
+        return -1;
+    }
     DEBUG("rlm_osp: duration = '%s'", mapping->duration);
 
     /*
-     * Nothing to check for PDD
+     * If pdd is incorrect, then fail.
      */
+    if (osp_check_mapitem(mapping->pdd, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'postdialdelay'.");
+        return -1;
+    }
     DEBUG("rlm_osp: postdialdelay = '%s'", mapping->pdd);
 
     /*
-     * Nothing to check for release source.
+     * If release source is incorrect, then fail.
      */
+    if (osp_check_mapitem(mapping->release, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'releasesource'.");
+        return -1;
+    }
     DEBUG("rlm_osp: releasesource = '%s'", mapping->release);
 
     /*
      * If release cause is undefined, then fail.
      */
-    if (osp_check_mapitem(mapping->cause) < 0) {
+    if (osp_check_mapitem(mapping->cause, OSP_ITEM_MUSTDEF) < 0) {
         radlog(L_ERR, "rlm_osp: 'releasecause' must be defined properly.");
         return -1;
     }
     DEBUG("rlm_osp: releasecause = '%s'", mapping->cause);
 
     /*
-     * Nothing to check for conference ID.
+     * If conference ID is incorrect, then fail.
      */
+    if (osp_check_mapitem(mapping->confid, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'conferenceid'.");
+        return -1;
+    }
     DEBUG("rlm_osp: conferenceid = '%s'", mapping->confid);
 
     /*
-     * Nothing to check for lost send packets.
+     * If lost send packets is incorrect, then fail.
      */
+    if (osp_check_mapitem(mapping->slost, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'sendlost'.");
+        return -1;
+    }
     DEBUG("rlm_osp: sendlost = '%s'", mapping->slost);
 
     /*
-     * Nothing to check for lost send packet fraction.
+     * If lost send packet fraction is incorrect, then fail.
      */
+    if (osp_check_mapitem(mapping->slostfract, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'sendlostfract'.");
+        return -1;
+    }
     DEBUG("rlm_osp: sendlostfract = '%s'", mapping->slostfract);
 
     /*
-     * Nothing to check for lost receive packets.
+     * If lost receive packets is incorrect, then fail.
      */
+    if (osp_check_mapitem(mapping->rlost, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'receivelost'.");
+        return -1;
+    }
     DEBUG("rlm_osp: receivelost = '%s'", mapping->rlost);
 
     /*
-     * Nothing to check for lost receive packet fraction.
+     * If lost receive packet fraction is incorrect, then fail.
      */
+    if (osp_check_mapitem(mapping->rlostfract, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'receivelostfract'.");
+        return -1;
+    }
     DEBUG("rlm_osp: receivelostfract = '%s'", mapping->rlostfract);
 
     DEBUG("rlm_osp: osp_check_mapping success");
@@ -758,23 +822,44 @@ static int osp_check_mapping(
  * Check RADIUS OSP mapping item.
  *
  * param item Mapping item
+ * param level Mapping item level
  * return 0 success, -1 failure
  */
 static int osp_check_mapitem (
-    char* item)
+    char* item,
+    osp_itemlevel_t level)
 {
+    int last;
+
     DEBUG("rlm_osp: osp_check_mapitem start");
 
-    if ((item == NULL) ||
-        (item[0] != '%') ||
-        (item[1] != '{') ||
-        (item[strlen(item) - 1] != '}'))
-    {
-        return -1;
+    if ((item == NULL) || (*item == '\0')) {
+        if (level == OSP_ITEM_MUSTDEF) {
+            radlog(L_ERR, "rlm_osp: Failed to check mapping item.");
+            return -1;
+        }
     } else {
-        DEBUG("rlm_osp: osp_check_mapitem success");
-        return 0;
+        if (*item != '%') {
+            radlog(L_ERR, 
+                "rlm_osp: Failed to check mapping item '%s'.",
+                item);
+            return -1;
+        } else {
+            last = strlen(item) - 1;
+            if (((item[1] == '{') && (item[last] != '}')) || 
+                ((item[1] != '{') && (item[last] == '}')))
+            {
+                radlog(L_ERR, 
+                    "rlm_osp: Failed to check mapping item '%s'.",
+                    item);
+                return -1;
+            }
+        }
     }
+
+   DEBUG("rlm_osp: osp_check_mapitem success");
+
+    return 0;
 }
 
 /*
@@ -1649,7 +1734,7 @@ radlog(L_INFO, "SDS: osp_report_work 1");
      * Send OSP UsageInd message to OSP server
      */
     for (i = 1; i <= MAX_RETRIES; i++) {
-radlog(L_INFO, "SDS: osp_report_work 1.1");
+radlog(L_INFO, "SDS: osp_report_work 1.0");
         error = OSPPTransactionReportUsage(
             info->transaction,                  /* Transaction handle */
             info->duration,                     /* Call duration */
@@ -1667,7 +1752,7 @@ radlog(L_INFO, "SDS: osp_report_work 1.1");
             info->rlostfract,                   /* Fraction of packets expected but not received */
             NULL,                               /* Max size of detail log */
             NULL);                              /* Detail log */
-radlog(L_INFO, "SDS: osp_report_work 1.2");
+radlog(L_INFO, "SDS: osp_report_work 1.1");
         if (error != OSPC_ERR_NO_ERROR) {
             radlog(L_ERR,
                 "rlm_osp: Failed to report usage, attempt '%d', error '%d'.",
@@ -1684,16 +1769,13 @@ radlog(L_INFO, "SDS: osp_report_work 3");
      * Delete transaction handle
      */
     OSPPTransactionDelete(info->transaction);
-radlog(L_INFO, "SDS: osp_report_work 4");
 
     /*
      * Release usage information structure
      */
     free(usagearg);
-radlog(L_INFO, "SDS: osp_report_work 5");
 
     DEBUG("rlm_osp: osp_report_work success");
-radlog(L_INFO, "SDS: osp_report_work success");
 
     OSPTTHREADRETURN_NULL();
 }
