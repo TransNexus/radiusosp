@@ -322,6 +322,7 @@ static const CONF_PARSER module_config[] = {
 /*
  * Internal function prototype
  */
+static int osp_check_string(char* string);
 static int osp_check_provider(osp_provider_t* provider);
 static int osp_check_mapping(osp_mapping_t* mapping);
 static int osp_check_mapitem(char* item, osp_itemlevel_t level);
@@ -409,6 +410,18 @@ static int osp_instantiate(
 }
 
 /*
+ * Check empty string
+ *
+ * param string String to be checked
+ * return 0 empty, 1 with contents
+ */
+static int osp_check_string(
+    char* string)
+{
+    return ((string != NULL) && (*string != '\0'));
+}   
+
+/*
  * Check OSP provider parameters.
  *
  * param provider Provider parameters
@@ -426,7 +439,7 @@ static int osp_check_provider(
      */
     provider->sps = 0;
     for (i = 0; i < OSP_MAX_SPS; i++) {
-        if ((provider->spuris[i] != NULL) && (*(provider->spuris[i]) != '\0')) {
+        if (osp_check_string(provider->spuris[i])) {
             /*
              * If any service point weight is wrong, then fail.
              */
@@ -461,7 +474,7 @@ static int osp_check_provider(
     /*
      * If privatekey is undefined, then fail.
      */
-    if ((provider->privatekey == NULL) || (*(provider->privatekey) == '\0')) {
+    if (!osp_check_string(provider->privatekey)) {
         radlog(L_ERR, "rlm_osp: 'privatekey' must be defined.");
         return -1;
     }
@@ -470,7 +483,7 @@ static int osp_check_provider(
     /*
      * If localcert is undefined, then fail.
      */
-    if ((provider->localcert == NULL) || (*(provider->localcert) == '\0')) {
+    if (!osp_check_string(provider->localcert)) {
         radlog(L_ERR, "rlm_osp: 'localcert' must be defined.");
         return -1;
     }
@@ -481,10 +494,10 @@ static int osp_check_provider(
      */
     provider->cas = 0;
     for (i = 0; i < OSP_MAX_CAS; i++) {
-        if ((provider->cacerts[i] == NULL) || (*(provider->cacerts[i]) == '\0'))  {
-            break;
-        } else {
+        if (osp_check_string(provider->cacerts[i]))  {
             provider->cas++;
+        } else {
+            break;
         }
     }
 
@@ -833,7 +846,7 @@ static int osp_check_mapitem (
 
     DEBUG("rlm_osp: osp_check_mapitem start");
 
-    if ((item == NULL) || (*item == '\0')) {
+    if (!osp_check_string(item)) {
         if (level == OSP_ITEM_MUSTDEF) {
             radlog(L_ERR, "rlm_osp: Failed to check mapping item.");
             return -1;
@@ -1147,7 +1160,7 @@ static int osp_get_usagebase(
     /*
      * Get transaction ID
      */
-    if (mapping->transid != NULL) {
+    if (osp_check_string(mapping->transid)) {
         radius_xlat(buffer, sizeof(buffer), mapping->transid, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_INFO, 
@@ -1166,7 +1179,7 @@ static int osp_get_usagebase(
     /*
      * Get Call-ID
      */
-    if (mapping->callid != NULL) {
+    if (osp_check_string(mapping->callid)) {
         radius_xlat(base->callid, sizeof(base->callid), mapping->callid, request, NULL);
         if (base->callid[0] == '\0') {
             radlog(L_ERR,
@@ -1183,7 +1196,7 @@ static int osp_get_usagebase(
     /*
      * Get calling number
      */
-    if (mapping->calling != NULL) {
+    if (osp_check_string(mapping->calling)) {
         radius_xlat(buffer, sizeof(buffer), mapping->calling, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_ERR,
@@ -1207,7 +1220,7 @@ static int osp_get_usagebase(
     /*
      * Get called number
      */
-    if (mapping->called != NULL) {
+    if (osp_check_string(mapping->called)) {
         radius_xlat(buffer, sizeof(buffer), mapping->called, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_ERR,
@@ -1231,7 +1244,7 @@ static int osp_get_usagebase(
     /*
      * Get source device
      */
-    if (mapping->srcdev != NULL) {
+    if (osp_check_string(mapping->srcdev)) {
         radius_xlat(buffer, sizeof(buffer), mapping->srcdev, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_ERR,
@@ -1250,7 +1263,7 @@ static int osp_get_usagebase(
     /*
      * Get source
      */
-    if (mapping->source != NULL) {
+    if (osp_check_string(mapping->source)) {
         radius_xlat(buffer, sizeof(buffer), mapping->source, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_INFO, 
@@ -1271,7 +1284,7 @@ static int osp_get_usagebase(
     /*
      * Get destination
      */
-    if (mapping->destination != NULL) {
+    if (osp_check_string(mapping->destination)) {
         radius_xlat(buffer, sizeof(buffer), mapping->destination, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_ERR,
@@ -1290,7 +1303,7 @@ static int osp_get_usagebase(
     /*
      * Get destination device
      */
-    if (mapping->destdev != NULL) {
+    if (osp_check_string(mapping->destdev)) {
         radius_xlat(buffer, sizeof(buffer), mapping->destdev, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_INFO, 
@@ -1309,7 +1322,7 @@ static int osp_get_usagebase(
     /*
      * Get destination count
      */
-    if (mapping->destcount != NULL) {
+    if (osp_check_string(mapping->destcount)) {
         radius_xlat(buffer, sizeof(buffer), mapping->destcount, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_INFO, 
@@ -1430,7 +1443,7 @@ static int osp_get_usageinfo(
     /*
      * Get call start time
      */
-    if (mapping->start != NULL) {
+    if (osp_check_string(mapping->start)) {
         radius_xlat(buffer, sizeof(buffer), mapping->start, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_ERR,
@@ -1449,7 +1462,7 @@ static int osp_get_usageinfo(
     /*
      * Get call alert time
      */
-    if (mapping->alert != NULL) {
+    if (osp_check_string(mapping->alert)) {
         radius_xlat(buffer, sizeof(buffer), mapping->alert, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_INFO,
@@ -1468,7 +1481,7 @@ static int osp_get_usageinfo(
     /*
      * Get call connect time
      */
-    if (mapping->connect != NULL) {
+    if (osp_check_string(mapping->connect)) {
         radius_xlat(buffer, sizeof(buffer), mapping->connect, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_INFO,
@@ -1487,7 +1500,7 @@ static int osp_get_usageinfo(
     /*
      * Get call end time
      */
-    if (mapping->end != NULL) {
+    if (osp_check_string(mapping->end)) {
         radius_xlat(buffer, sizeof(buffer), mapping->end, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_ERR,
@@ -1506,7 +1519,7 @@ static int osp_get_usageinfo(
     /*
      * Get call duration
      */
-    if (mapping->duration != NULL) {
+    if (osp_check_string(mapping->duration)) {
         radius_xlat(buffer, sizeof(buffer), mapping->duration, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_INFO,
@@ -1525,7 +1538,7 @@ static int osp_get_usageinfo(
     /*
      * Get post dial delay
      */
-    if (mapping->pdd != NULL) {
+    if (osp_check_string(mapping->pdd)) {
         radius_xlat(buffer, sizeof(buffer), mapping->pdd, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_INFO,
@@ -1548,7 +1561,7 @@ static int osp_get_usageinfo(
     /*
      * Get release source
      */
-    if (mapping->release != NULL) {
+    if (osp_check_string(mapping->release)) {
         radius_xlat(buffer, sizeof(buffer), mapping->release, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_INFO,
@@ -1567,7 +1580,7 @@ static int osp_get_usageinfo(
     /*
      * Get release cause
      */
-    if (mapping->cause != NULL) {
+    if (osp_check_string(mapping->cause)) {
         radius_xlat(buffer, sizeof(buffer), mapping->cause, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_ERR,
@@ -1586,7 +1599,7 @@ static int osp_get_usageinfo(
     /*
      * Get conference ID
      */
-    if (mapping->confid != NULL) {
+    if (osp_check_string(mapping->confid)) {
         radius_xlat(info->confid, sizeof(info->confid), mapping->confid, request, NULL);
         if (info->confid[0] == '\0') {
             radlog(L_INFO,
@@ -1602,7 +1615,7 @@ static int osp_get_usageinfo(
     /*
      * Get lost send packets
      */
-    if (mapping->slost != NULL) {
+    if (osp_check_string(mapping->slost)) {
         radius_xlat(buffer, sizeof(buffer), mapping->slost, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_INFO,
@@ -1621,7 +1634,7 @@ static int osp_get_usageinfo(
     /*
      * Get lost send packet fraction
      */
-    if (mapping->slostfract != NULL) {
+    if (osp_check_string(mapping->slostfract)) {
         radius_xlat(buffer, sizeof(buffer), mapping->slostfract, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_INFO,
@@ -1640,7 +1653,7 @@ static int osp_get_usageinfo(
     /*
      * Get lost receive packets
      */
-    if (mapping->rlost != NULL) {
+    if (osp_check_string(mapping->rlost)) {
         radius_xlat(buffer, sizeof(buffer), mapping->rlost, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_INFO,
@@ -1659,7 +1672,7 @@ static int osp_get_usageinfo(
     /*
      * Get lost receive packet fraction
      */
-    if (mapping->rlostfract != NULL) {
+    if (osp_check_string(mapping->rlostfract)) {
         radius_xlat(buffer, sizeof(buffer), mapping->rlostfract, request, NULL);
         if (buffer[0] == '\0') {
             radlog(L_INFO,
@@ -1693,6 +1706,8 @@ static time_t osp_format_time(
 {
     struct tm tmp;
     time_t value;
+    char buffer[OSP_STRBUF_SIZE];
+    unsigned int length;
 
     DEBUG("rlm_osp: osp_format_time start");
 
@@ -1703,11 +1718,25 @@ static time_t osp_format_time(
             value = atol(timestr);
             break;
         case OSP_TIMESTR_C:
+            /*
+             * WWW MMM DD hh:mm:ss YYYY
+             */
             strptime(timestr, "%a %b %d %T %Y", &tmp);
             value = mktime(&tmp);
             break;
         case OSP_TIMESTR_NTP:
-            value = 0;
+            /*
+             * hh:mm:ss.mmm ZON MMM DD YYYY
+             */
+            length = strlen(timestr);
+            if ((length > 12) && (length < sizeof(buffer) - (12 - 8))) {
+                snprintf(buffer, sizeof(buffer), "%s", timestr);
+                snprintf(buffer + 8, sizeof(buffer) - 8, "%s", timestr + 12);
+                strptime(buffer, "%T %Z %b %d %Y", &tmp);
+                value = mktime(&tmp);
+            } else {
+                value = 0;
+            }
             break;
         case OSP_TIMESTR_MAX:
             value = 0;
