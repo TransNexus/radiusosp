@@ -34,6 +34,7 @@ RCSID("$Id$")
  * OSP module constants.
  */
 #define OSP_STRBUF_SIZE     256
+#define OSP_FULLBUF_SIZE	4096
 
 #define OSP_DEF_HWACCE      "no"                        /* OSP default hardware accelerate flag */
 #define OSP_MAX_SPS         8                           /* OSP max number of service points */
@@ -1033,6 +1034,7 @@ static int osp_accounting(
     osp_usageinfo_t* info;
     OSPTTHREADID threadid;
     OSPTTHRATTR threadattr;
+    char buffer[OSP_FULLBUF_SIZE];
     int error;
 
     DEBUG("rlm_osp: osp_accounting start");
@@ -1044,7 +1046,7 @@ static int osp_accounting(
         return RLM_MODULE_NOOP;
     }
 
-char tmp[4096];
+char tmp[OSP_FULLBUF_SIZE];
 radius_xlat(tmp, sizeof(tmp), "%Z", request, NULL);
 // return RLM_MODULE_NOOP;
 
@@ -1052,7 +1054,10 @@ radius_xlat(tmp, sizeof(tmp), "%Z", request, NULL);
      * Get usage base information
      */
     if (osp_get_usagebase(data, request, &base) < 0) {
-        radlog(L_ERR, "rlm_osp: Failed to get usage base info.");
+        radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
+        radlog(L_ERR, 
+            "rlm_osp: Failed to get usage base info from '%s'.", 
+            buffer);
         /*
          * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
          */
@@ -1115,7 +1120,10 @@ radius_xlat(tmp, sizeof(tmp), "%Z", request, NULL);
      * Get usage info
      */
     if (osp_get_usageinfo(&data->mapping, request, info) < 0) {
-        radlog(L_ERR, "rlm_osp: Failed to get usage information.");
+        radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
+        radlog(L_ERR, 
+            "rlm_osp: Failed to get usage information from '%s'.", 
+            buffer);
         OSPPTransactionDelete(transaction);
         free(info);
         /*
@@ -1818,6 +1826,7 @@ radlog(L_INFO, "SDS: osp_report_work 3");
     free(usagearg);
 
     DEBUG("rlm_osp: osp_report_work success");
+radlog(L_INFO, "SDS: osp_report_work success");
 
     OSPTTHREADRETURN_NULL();
 }
