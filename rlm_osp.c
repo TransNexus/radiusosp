@@ -36,6 +36,7 @@ RCSID("$Id$")
 #define OSP_STRBUF_SIZE     256
 #define OSP_LOGBUF_SIZE     1024
 
+#define OSP_DEF_LOGLEVEL    "1"                         /* OSP module default log level, long */
 #define OSP_DEF_HWACCE      "no"                        /* OSP default hardware accelerate flag */
 #define OSP_MAX_SPS         8                           /* OSP max number of service points */
 #define OSP_DEF_SPURI       "http://osptestserver.transnexus.com:1080/osp"
@@ -102,6 +103,14 @@ RCSID("$Id$")
 #define OSP_MAP_RLOSTFRAC       NULL                        /* Lost receive packet fraction */
 
 /*
+ * OSP log level
+ */
+typedef enum osp_loglevel_t {
+    OSP_LOG_SHORT = 0,  /* Log short message */
+    OSP_LOG_LONG        /* Log long message */
+} osp_loglevel_t;
+
+/*
  * OSP mapping item level
  */
 typedef enum osp_itemlevel_t {
@@ -118,6 +127,13 @@ typedef enum osp_timestr_t {
     OSP_TIMESTR_NTP,    /* NTP, HH:MM:SS.MMM ZON WWW MMM DD YYYY */
     OSP_TIMESTR_MAX     /* Number of time string types */
 } osp_timestr_t;
+
+/*
+ * OSP module running parameter structure.
+ */
+typedef struct osp_running_t {
+    int loglevel;
+} osp_running_t;
 
 /*
  * OSP module provider parameter structure.
@@ -177,6 +193,7 @@ typedef struct osp_mapping_t {
  * OSP module instance data structure.
  */
 typedef struct rlm_osp_t {
+    osp_running_t running;      /* OSP module running parameters */
     osp_provider_t provider;    /* OSP provider parameters */
     osp_mapping_t mapping;      /* OSP mapping parameters */
 } rlm_osp_t;
@@ -226,6 +243,17 @@ typedef struct osp_usageinfo_t {
  *   to the strdup'd string into 'config.string'.  This gets around
  *   buffer over-flows.
  */
+static const CONF_PARSER running_config[] = {
+    /*
+     * OSP module running parameters
+     */
+    { "loglevel", PW_TYPE_INTEGER, offsetof(rlm_osp_t, running.loglevel), NULL, OSP_DEF_LOGLEVEL },
+    /*
+     * End
+     */
+    { NULL, -1, 0, NULL, NULL }     /* end the list */
+};
+
 static const CONF_PARSER provider_config[] = {
     /*
      * OSP provider parameters
@@ -307,6 +335,10 @@ static const CONF_PARSER mapping_config[] = {
 
 static const CONF_PARSER module_config[] = {
     /*
+     * OSP running parameters
+     */
+    { "running", PW_TYPE_SUBSECTION, 0, NULL, (const void*)running_config },
+    /*
      * OSP provider parameters
      */
     { "provider", PW_TYPE_SUBSECTION, 0, NULL, (const void*)provider_config },
@@ -324,6 +356,7 @@ static const CONF_PARSER module_config[] = {
  * Internal function prototype
  */
 static int osp_check_string(char* string);
+static int osp_check_running(osp_running_t* running);
 static int osp_check_provider(osp_provider_t* provider);
 static int osp_check_mapping(osp_mapping_t* mapping);
 static int osp_check_mapitem(char* item, osp_itemlevel_t level);
@@ -377,6 +410,15 @@ static int osp_instantiate(
     }
 
     /*
+     * If any running parameter is wrong, then fail.
+     */
+    if (osp_check_running(&data->running) < 0) {
+        radlog(L_ERR, "rlm_osp: Failed to check running parameters.");
+        free(data);
+        return -1;
+    }
+
+    /*
      * If any provider parameter is wrong, then fail.
      */
     if (osp_check_provider(&data->provider) < 0) {
@@ -421,6 +463,35 @@ static int osp_check_string(
 {
     return ((string != NULL) && (*string != '\0'));
 }   
+
+/*
+ * Check OSP module running parameters.
+ *
+ * param running Running parameters
+ * return 0 success, -1 failure
+ */
+static int osp_check_running(
+    osp_running_t* running)
+{
+    DEBUG("rlm_osp: osp_check_running start");
+
+    /*
+     * Check log level
+     */
+    switch (running->loglevel) {
+        case OSP_LOG_SHORT:
+        case OSP_LOG_LONG:
+            break;
+        default:
+            running->loglevel = OSP_LOG_LONG;
+            break;
+    }
+    DEBUG("rlm_osp: loglevel = '%d'", running->loglevel);
+
+    DEBUG("rlm_osp: osp_check_running success");
+
+    return 0;
+}
 
 /*
  * Check OSP provider parameters.
@@ -1028,6 +1099,7 @@ static int osp_accounting(
 {
     VALUE_PAIR* vp;
     rlm_osp_t* data = (rlm_osp_t*)instance;
+    osp_running_t* running = &data->running;
     osp_provider_t* provider = &data->provider;
     OSPTTRANHANDLE transaction;
     osp_usagebase_t base;
@@ -1046,18 +1118,24 @@ static int osp_accounting(
         return RLM_MODULE_NOOP;
     }
 
-char tmp[10240];
-radius_xlat(tmp, sizeof(tmp), "%Z", request, NULL);
-// return RLM_MODULE_NOOP;
+// char tmp[10240];
+// radius_xlat(tmp, sizeof(tmp), "%Z", request, NULL);
 
     /*
      * Get usage base information
      */
     if (osp_get_usagebase(data, request, &base) < 0) {
-        radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
-        radlog(L_INFO, 
-            "rlm_osp: Failed to get usage base info from '%s'.", 
-            buffer);
+        switch (running->loglevel) {
+            case OSP_LOG_SHORT:
+                radlog(L_INFO, "rlm_osp: Failed to get usage base info.");
+                break;
+            case OSP_LOG_LONG:
+                radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
+                radlog(L_INFO,
+                    "rlm_osp: Failed to get usage base info from '%s'.",
+                    buffer);
+                break;
+        }
         /*
          * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
          */
@@ -1120,10 +1198,17 @@ radius_xlat(tmp, sizeof(tmp), "%Z", request, NULL);
      * Get usage info
      */
     if (osp_get_usageinfo(&data->mapping, request, info) < 0) {
-        radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
-        radlog(L_INFO, 
-            "rlm_osp: Failed to get usage information from '%s'.", 
-            buffer);
+        switch (running->loglevel) {
+            case OSP_LOG_SHORT:
+                radlog(L_INFO, "rlm_osp: Failed to get usage information.");
+                break;
+            case OSP_LOG_LONG:
+                radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
+                radlog(L_INFO,
+                    "rlm_osp: Failed to get usage information from '%s'.",
+                    buffer);
+                break;
+        }
         OSPPTransactionDelete(transaction);
         free(info);
         /*
