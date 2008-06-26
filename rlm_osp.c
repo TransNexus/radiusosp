@@ -975,6 +975,17 @@ static int osp_create_provider(
     DEBUG("rlm_osp: osp_create_provider start");
 
     /*
+     * Initialize OSP
+     */
+    error = OSPPInit(provider->accelerate);
+    if (error != OSPC_ERR_NO_ERROR) {
+        radlog(L_ERR,
+            "Failed to initalize OSP, error '%d'.",
+            error);
+        return -1;
+    }
+
+    /*
      * Copy service point weights to a temp buffer to avoid compile warning
      */
     for (i = 0; i < provider->sps; i++) {
@@ -990,6 +1001,7 @@ static int osp_create_provider(
             "rlm_osp: Failed to load privatekey '%s', error '%d'.",
             provider->privatekey,
             error);
+        OSPPCleanup();
         return -1;
     }
 
@@ -1002,9 +1014,10 @@ static int osp_create_provider(
             "rlm_osp: Failed to load localcert '%s', error '%d'.",
             provider->localcert,
             error);
-        if (privatekey.PrivateKeyData) {
+        if (privatekey.PrivateKeyData != NULL) {
             free(privatekey.PrivateKeyData);
         }
+        OSPPCleanup();
         return -1;
     }
 
@@ -1019,16 +1032,17 @@ static int osp_create_provider(
                 provider->cacerts[i],
                 error);
             for (j = 0; j < i; j++) {
-                if (cacerts[j].CertData) {
+                if (cacerts[j].CertData != NULL) {
                     free(cacerts[j].CertData);
                 }
             }
-            if (localcert.CertData) {
+            if (localcert.CertData != NULL) {
                 free(localcert.CertData);
             }
-            if (privatekey.PrivateKeyData) {
+            if (privatekey.PrivateKeyData != NULL) {
                 free(privatekey.PrivateKeyData);
             }
+            OSPPCleanup();
             return -1;
         }
         pcacerts[i] = &cacerts[i];
@@ -1060,6 +1074,7 @@ static int osp_create_provider(
         radlog(L_ERR,
             "rlm_osp: Failed to create provider, error '%d'.",
             error);
+        OSPPCleanup();
         result = -1;
     } else {
         DEBUG("rlm_osp: osp_create_provider success");
@@ -1070,14 +1085,14 @@ static int osp_create_provider(
      * Release temp key buffers
      */
     for (i = 0; i < provider->cas; i++) {
-        if (cacerts[i].CertData) {
+        if (cacerts[i].CertData != NULL) {
             free(cacerts[i].CertData);
         }
     }
-    if (localcert.CertData) {
+    if (localcert.CertData != NULL) {
         free(localcert.CertData);
     }
-    if (privatekey.PrivateKeyData) {
+    if (privatekey.PrivateKeyData != NULL) {
         free(privatekey.PrivateKeyData);
     }
 
@@ -1889,6 +1904,11 @@ static int osp_detach(
      * Delete provider handle
      */
     OSPPProviderDelete(provider->handle, 0);
+
+    /*
+     * Cleanup OSP
+     */
+    OSPPCleanup();
 
     /*
      * Release instance data
