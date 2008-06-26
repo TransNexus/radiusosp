@@ -217,7 +217,6 @@ typedef struct osp_usagebase_t {
  * Usage information structure.
  */
 typedef struct osp_usageinfo_t {
-    OSPTTRANHANDLE transaction;     /* Transaction handle */
     time_t start;                   /* Call start time */
     time_t alert;                   /* Call alert time */
     time_t connect;                 /* Call connect time */
@@ -366,7 +365,6 @@ static void osp_format_device(char* device, char* buffer, int buffersize);
 static int osp_get_username(char* uri, char* buffer, int buffersize);
 static int osp_get_usageinfo(osp_mapping_t* mapping, REQUEST* request, osp_usageinfo_t* info);
 static time_t osp_format_time(char* timestr, osp_timestr_t format);
-static OSPTTHREADRETURN osp_report_work(void* usagearg);
 
 /*
  * Do any per-module initialization that is separate to each
@@ -1103,13 +1101,13 @@ static int osp_accounting(
     osp_provider_t* provider = &data->provider;
     OSPTTRANHANDLE transaction;
     osp_usagebase_t base;
-    osp_usageinfo_t* info;
-    OSPTTHREADID threadid;
-    OSPTTHRATTR threadattr;
+    osp_usageinfo_t info;
     char buffer[OSP_LOGBUF_SIZE];
-    int error;
+    const int MAX_RETRIES = 5;
+    int i, error;
 
     DEBUG("rlm_osp: osp_accounting start");
+radlog(L_INFO, "rlm_osp: osp_accounting start");
 
     if (((vp = pairfind(request->packet->vps, PW_ACCT_STATUS_TYPE)) == NULL) ||
         (vp->vp_integer != PW_STATUS_STOP))
@@ -1117,9 +1115,7 @@ static int osp_accounting(
         DEBUG("rlm_osp: Nothing to do for requests other than Stop.");
         return RLM_MODULE_NOOP;
     }
-
-// char tmp[10240];
-// radius_xlat(tmp, sizeof(tmp), "%Z", request, NULL);
+radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 1");
 
     /*
      * Get usage base information
@@ -1141,6 +1137,29 @@ static int osp_accounting(
          */
         return RLM_MODULE_NOOP;
     }
+radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 2");
+
+    /*
+     * Get usage info
+     */
+    if (osp_get_usageinfo(&data->mapping, request, &info) < 0) {
+        switch (running->loglevel) {
+            case OSP_LOG_SHORT:
+                radlog(L_INFO, "rlm_osp: Failed to get usage information.");
+                break;
+            case OSP_LOG_LONG:
+                radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
+                radlog(L_INFO,
+                    "rlm_osp: Failed to get usage information from '%s'.",
+                    buffer);
+                break;
+        }
+        /*
+         * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
+         */
+        return RLM_MODULE_NOOP;
+    }
+radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 3");
 
     /*
      * Create a transaction handle
@@ -1152,6 +1171,7 @@ static int osp_accounting(
             error);
         return RLM_MODULE_FAIL;
     }
+radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 4");
 
     /*
      * Build usage report from scratch
@@ -1180,54 +1200,62 @@ static int osp_accounting(
         OSPPTransactionDelete(transaction);
         return RLM_MODULE_FAIL;
     }
+radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 5");
 
     /*
-     * Allocate memory for usage information structure
+     * Set release code
      */
-    info = rad_malloc(sizeof(*info));
-    if (info == NULL) {
-        radlog(L_ERR, "rlm_osp: Failed to allocate memory for usage info structure.");
-        OSPPTransactionDelete(transaction);
-        return RLM_MODULE_FAIL;
-    }
-    memset(info, 0, sizeof(*info));
-
-    info->transaction = transaction;
+    OSPPTransactionRecordFailure(
+        transaction,                        /* Transaction handle */
+        (enum OSPEFAILREASON)info.cause);   /* Release reason */
+radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 6");
 
     /*
-     * Get usage info
+     * Send OSP UsageInd message to OSP server
      */
-    if (osp_get_usageinfo(&data->mapping, request, info) < 0) {
-        switch (running->loglevel) {
-            case OSP_LOG_SHORT:
-                radlog(L_INFO, "rlm_osp: Failed to get usage information.");
-                break;
-            case OSP_LOG_LONG:
-                radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
-                radlog(L_INFO,
-                    "rlm_osp: Failed to get usage information from '%s'.",
-                    buffer);
-                break;
+    for (i = 1; i <= MAX_RETRIES; i++) {
+        error = OSPPTransactionReportUsage(
+            transaction,                    /* Transaction handle */
+            info.duration,                  /* Call duration */
+            info.start,                     /* Call start time */
+            info.end,                       /* Call end time */
+            info.alert,                     /* Call alert time */
+            info.connect,                   /* Call connect time */
+            info.ispddpresent,              /* If PDD info present */
+            info.pdd,                       /* Post dial delay */
+            info.release,                   /* Who released the call */
+            (unsigned char*)info.confid,    /* Conference ID */
+            info.slost,                     /* Packets not received by peer */
+            info.slostfract,                /* Fraction of packets not received by peer */
+            info.rlost,                     /* Packets not received that were expected */
+            info.rlostfract,                /* Fraction of packets expected but not received */
+            NULL,                           /* Max size of detail log */
+            NULL);                          /* Detail log */
+        if (error != OSPC_ERR_NO_ERROR) {
+            radlog(L_INFO,
+                "rlm_osp: Failed to report usage, attempt '%d', error '%d'.",
+                i,
+                error);
+        } else {
+            break;
         }
-        OSPPTransactionDelete(transaction);
-        free(info);
-        /*
-         * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
-         */
-        return RLM_MODULE_NOOP;
     }
+radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 7");
 
     /*
-     * Start usage report thread
+     * Delete transaction handle
      */
-    OSPM_THRATTR_INIT(threadattr, error);
-    OSPM_SETDETACHED_STATE(threadattr, error);
-    OSPM_CREATE_THREAD(threadid, &threadattr, osp_report_work, info, error);
-    OSPM_THRATTR_DESTROY(threadattr);
+    OSPPTransactionDelete(transaction);
+radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 8");
 
-    DEBUG("rlm_osp: osp_accounting success");
-
-    return RLM_MODULE_OK;
+    if (i > MAX_RETRIES) {
+        radlog(L_ERR, "rlm_osp: Failed to report usage.");
+        return RLM_MODULE_FAIL;
+    } else {
+        DEBUG("rlm_osp: osp_accounting success");
+radlog(L_INFO, "rlm_osp: osp_accounting success");
+        return RLM_MODULE_OK;
+    }
 }
 
 /*
@@ -1840,80 +1868,6 @@ static time_t osp_format_time(
     DEBUG("rlm_osp: osp_format_time success");
 
     return value;
-}
-
-/*
- * Report OSP usage thread function
- *
- * param usagearg OSP usage information
- */
-static OSPTTHREADRETURN osp_report_work(
-    void* usagearg)
-{
-    int i, error;
-    const int MAX_RETRIES = 5;
-    osp_usageinfo_t* info = (osp_usageinfo_t*)usagearg;
-
-    DEBUG("rlm_osp: osp_report_work start");
-radlog(L_INFO, "SDS: osp_report_work start");
-
-    /*
-     * Set release code
-     */
-    OSPPTransactionRecordFailure(
-        info->transaction,                 /* Transaction handle */
-        (enum OSPEFAILREASON)info->cause); /* Release reason */
-radlog(L_INFO, "SDS: osp_report_work 1");
-
-    /*
-     * Send OSP UsageInd message to OSP server
-     */
-    for (i = 1; i <= MAX_RETRIES; i++) {
-radlog(L_INFO, "SDS: osp_report_work 1.0");
-        error = OSPPTransactionReportUsage(
-            info->transaction,                  /* Transaction handle */
-            info->duration,                     /* Call duration */
-            info->start,                        /* Call start time */
-            info->end,                          /* Call end time */
-            info->alert,                        /* Call alert time */
-            info->connect,                      /* Call connect time */
-            info->ispddpresent,                 /* If PDD info present */
-            info->pdd,                          /* Post dial delay */
-            info->release,                      /* Who released the call */
-            (unsigned char*)info->confid,       /* Conference ID */
-            info->slost,                        /* Packets not received by peer */
-            info->slostfract,                   /* Fraction of packets not received by peer */
-            info->rlost,                        /* Packets not received that were expected */
-            info->rlostfract,                   /* Fraction of packets expected but not received */
-            NULL,                               /* Max size of detail log */
-            NULL);                              /* Detail log */
-radlog(L_INFO, "SDS: osp_report_work 1.1");
-        if (error != OSPC_ERR_NO_ERROR) {
-            radlog(L_ERR,
-                "rlm_osp: Failed to report usage, attempt '%d', error '%d'.",
-                i,
-                error);
-        } else {
-radlog(L_INFO, "SDS: osp_report_work 2");
-            break;
-        }
-    }
-radlog(L_INFO, "SDS: osp_report_work 3");
-
-    /*
-     * Delete transaction handle
-     */
-    OSPPTransactionDelete(info->transaction);
-
-    /*
-     * Release usage information structure
-     */
-    free(usagearg);
-
-    DEBUG("rlm_osp: osp_report_work success");
-radlog(L_INFO, "SDS: osp_report_work success");
-
-    OSPTTHREADRETURN_NULL();
 }
 
 /*
