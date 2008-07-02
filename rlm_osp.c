@@ -1122,7 +1122,6 @@ static int osp_accounting(
     int i, error;
 
     DEBUG("rlm_osp: osp_accounting start");
-radlog(L_INFO, "rlm_osp: osp_accounting start");
 
     if (((vp = pairfind(request->packet->vps, PW_ACCT_STATUS_TYPE)) == NULL) ||
         (vp->vp_integer != PW_STATUS_STOP))
@@ -1130,7 +1129,6 @@ radlog(L_INFO, "rlm_osp: osp_accounting start");
         DEBUG("rlm_osp: Nothing to do for requests other than Stop.");
         return RLM_MODULE_NOOP;
     }
-radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 1");
 
     /*
      * Get usage base information
@@ -1152,7 +1150,6 @@ radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 1");
          */
         return RLM_MODULE_NOOP;
     }
-radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 2");
 
     /*
      * Get usage info
@@ -1174,7 +1171,6 @@ radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 2");
          */
         return RLM_MODULE_NOOP;
     }
-radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 3");
 
     /*
      * Create a transaction handle
@@ -1186,7 +1182,6 @@ radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 3");
             error);
         return RLM_MODULE_FAIL;
     }
-radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 4");
 
     /*
      * Build usage report from scratch
@@ -1215,7 +1210,6 @@ radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 4");
         OSPPTransactionDelete(transaction);
         return RLM_MODULE_FAIL;
     }
-radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 5");
 
     /*
      * Set release code
@@ -1223,7 +1217,6 @@ radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 5");
     OSPPTransactionRecordFailure(
         transaction,                        /* Transaction handle */
         (enum OSPEFAILREASON)info.cause);   /* Release reason */
-radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 6");
 
     /*
      * Send OSP UsageInd message to OSP server
@@ -1255,20 +1248,17 @@ radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 6");
             break;
         }
     }
-radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 7");
 
     /*
      * Delete transaction handle
      */
     OSPPTransactionDelete(transaction);
-radlog(L_INFO, "rlm_osp: osp_accounting checkpoint 8");
 
     if (i > MAX_RETRIES) {
         radlog(L_ERR, "rlm_osp: Failed to report usage.");
         return RLM_MODULE_FAIL;
     } else {
         DEBUG("rlm_osp: osp_accounting success");
-radlog(L_INFO, "rlm_osp: osp_accounting success");
         return RLM_MODULE_OK;
     }
 }
@@ -1286,6 +1276,7 @@ static int osp_get_usagebase(
     REQUEST* request,
     osp_usagebase_t* base)
 {
+    int size;
     char buffer[OSP_STRBUF_SIZE];
     osp_provider_t* provider = &data->provider;
     osp_mapping_t* mapping = &data->mapping;
@@ -1345,7 +1336,9 @@ static int osp_get_usagebase(
                 return -1;
             }
         } else {
-            snprintf(base->calling, sizeof(base->calling), "%s", buffer);
+            size = sizeof(base->calling) - 1;
+            snprintf(base->calling, size, "%s", buffer);
+            base->calling[size] = '\0';
         }
     } else {
         radlog(L_ERR, "rlm_osp: 'callingnumber' mapping undefined.");
@@ -1369,7 +1362,9 @@ static int osp_get_usagebase(
                 return -1;
             }
         } else {
-            snprintf(base->called, sizeof(base->called), "%s", buffer);
+            size = sizeof(base->called) - 1;
+            snprintf(base->called, size, "%s", buffer);
+            base->called[size] = '\0';
         }
     } else {
         radlog(L_ERR, "rlm_osp: 'callednumber' mapping undefined.");
@@ -1493,14 +1488,33 @@ static void osp_format_device(
     int buffersize)
 {
     struct in_addr inp;
+    int size;
+    char tmpbuf[OSP_STRBUF_SIZE];
+    char* tmpptr;
 
     DEBUG("rlm_osp: osp_format_device start");
 
-    if (inet_aton(device, &inp) != 0) {
-        snprintf(buffer, buffersize, "[%s]", device);
-    } else {
-        snprintf(buffer, buffersize, "%s", device);
+    size = sizeof(tmpbuf) - 1;
+    strncpy(tmpbuf, device, size);
+    tmpbuf[size] = '\0';
+
+    if((tmpptr = strchr(tmpbuf, ':')) != NULL) {
+        *tmpptr = '\0';
+        tmpptr++;
     }
+
+    size = buffersize - 1;
+    if (inet_aton(tmpbuf, &inp) != 0) {
+        if (tmpptr != NULL) {
+            snprintf(buffer, size, "[%s]:%s", tmpbuf, tmpptr);
+        } else {
+            snprintf(buffer, size, "[%s]", tmpbuf);
+        }
+    } else {
+        snprintf(buffer, size, "%s", device);
+    }
+    buffer[size] = '\0';
+
     DEBUG("rlm_osp: device = '%s'", buffer);
 
     DEBUG("rlm_osp: osp_format_device success");
