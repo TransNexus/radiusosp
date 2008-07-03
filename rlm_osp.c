@@ -1855,9 +1855,16 @@ static time_t osp_format_time(
     osp_timestr_t format)
 {
     struct tm tmp;
-    time_t value;
+    time_t value = 0;
     char buffer[OSP_STRBUF_SIZE];
-    unsigned int length;
+    char string[OSP_STRBUF_SIZE];
+    int size;
+    char* ptr;
+    char* hms;
+    char* zone;
+    char* month;
+    char* day;
+    char* year;
 
     DEBUG("rlm_osp: osp_format_time start");
 
@@ -1878,18 +1885,42 @@ static time_t osp_format_time(
             /*
              * hh:mm:ss.mmm ZON MMM DD YYYY
              */
-            length = strlen(timestr);
-            if ((length > 12) && (length < sizeof(buffer) - (12 - 8))) {
-                snprintf(buffer, sizeof(buffer), "%s", timestr);
-                snprintf(buffer + 8, sizeof(buffer) - 8, "%s", timestr + 12);
-                strptime(buffer, "%T %Z %b %d %Y", &tmp);
-                value = mktime(&tmp);
+            size = sizeof(string) - 1;
+            strncpy(string, timestr, size);
+            string[size] = '\0';
+
+            if ((hms = strtok_r(string, " ", &ptr)) == NULL) {
+                break;
             } else {
-                value = 0;
+                hms[8] = '\0';
             }
+            if ((zone = strtok_r(NULL, " ", &ptr)) == NULL) {
+                break;
+            }
+            if ((month = strtok_r(NULL, " ", &ptr)) == NULL) {
+                break;
+            }
+            if ((day = strtok_r(NULL, " ", &ptr)) == NULL) {
+                break;
+            }
+            if ((year = strtok_r(NULL, " ", &ptr)) == NULL) {
+                /*
+                 * Time zone may not be there
+                 */
+                zone = "UTC";
+                month = zone;
+                day = month;
+                year = day;
+            }
+
+            size = sizeof(buffer) - 1;
+            snprintf(buffer, size, "%s %s %s %s", hms, month, day, year);
+            buffer[size] = '\0';
+
+            strptime(buffer, "%T %b %d %Y", &tmp);
+            value = mktime(&tmp);
             break;
         case OSP_TIMESTR_MAX:
-            value = 0;
             break;
     }
     DEBUG("rlm_osp: time = '%lu'", value);
