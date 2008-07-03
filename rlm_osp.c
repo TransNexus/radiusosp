@@ -140,8 +140,8 @@ typedef enum osp_release_t {
 /*
  * OSPTK release source
  */
-#define OSP_TK_RELSRC   1
-#define OSP_TK_RELDST   0
+#define OSP_TK_RELSRC   0
+#define OSP_TK_RELDST   1
 
 /*
  * OSP module running parameter structure
