@@ -698,10 +698,10 @@ static int osp_check_mapping(
     DEBUG("rlm_osp: iscallinguri = '%d'", mapping->iscallinguri);
 
     /*
-     * If calling number is undefined, then fail.
+     * If calling number is incorrect, then fail.
      */
-    if (osp_check_mapitem(mapping->calling, OSP_ITEM_MUSTDEF) < 0) {
-        radlog(L_ERR, "rlm_osp: 'callingnumber' must be defined properly.");
+    if (osp_check_mapitem(mapping->calling, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'callingnumber'.");
         return -1;
     }
     DEBUG("rlm_osp: callingnumber = '%s'", mapping->calling);
@@ -1326,14 +1326,16 @@ static int osp_get_usagebase(
     if (osp_check_string(mapping->calling)) {
         radius_xlat(buffer, sizeof(buffer), mapping->calling, request, NULL);
         if (buffer[0] == '\0') {
-            radlog(L_ERR,
+            radlog(L_INFO,
                 "rlm_osp: Failed to parse '%s' in request for calling number.", 
                 mapping->calling);
-            return -1;
+            base->calling[0] = '\0';
         } else if (mapping->iscallinguri) {
             if (osp_get_username(buffer, base->calling, sizeof(base->calling)) < 0) {
-                radlog(L_ERR, "rlm_osp: Failed to get calling number from URI.");
-                return -1;
+                radlog(L_INFO,
+                    "rlm_osp: Failed to get calling number from URI '%s'.",
+                    buffer);
+                base->calling[0] = '\0';
             }
         } else {
             size = sizeof(base->calling) - 1;
@@ -1342,7 +1344,7 @@ static int osp_get_usagebase(
         }
     } else {
         radlog(L_ERR, "rlm_osp: 'callingnumber' mapping undefined.");
-        return -1;
+        base->calling[0] = '\0';
     }
     DEBUG("rlm_osp: Calling Number = '%s'", base->calling);
 
@@ -1358,7 +1360,15 @@ static int osp_get_usagebase(
             return -1;
         } else if (mapping->iscalleduri) {
             if (osp_get_username(buffer, base->called, sizeof(base->called)) < 0) {
-                radlog(L_ERR, "rlm_osp: Failed to get called number from URI.");
+                radlog(L_ERR,
+                    "rlm_osp: Failed to get called number from URI '%s'.",
+                    buffer);
+                return -1;
+            } else if (!osp_check_string(base->called)) {
+                /*
+                 * Called number must be reported
+                 */
+                radlog(L_ERR, "rlm_osp: Empty called number.");
                 return -1;
             }
         } else {
@@ -1524,6 +1534,10 @@ static void osp_format_device(
 /*
  * Get username from uri
  *
+ * SIP-URI = "sip:" [ userinfo ] hostport
+ *           uri-parameters [ headers ]
+ * userinfo = ( user / telephone-subscriber ) [ ":" password ] "@"
+ *
  * param uri Caller/callee URI
  * param buffer Username buffer
  * param buffersize Username buffer size
@@ -1536,36 +1550,35 @@ static int osp_get_username(
 {
     char* start;
     char* end;
+    char* tmp;
     int size;
 
     DEBUG("rlm_osp: osp_get_username start");
 
-    if ((start = strchr(uri, ':')) == NULL) {
-        radlog(L_ERR, "rlm_osp: URI '%s' format incorrect, without ':'.",
+    if ((start = strstr(uri, "sip:")) == NULL) {
+        radlog(L_ERR,
+            "rlm_osp: URI '%s' format incorrect, without 'sip:'.",
             uri);
         return -1;
     } else {
-        start++;
+        start += 4;
     }
 
-    if ((end = strchr(uri, '@')) == NULL) {
-        radlog(L_ERR, "rlm_osp: URI '%s' format incorrect, without '@'.",
-            uri);
-        return -1;
-    }
+    if ((end = strchr(start, '@')) == NULL) {
+        *buffer = '\0';
+    } else {
+        if (((tmp = strchr(start, ':')) != NULL) && (tmp < end )) {
+            end = tmp;
+        }
 
-    if ((size = end - start) <= 0) {
-        radlog(L_ERR, "rlm_osp: URI '%s' format incorrect, '@' before ':'.",
-            uri);
-        return -1;
-    }
+        size = end - start;
+        if (buffersize <= size) {
+            size = buffersize - 1;
+        }
 
-    if (buffersize <= size) {
-        size = buffersize - 1;
+        memcpy(buffer, start, size);
+        buffer[size] = '\0';
     }
-
-    memcpy(buffer, start, size);
-    buffer[size] = '\0';
     DEBUG("rlm_osp: username = '%s'", buffer);
 
     DEBUG("rlm_osp: osp_get_username success");
