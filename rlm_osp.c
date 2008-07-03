@@ -36,38 +36,37 @@ RCSID("$Id$")
 #define OSP_STRBUF_SIZE     256
 #define OSP_LOGBUF_SIZE     1024
 
-#define OSP_DEF_LOGLEVEL    "1"                         /* OSP module default log level, long */
-#define OSP_DEF_HWACCE      "no"                        /* OSP default hardware accelerate flag */
+#define OSP_DEF_LOGLEVEL    "1"                         /* Mapping default log level, long */
+#define OSP_DEF_HWACCE      "no"                        /* Mapping default hardware accelerate flag */
 #define OSP_MAX_SPS         8                           /* OSP max number of service points */
-#define OSP_DEF_SPURI       "http://osptestserver.transnexus.com:1080/osp"
-#define OSP_DEF_SPWEIGHT    "1000"                      /* OSP default service point weight */
+#define OSP_DEF_SPURI       "http://osptestserver.transnexus.com:1080/osp"  /* OSP default service point URI */
+#define OSP_DEF_SPWEIGHT    "1000"                      /* Mapping default service point weight */
 #define OSP_DEF_AUDITURL    "http://localhost:1234"     /* OSP default Audit URL */
 #define OSP_DEF_PRIVATEKEY  "${raddbdir}/pkey.pem"      /* OSP default private key file */
 #define OSP_DEF_LOCALCERT   "${raddbdir}/localcert.pem" /* OSP default localcert file */
 #define OSP_MAX_CAS         4                           /* OSP max number of cacert files */
 #define OSP_DEF_CACERT      "${raddbdir}/cacert_0.pem"  /* OSP default cacert file */
 #define OSP_DEF_VALIDATION  1                           /* OSP default token validation, locally */
-#define OSP_DEF_SSLLIFETIME "300"                       /* OSP default SSL life time in seconds */
-#define OSP_DEF_MAXCONN     "20"                        /* OSP default max number of connections */
+#define OSP_DEF_SSLLIFETIME "300"                       /* Mapping default SSL life time in seconds */
+#define OSP_DEF_MAXCONN     "20"                        /* Mapping default max number of connections */
 #define OSP_MIN_MAXCONN     1                           /* OSP min max number of connections */
 #define OSP_MAX_MAXCONN     1000                        /* OSP max max number of connections */
-#define OSP_DEF_PERSISTENCE "60000"                     /* OSP default HTTP persistence in ms*/
-#define OSP_DEF_RETRYDELAY  "0"                         /* OSP default retry delay */
+#define OSP_DEF_PERSISTENCE "60000"                     /* Mapping default HTTP persistence in ms*/
+#define OSP_DEF_RETRYDELAY  "0"                         /* Mapping default retry delay */
 #define OSP_MIN_RETRYDELAY  0                           /* OSP min retry delay */
 #define OSP_MAX_RETRYDELAY  10                          /* OSP max retry delay */
-#define OSP_DEF_RETRYLIMIT  "2"                         /* OSP default retry times */
+#define OSP_DEF_RETRYLIMIT  "2"                         /* Mapping default retry times */
 #define OSP_MIN_RETRYLIMIT  0                           /* OSP min retry times */
 #define OSP_MAX_RETRYLIMIT  100                         /* OSP max retry times */
-#define OSP_DEF_TIMEOUT     "10000"                     /* OSP default timeout */
+#define OSP_DEF_TIMEOUT     "10000"                     /* Mapping default timeout */
 #define OSP_MIN_TIMEOUT     200                         /* OSP min timeout in ms */
 #define OSP_MAX_TIMEOUT     60000                       /* OSP max timeout in ms */
 #define OSP_DEF_CUSTOMERID  ""                          /* OSP default customer ID */
 #define OSP_DEF_DEVICEID    ""                          /* OSP default device ID */
 #define OSP_DEF_DEVICEIP    "localhost"                 /* OSP default device IP */
-#define OSP_DEF_DEVICEPORT  "5060"                      /* OSP default device port */
+#define OSP_DEF_DEVICEPORT  "5060"                      /* Mapping default device port */
 #define OSP_DEF_USAGETYPE   OSPC_SOURCE                 /* OSP default usage type for RADIUS */
 #define OSP_DEF_DESTCOUNT   0                           /* OSP default destination count, unset */
-#define OSP_DEF_RELEASE     0                           /* OSP default release source, source releases the call */
 #define OSP_DEF_SLOST       0                           /* OSP default lost send packets */
 #define OSP_DEF_SLOSTFRACT  0                           /* OSP default lost send packet fraction */
 #define OSP_DEF_RLOST       0                           /* OSP default lost receive packets */
@@ -85,7 +84,7 @@ RCSID("$Id$")
 #define OSP_MAP_SRCDEV          NULL                        /* Source device */
 #define OSP_MAP_SOURCE          "%{NAS-IP-Address}"         /* Source, RFC 2865 */
 #define OSP_MAP_DESTINATION     NULL                        /* Destination */
-#define OSP_MAP_DESTDEV         NULL                        /* Destination */
+#define OSP_MAP_DESTDEV         NULL                        /* Destination device */
 #define OSP_MAP_DESTCOUNT       NULL                        /* Destination count */
 #define OSP_MAP_TIMEFORMAT      "0"                         /* Time string format, integer string */
 #define OSP_MAP_START           "%{Acct-Session-Start-Time}"/* Call start time, FreeRADIUS internal */
@@ -129,7 +128,23 @@ typedef enum osp_timestr_t {
 } osp_timestr_t;
 
 /*
- * OSP module running parameter structure.
+ * OSP release source
+ */
+typedef enum osp_release_t {
+    OSP_RELEASE_UNDEF = 0,
+    OSP_RELEASE_SRC,
+    OSP_RELEASE_DEST,
+    OSP_RELEASE_MAX
+} osp_release_t;
+
+/*
+ * OSPTK release source
+ */
+#define OSP_TK_RELSRC   1
+#define OSP_TK_RELDST   0
+
+/*
+ * OSP module running parameter structure
  */
 typedef struct osp_running_t {
     int loglevel;
@@ -1730,13 +1745,22 @@ static int osp_get_usageinfo(
             radlog(L_INFO,
                 "rlm_osp: Failed to parse '%s' in request for release source.", 
                 mapping->release);
-            info->release = OSP_DEF_RELEASE;
+            info->release = OSP_TK_RELSRC;
         } else {
-            info->release = atoi(buffer);
+            switch (atoi(buffer)) {
+                case OSP_RELEASE_DEST:
+                    info->release = OSP_TK_RELDST;
+                    break;
+                case OSP_RELEASE_UNDEF:
+                case OSP_RELEASE_SRC:
+                default:
+                    info->release = OSP_TK_RELSRC;
+                    break;
+            }
         }
     } else {
         DEBUG("rlm_osp: 'releasesource' mapping undefined.");
-        info->release = OSP_DEF_RELEASE;
+        info->release = OSP_TK_RELSRC;
     }
     DEBUG("rlm_osp: releasesource = '%d'", info->release);
 
