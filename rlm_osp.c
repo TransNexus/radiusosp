@@ -123,9 +123,43 @@ typedef enum osp_itemlevel_t {
 typedef enum osp_timestr_t {
     OSP_TIMESTR_T = 0,  /* time_t, integer string */
     OSP_TIMESTR_C,      /* ctime, WWW MMM DD HH:MM:SS YYYY */
-    OSP_TIMESTR_NTP,    /* NTP, HH:MM:SS.MMM ZON WWW MMM DD YYYY */
+    OSP_TIMESTR_H,      /* Cisco h323 time, HH:MM:SS.MMM ZON WWW MMM DD YYYY */
     OSP_TIMESTR_MAX     /* Number of time string types */
 } osp_timestr_t;
+
+/*
+ * Time zone strings
+ */
+#define OSP_TZ_UTC  "UTC"   /* Universal Time, Coordinated */
+#define OSP_TZ_GMT  "GMT"   /* Greenwich Mean Time */
+#define OSP_TZ_EST  "EST"   /* Eastern Standard Time */
+#define OSP_TZ_EDT  "EDT"   /* Eastern Daylight Time */
+#define OSP_TZ_CST  "CST"   /* Central Standard Time */
+#define OSP_TZ_CDT  "CDT"   /* Central Daylight Time */
+#define OSP_TZ_MST  "MST"   /* Mountain Standard Time */
+#define OSP_TZ_MDT  "MDT"   /* Mountain Daylight Time */
+#define OSP_TZ_PST  "PST"   /* Pacific Standard Time */
+#define OSP_TZ_PDT  "PDT"   /* Pacific Daylight Time */
+#define OSP_TZ_HST  "HST"   /* Hawaii-Aleutian Standard Time */
+#define OSP_TZ_AKST "AKST"  /* Alaska Standard Time */
+#define OSP_TZ_AKDT "AKDT"  /* Alaska Daylight Time */
+
+/*
+ * Time zone time offset
+ */
+#define OSP_TOFF_UTC  0             /* Universal Time, Coordinated */
+#define OSP_TOFF_GMT  OSP_TOFF_UTC  /* Universal Time, Coordinated */
+#define OSP_TOFF_EST  (-5*60*60)    /* Eastern Standard Time */
+#define OSP_TOFF_EDT  (-4*60*60)    /* Eastern Daylight Time */
+#define OSP_TOFF_CST  (-6*60*60)    /* Central Standard Time */
+#define OSP_TOFF_CDT  (-5*60*60)    /* Central Daylight Time */
+#define OSP_TOFF_MST  (-7*60*60)    /* Mountain Standard Time */
+#define OSP_TOFF_MDT  (-6*60*60)    /* Mountain Daylight Time */
+#define OSP_TOFF_PST  (-8*60*60)    /* Pacific Standard Time */
+#define OSP_TOFF_PDT  (-7*60*60)    /* Pacific Daylight Time */
+#define OSP_TOFF_HST  (-10*60*60)   /* Hawaii-Aleutian Standard Time */
+#define OSP_TOFF_AKST (-9*60*60)    /* Alaska Standard Time */
+#define OSP_TOFF_AKDT (-8*60*60)    /* Alaska Daylight Time */
 
 /*
  * OSP release source
@@ -380,6 +414,7 @@ static void osp_format_device(char* device, char* buffer, int buffersize);
 static int osp_get_username(char* uri, char* buffer, int buffersize);
 static int osp_get_usageinfo(osp_mapping_t* mapping, REQUEST* request, osp_usageinfo_t* info);
 static time_t osp_format_time(char* timestr, osp_timestr_t format);
+static int osp_get_timeoffset(char* tzone, long int* toffset);
 
 /*
  * Do any per-module initialization that is separate to each
@@ -1902,6 +1937,7 @@ static time_t osp_format_time(
     char* month;
     char* day;
     char* year;
+    long int toffset;
 
     DEBUG("rlm_osp: osp_format_time start");
 
@@ -1918,7 +1954,7 @@ static time_t osp_format_time(
             strptime(timestr, "%a %b %d %T %Y", &tmp);
             value = mktime(&tmp);
             break;
-        case OSP_TIMESTR_NTP:
+        case OSP_TIMESTR_H:
             /*
              * hh:mm:ss.mmm ZON MMM DD YYYY
              */
@@ -1927,35 +1963,41 @@ static time_t osp_format_time(
             string[size] = '\0';
 
             if ((hms = strtok_r(string, " ", &ptr)) == NULL) {
+                radlog(L_INFO, "rlm_osp: Failed to parse hms.");
                 break;
             } else {
                 hms[8] = '\0';
             }
             if ((zone = strtok_r(NULL, " ", &ptr)) == NULL) {
+                radlog(L_INFO, "rlm_osp: Failed to parse time zone.");
                 break;
             }
             if ((month = strtok_r(NULL, " ", &ptr)) == NULL) {
+                radlog(L_INFO, "rlm_osp: Failed to parse month.");
                 break;
             }
             if ((day = strtok_r(NULL, " ", &ptr)) == NULL) {
+                radlog(L_INFO, "rlm_osp: Failed to parse day.");
                 break;
             }
             if ((year = strtok_r(NULL, " ", &ptr)) == NULL) {
                 /*
                  * Time zone may not be there
                  */
-                zone = "UTC";
+                zone = NULL;
                 month = zone;
                 day = month;
                 year = day;
             }
+
+            osp_get_timeoffset(zone, &toffset);
 
             size = sizeof(buffer) - 1;
             snprintf(buffer, size, "%s %s %s %s", hms, month, day, year);
             buffer[size] = '\0';
 
             strptime(buffer, "%T %b %d %Y", &tmp);
-            value = mktime(&tmp);
+            value = mktime(&tmp) + toffset;
             break;
         case OSP_TIMESTR_MAX:
             break;
@@ -1965,6 +2007,63 @@ static time_t osp_format_time(
     DEBUG("rlm_osp: osp_format_time success");
 
     return value;
+}
+
+/*
+ * Calculate time offset to GMT beased on time zone in USA
+ * 
+ * param tzone Time zone
+ * param toffset Time offset in seconds
+ * return 0 success, -1 failure
+ */
+static int osp_get_timeoffset(
+    char* tzone,
+    long int* toffset)
+{
+    int ret = 0;
+
+    DEBUG("rlm_osp: osp_get_timeoffset start");
+
+    if (tzone == NULL) {
+        *toffset = OSP_TOFF_UTC;
+    } else if (!strcmp(tzone, OSP_TZ_UTC)) {
+        *toffset = OSP_TOFF_UTC;
+    } else if (!strcmp(tzone, OSP_TZ_GMT)) {
+        *toffset = OSP_TOFF_GMT;
+    } else if (!strcmp(tzone, OSP_TZ_EST)) {
+        *toffset = OSP_TOFF_EST;
+    } else if (!strcmp(tzone, OSP_TZ_EDT)) {
+        *toffset = OSP_TOFF_EDT;
+    } else if (!strcmp(tzone, OSP_TZ_CST)) {
+        *toffset = OSP_TOFF_CST;
+    } else if (!strcmp(tzone, OSP_TZ_CDT)) {
+        *toffset = OSP_TOFF_CDT;
+    } else if (!strcmp(tzone, OSP_TZ_MST)) {
+        *toffset = OSP_TOFF_MST;
+    } else if (!strcmp(tzone, OSP_TZ_MDT)) {
+        *toffset = OSP_TOFF_MDT;
+    } else if (!strcmp(tzone, OSP_TZ_PST)) {
+        *toffset = OSP_TOFF_PST;
+    } else if (!strcmp(tzone, OSP_TZ_PDT)) {
+        *toffset = OSP_TOFF_PDT;
+    } else if (!strcmp(tzone, OSP_TZ_HST)) {
+        *toffset = OSP_TOFF_HST;
+    } else if (!strcmp(tzone, OSP_TZ_AKST)) {
+        *toffset = OSP_TOFF_AKST;
+    } else if (!strcmp(tzone, OSP_TZ_AKDT)) {
+        *toffset = OSP_TOFF_AKDT;
+    } else {
+        radlog(L_INFO,
+            "rlm_osp: Failed to calcaulte time offset for time zone '%s'.",
+            tzone);
+        *toffset = OSP_TOFF_UTC;
+        ret = -1;
+    }
+    DEBUG("rlm_osp: toffset = '%ld'", *toffset);
+
+    DEBUG("rlm_osp: osp_get_timeoffset success");
+
+    return ret;
 }
 
 /*
