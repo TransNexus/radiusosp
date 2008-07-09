@@ -65,7 +65,7 @@ RCSID("$Id$")
 #define OSP_DEF_DEVICEID    ""                          /* OSP default device ID */
 #define OSP_DEF_DEVICEIP    "localhost"                 /* OSP default device IP */
 #define OSP_DEF_DEVICEPORT  "5060"                      /* Mapping default device port */
-#define OSP_DEF_USAGETYPE   OSPC_RADIUSSRC              /* OSP default usage type for RADIUS source */
+#define OSP_DEF_USAGETYPE   OSPC_RADSRC                 /* OSP default usage type for RADIUS source */
 #define OSP_DEF_DESTCOUNT   0                           /* OSP default destination count, unset */
 #define OSP_DEF_SLOST       0                           /* OSP default lost send packets */
 #define OSP_DEF_SLOSTFRACT  0                           /* OSP default lost send packet fraction */
