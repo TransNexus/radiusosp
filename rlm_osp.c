@@ -65,7 +65,7 @@ RCSID("$Id$")
 #define OSP_DEF_DEVICEID    ""                          /* OSP default device ID */
 #define OSP_DEF_DEVICEIP    "localhost"                 /* OSP default device IP */
 #define OSP_DEF_DEVICEPORT  "5060"                      /* Mapping default device port */
-#define OSP_DEF_USAGETYPE   OSPC_RADSRC                 /* OSP default usage type for RADIUS source */
+#define OSP_DEF_USAGETYPE   OSPC_RADSRCSTOP             /* OSP default usage type for RADIUS source */
 #define OSP_DEF_DESTCOUNT   0                           /* OSP default destination count, unset */
 #define OSP_DEF_SLOST       0                           /* OSP default lost send packets */
 #define OSP_DEF_SLOSTFRACT  0                           /* OSP default lost send packet fraction */
@@ -92,6 +92,7 @@ RCSID("$Id$")
 #define OSP_MAP_CONNECT         NULL                        /* Call connect time */
 #define OSP_MAP_END             NULL                        /* Call end time */
 #define OSP_MAP_DURATION        "%{Acct-Session-Time}"      /* Call duration, RFC 2866 */
+#define OSP_MAP_PDDUNIT         "0"                         /* PDD unit, second */
 #define OSP_MAP_PDD             NULL                        /* Post dial delay */
 #define OSP_MAP_RELEASE         NULL                        /* Release source */
 #define OSP_MAP_CAUSE           "%{Acct-Terminate-Cause}"   /* Release cause, RFC 2866 */
@@ -123,7 +124,7 @@ typedef enum osp_itemlevel_t {
 typedef enum osp_timestr_t {
     OSP_TIMESTR_T = 0,  /* time_t, integer string */
     OSP_TIMESTR_C,      /* ctime, WWW MMM DD HH:MM:SS YYYY */
-    OSP_TIMESTR_H,      /* Cisco h323 time, HH:MM:SS.MMM ZON WWW MMM DD YYYY */
+    OSP_TIMESTR_ACME,   /* HH:MM:SS.MMM ZON MMM DD YYYY */
     OSP_TIMESTR_MAX     /* Number of time string types */
 } osp_timestr_t;
 
@@ -162,12 +163,23 @@ typedef enum osp_timestr_t {
 #define OSP_TOFF_AKDT (-8*60*60)    /* Alaska Daylight Time */
 
 /*
+ * Post dial delay unit
+ */
+typedef enum osp_timeunit_t {
+    OSP_TIMEUNIT_S = 0, /* Second */
+    OSP_TIMEUNIT_MS,    /* Millisecond */
+    OSP_TIMEUNIT_MAX
+} osp_timeunit_t;
+
+int OSP_TIMEUNIT_SCALE[OSP_TIMEUNIT_MAX] = { 1, 1000 };
+
+/*
  * OSP release source
  */
 typedef enum osp_release_t {
-    OSP_RELEASE_UNDEF = 0,
-    OSP_RELEASE_SRC,
-    OSP_RELEASE_DEST,
+    OSP_RELEASE_UNDEF = 0,  /* Unknown */
+    OSP_RELEASE_SRC,        /* Source releases the call */
+    OSP_RELEASE_DEST,       /* Destination releases the call */
     OSP_RELEASE_MAX
 } osp_release_t;
 
@@ -228,6 +240,7 @@ typedef struct osp_mapping_t {
     char* connect;      /* Call connect time */
     char* end;          /* Call end time */
     char* duration;     /* Call duration */
+    int pddunit;        /* Post dial delay unit */
     char* pdd;          /* Post dial delay */
     char* release;      /* Release source */
     char* cause;        /* Release cause */
@@ -367,6 +380,7 @@ static const CONF_PARSER mapping_config[] = {
     { "connecttime", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.connect), NULL, OSP_MAP_CONNECT },
     { "endtime", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.end), NULL, OSP_MAP_END },
     { "duration", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.duration), NULL, OSP_MAP_DURATION },
+    { "postdialdelayunit", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.pddunit), NULL, OSP_MAP_PDDUNIT },
     { "postdialdelay", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.pdd), NULL, OSP_MAP_PDD },
     { "releasesource", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.release), NULL, OSP_MAP_RELEASE },
     { "releasecause", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.cause), NULL, OSP_MAP_CAUSE },
@@ -414,7 +428,8 @@ static void osp_format_device(char* device, char* buffer, int buffersize);
 static int osp_get_username(char* uri, char* buffer, int buffersize);
 static int osp_get_usageinfo(osp_mapping_t* mapping, REQUEST* request, osp_usageinfo_t* info);
 static time_t osp_format_time(char* timestr, osp_timestr_t format);
-static int osp_get_timeoffset(char* tzone, long int* toffset);
+static int osp_cal_timeoffset(char* tzone, long int* toffset);
+static void osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
 
 /*
  * Do any per-module initialization that is separate to each
@@ -873,6 +888,19 @@ static int osp_check_mapping(
         return -1;
     }
     DEBUG("rlm_osp: duration = '%s'", mapping->duration);
+
+    /*
+     * If pdd unit is wrong, then fail.
+     */
+    if ((mapping->pddunit < OSP_TIMEUNIT_S) || (mapping->pddunit >= OSP_TIMEUNIT_MAX)) {
+        radlog(L_ERR,
+            "rlm_osp: 'postdialdelayunit' must be an integer from '%d' to '%d', not '%d'.",
+            OSP_TIMEUNIT_S,
+            OSP_TIMEUNIT_MAX - 1,
+            mapping->pddunit);
+        return -1;
+    }
+    DEBUG("rlm_osp: postdialdelayunit = '%d'", mapping->pddunit);
 
     /*
      * If pdd is incorrect, then fail.
@@ -1768,6 +1796,7 @@ static int osp_get_usageinfo(
         info->ispddpresent = 0;
         info->pdd = 0;
     }
+    info->pdd /= OSP_TIMEUNIT_SCALE[mapping->pddunit];
     DEBUG("rlm_osp: ispddpresent = '%d'", info->ispddpresent);
     DEBUG("rlm_osp: postdialdelay = '%d'", info->pdd);
 
@@ -1926,87 +1955,60 @@ static time_t osp_format_time(
     char* timestr,
     osp_timestr_t format)
 {
-    struct tm tmp;
-    time_t value = 0;
+    struct tm dt;
     char buffer[OSP_STRBUF_SIZE];
-    char string[OSP_STRBUF_SIZE];
     int size;
-    char* ptr;
-    char* hms;
-    char* zone;
-    char* month;
-    char* day;
-    char* year;
+    char* tzone;
     long int toffset;
+    time_t tvalue = 0;
 
     DEBUG("rlm_osp: osp_format_time start");
 
-    memset(&tmp, 0, sizeof(tmp));
-
     switch (format) {
         case OSP_TIMESTR_T:
-            value = atol(timestr);
+            tvalue = atol(timestr);
             break;
         case OSP_TIMESTR_C:
             /*
-             * WWW MMM DD hh:mm:ss YYYY
+             * WWW MMM DD hh:mm:ss YYYY, assume UTC
              */
-            strptime(timestr, "%a %b %d %T %Y", &tmp);
-            value = mktime(&tmp);
+            strptime(timestr, "%a %b %d %T %Y", &dt);
+
+            tzone = NULL;
+            osp_cal_timeoffset(tzone, &toffset);
+
+            osp_cal_elapsed(&dt, toffset, &tvalue);
             break;
-        case OSP_TIMESTR_H:
+        case OSP_TIMESTR_ACME:
             /*
-             * hh:mm:ss.mmm ZON MMM DD YYYY
+             * hh:mm:ss.kkk ZON MMM DD YYYY
              */
-            size = sizeof(string) - 1;
-            strncpy(string, timestr, size);
-            string[size] = '\0';
-
-            if ((hms = strtok_r(string, " ", &ptr)) == NULL) {
-                radlog(L_INFO, "rlm_osp: Failed to parse hms.");
-                break;
-            } else {
-                hms[8] = '\0';
-            }
-            if ((zone = strtok_r(NULL, " ", &ptr)) == NULL) {
-                radlog(L_INFO, "rlm_osp: Failed to parse time zone.");
-                break;
-            }
-            if ((month = strtok_r(NULL, " ", &ptr)) == NULL) {
-                radlog(L_INFO, "rlm_osp: Failed to parse month.");
-                break;
-            }
-            if ((day = strtok_r(NULL, " ", &ptr)) == NULL) {
-                radlog(L_INFO, "rlm_osp: Failed to parse day.");
-                break;
-            }
-            if ((year = strtok_r(NULL, " ", &ptr)) == NULL) {
-                /*
-                 * Time zone may not be there
-                 */
-                zone = NULL;
-                month = zone;
-                day = month;
-                year = day;
-            }
-
-            osp_get_timeoffset(zone, &toffset);
-
             size = sizeof(buffer) - 1;
-            snprintf(buffer, size, "%s %s %s %s", hms, month, day, year);
+            snprintf(buffer, size, "%s", timestr);
             buffer[size] = '\0';
 
-            strptime(buffer, "%T %b %d %Y", &tmp);
-            value = mktime(&tmp) + toffset;
+            size = sizeof(buffer) - 1 - 8;
+            snprintf(buffer + 8, size, "%s", timestr + 16);
+            buffer[size + 8] = '\0';
+
+            strptime(buffer, "%T %b %d %Y", &dt);
+
+            size = sizeof(buffer) - 1;
+            snprintf(buffer, size, "%s", timestr + 13);
+            buffer[3] = '\0';
+
+            osp_cal_timeoffset(buffer, &toffset);
+
+            osp_cal_elapsed(&dt, toffset, &tvalue);
             break;
         case OSP_TIMESTR_MAX:
             break;
     }
-    DEBUG("rlm_osp: time = '%lu'", value);
+    DEBUG("rlm_osp: time = '%lu'", tvalue);
 
     DEBUG("rlm_osp: osp_format_time success");
 
-    return value;
+    return tvalue;
 }
 
 /*
@@ -2016,7 +2018,7 @@ static time_t osp_format_time(
  * param toffset Time offset in seconds
  * return 0 success, -1 failure
  */
-static int osp_get_timeoffset(
+static int osp_cal_timeoffset(
     char* tzone,
     long int* toffset)
 {
@@ -2024,7 +2026,7 @@ static int osp_get_timeoffset(
 
     DEBUG("rlm_osp: osp_get_timeoffset start");
 
-    if (tzone == NULL) {
+    if (!osp_check_string(tzone)) {
         *toffset = OSP_TOFF_UTC;
     } else if (!strcmp(tzone, OSP_TZ_UTC)) {
         *toffset = OSP_TOFF_UTC;
@@ -2064,6 +2066,33 @@ static int osp_get_timeoffset(
     DEBUG("rlm_osp: osp_get_timeoffset success");
 
     return ret;
+}
+
+/*
+ * Calculate seconds elapsed
+ * 
+ * param dt Breaken down time
+ * param toffset Time offset in seconds
+ * param elapsed Seconds elapsed
+ */
+static void osp_cal_elapsed(
+    struct tm* dt,
+    long int toffset,
+    time_t* elapsed)
+{
+    int DaysAtMonth[] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
+    time_t days;
+
+    dt->tm_year += 1900;
+    days = (dt->tm_year * 365) + (dt->tm_year / 4) - (dt->tm_year / 100) + (dt->tm_year / 400) + DaysAtMonth[dt->tm_mon] + dt->tm_mday;
+    if ((((dt->tm_year % 4) == 0) && (!((dt->tm_year % 100) == 0) || ((dt->tm_year % 400) == 0))) &&
+        (dt->tm_mon < 2))
+    {
+        days--;
+    }
+    days -= 719528;
+
+    *elapsed = ((days * 86400) + (dt->tm_hour * 3600) + (dt->tm_min * 60) + dt->tm_sec - toffset);
 }
 
 /*
