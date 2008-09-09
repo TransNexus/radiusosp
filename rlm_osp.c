@@ -124,7 +124,7 @@ typedef enum osp_itemlevel_t {
 typedef enum osp_timestr_t {
     OSP_TIMESTR_T = 0,  /* time_t, integer string */
     OSP_TIMESTR_C,      /* ctime, WWW MMM DD HH:MM:SS YYYY */
-    OSP_TIMESTR_ACME,   /* HH:MM:SS.MMM ZON MMM DD YYYY */
+    OSP_TIMESTR_ACME,   /* ACME, HH:MM:SS.MMM ZON MMM DD YYYY */
     OSP_TIMESTR_MAX     /* Number of time string types */
 } osp_timestr_t;
 
@@ -429,7 +429,7 @@ static int osp_get_username(char* uri, char* buffer, int buffersize);
 static int osp_get_usageinfo(osp_mapping_t* mapping, REQUEST* request, osp_usageinfo_t* info);
 static time_t osp_format_time(char* timestr, osp_timestr_t format);
 static int osp_cal_timeoffset(char* tzone, long int* toffset);
-static void osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
+static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
 
 /*
  * Do any per-module initialization that is separate to each
@@ -2074,14 +2074,23 @@ static int osp_cal_timeoffset(
  * param dt Breaken down time
  * param toffset Time offset in seconds
  * param elapsed Seconds elapsed
- */
-static void osp_cal_elapsed(
+ * return 0 success, -1 failure
+
+static int osp_cal_elapsed(
     struct tm* dt,
     long int toffset,
     time_t* elapsed)
 {
     int DaysAtMonth[] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
     time_t days;
+
+    DEBUG("rlm_osp: osp_cal_elapsed start");
+
+    if ((dt->tm_mon < 0) || (dt->tm_mon > 11)) {
+        radlog(L_ERR, "rlm_osp: Failed to calculate elapsed seconds.");
+        *elapsed = 0;
+        return -1;
+    }
 
     dt->tm_year += 1900;
     days = (dt->tm_year * 365) + (dt->tm_year / 4) - (dt->tm_year / 100) + (dt->tm_year / 400) + DaysAtMonth[dt->tm_mon] + dt->tm_mday;
@@ -2093,6 +2102,8 @@ static void osp_cal_elapsed(
     days -= 719528;
 
     *elapsed = ((days * 86400) + (dt->tm_hour * 3600) + (dt->tm_min * 60) + dt->tm_sec - toffset);
+
+    DEBUG("rlm_osp: osp_cal_elapsed success");
 }
 
 /*
