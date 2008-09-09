@@ -2075,7 +2075,7 @@ static int osp_cal_timeoffset(
  * param toffset Time offset in seconds
  * param elapsed Seconds elapsed
  * return 0 success, -1 failure
-
+ */
 static int osp_cal_elapsed(
     struct tm* dt,
     long int toffset,
@@ -2104,6 +2104,8 @@ static int osp_cal_elapsed(
     *elapsed = ((days * 86400) + (dt->tm_hour * 3600) + (dt->tm_min * 60) + dt->tm_sec - toffset);
 
     DEBUG("rlm_osp: osp_cal_elapsed success");
+
+    return 0;
 }
 
 /*
