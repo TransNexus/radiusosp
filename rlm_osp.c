@@ -1455,7 +1455,7 @@ static int osp_get_usagebase(
     char buffer[OSP_STRBUF_SIZE];
     osp_provider_t* provider = &data->provider;
     osp_mapping_t* mapping = &data->mapping;
-    struct in_addr ip = { provider->deviceip };
+    struct in_addr ip;
 
     DEBUG("rlm_osp: osp_get_usagebase start");
 
@@ -1597,6 +1597,7 @@ static int osp_get_usagebase(
             radlog(L_INFO, 
                 "rlm_osp: Failed to parse '%s' in request for source address.", 
                 mapping->source);
+            ip.s_addr = provider->deviceip;
             inet_ntop(AF_INET, &ip, buffer, sizeof(buffer));
             osp_format_device(buffer, base->source, sizeof(base->source));
         } else {
@@ -1604,6 +1605,7 @@ static int osp_get_usagebase(
         }
     } else {
         DEBUG("rlm_osp: 'source' mapping undefined.");
+        ip.s_addr = provider->deviceip;
         inet_ntop(AF_INET, &ip, buffer, sizeof(buffer));
         osp_format_device(buffer, base->source, sizeof(base->source));
     }
