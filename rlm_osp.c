@@ -266,13 +266,14 @@ typedef struct {
 typedef struct {
     OSPTUINT64 transid;                 /* Transaction ID */
     char callid[OSP_STRBUF_SIZE];       /* Call-ID */
+    char calling[OSP_STRBUF_SIZE];      /* Calling number */
+    char called[OSP_STRBUF_SIZE];       /* Called number */
     char srcdev[OSP_STRBUF_SIZE];       /* Source device */
     char source[OSP_STRBUF_SIZE];       /* Source */
     char destination[OSP_STRBUF_SIZE];  /* Destination */
     char destdev[OSP_STRBUF_SIZE];      /* Destination device */
     int destcount;                      /* Destination count */
-    char calling[OSP_STRBUF_SIZE];      /* Calling number */
-    char called[OSP_STRBUF_SIZE];       /* Called number */
+    int cause;                          /* Release code */
 } osp_usagebase_t;
 
 /*
@@ -287,7 +288,6 @@ typedef struct {
     int ispddpresent;               /* Is PDD Info present */
     int pdd;                        /* Post Dial Delay */
     int release;                    /* EP that released the call */
-    int cause;                      /* Release code */
     char confid[OSP_STRBUF_SIZE];   /* Conference ID */
     int slost;                      /* Packets not received by peer */
     int slostfract;                 /* Fraction of packets not received by peer */
@@ -423,6 +423,7 @@ static int osp_check_provider(osp_provider_t* provider);
 static int osp_check_mapping(osp_mapping_t* mapping);
 static int osp_check_mapitem(char* item, osp_itemlevel_t level);
 static int osp_create_provider(osp_provider_t* provider);
+static int osp_get_termcause(rlm_osp_t* data, REQUEST* request, int* cause);
 static int osp_get_usagebase(rlm_osp_t* data, REQUEST* request, osp_usagebase_t* base);
 static void osp_format_device(char* device, char* buffer, int buffersize);
 static int osp_get_username(char* uri, char* buffer, int buffersize);
@@ -542,12 +543,12 @@ static int osp_check_running(
      * Check log level
      */
     switch (running->loglevel) {
-        case OSP_LOG_SHORT:
-        case OSP_LOG_LONG:
-            break;
-        default:
-            running->loglevel = OSP_LOG_LONG;
-            break;
+    case OSP_LOG_SHORT:
+    case OSP_LOG_LONG:
+        break;
+    default:
+        running->loglevel = OSP_LOG_LONG;
+        break;
     }
     DEBUG("rlm_osp: loglevel = '%d'", running->loglevel);
 
@@ -1288,6 +1289,7 @@ static int osp_accounting(
     osp_running_t* running = &data->running;
     osp_provider_t* provider = &data->provider;
     OSPTTRANHANDLE transaction;
+    int cause;
     osp_usagebase_t base;
     osp_usageinfo_t info;
     char buffer[OSP_LOGBUF_SIZE];
@@ -1296,54 +1298,112 @@ static int osp_accounting(
 
     DEBUG("rlm_osp: osp_accounting start");
 
-    if (((vp = pairfind(request->packet->vps, PW_ACCT_STATUS_TYPE)) == NULL) ||
-        (vp->vp_integer != PW_STATUS_STOP))
-    {
-        DEBUG("rlm_osp: Nothing to do for requests other than Stop.");
+    if ((vp = pairfind(request->packet->vps, PW_ACCT_STATUS_TYPE)) == NULL) {
+        DEBUG("rlm_osp: Failed to get accounting status type.");
         return RLM_MODULE_NOOP;
     }
 
-    /*
-     * Get usage base information
-     */
-    if (osp_get_usagebase(data, request, &base) < 0) {
-        switch (running->loglevel) {
+    switch (vp->vp_integer) {
+    case PW_STATUS_STOP:
+        /*
+         * Get release cause
+         */
+        if (osp_get_termcause(data, request, &cause) < 0) {
+            /*
+             * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
+             */
+            return RLM_MODULE_NOOP;
+        }
+
+        /*
+         * Get usage base information
+         */
+        if (osp_get_usagebase(data, request, &base) < 0) {
+            switch (running->loglevel) {
             case OSP_LOG_SHORT:
                 radlog(L_INFO, "rlm_osp: Failed to get usage base info.");
                 break;
             case OSP_LOG_LONG:
+            default:
                 radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
                 /* Do not have to check string NULL */
                 radlog(L_INFO,
                     "rlm_osp: Failed to get usage base info from '%s'.",
                     buffer);
                 break;
+            }
+            /*
+             * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
+             */
+            return RLM_MODULE_NOOP;
         }
-        /*
-         * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
-         */
-        return RLM_MODULE_NOOP;
-    }
 
-    /*
-     * Get usage info
-     */
-    if (osp_get_usageinfo(&data->mapping, request, &info) < 0) {
-        switch (running->loglevel) {
+        /*
+         * Get usage info
+         */
+        if (osp_get_usageinfo(&data->mapping, request, &info) < 0) {
+            switch (running->loglevel) {
             case OSP_LOG_SHORT:
                 radlog(L_INFO, "rlm_osp: Failed to get usage info.");
                 break;
             case OSP_LOG_LONG:
+            default:
                 radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
                 /* Do not have to check string NULL */
                 radlog(L_INFO,
                     "rlm_osp: Failed to get usage info from '%s'.",
                     buffer);
                 break;
+            }
+            /*
+             * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
+             */
+            return RLM_MODULE_NOOP;
         }
+
+        break;
+    case PW_STATUS_ALIVE: /* Interim-Update */
         /*
-         * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
+         * Get release cause
          */
+        if (osp_get_termcause(data, request, &cause) < 0) {
+            /*
+             * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
+             */
+            return RLM_MODULE_NOOP;
+        }
+
+        /*
+         * Get usage base information
+         */
+        if (osp_get_usagebase(data, request, &base) < 0) {
+            switch (running->loglevel) {
+            case OSP_LOG_SHORT:
+                radlog(L_INFO, "rlm_osp: Failed to get usage base info.");
+                break;
+            case OSP_LOG_LONG:
+            default:
+                radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
+                /* Do not have to check string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to get usage base info from '%s'.",
+                    buffer);
+                break;
+            }
+            /*
+             * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
+             */
+            return RLM_MODULE_NOOP;
+        }
+
+        /*
+         * Clear usage info. Failing destination without these info. 
+         */
+        memset(&info, 0, sizeof(info));
+
+        break;
+    default:
+        DEBUG("rlm_osp: Nothing to do for requests other than Stop and Interim-Update.");
         return RLM_MODULE_NOOP;
     }
 
@@ -1391,7 +1451,7 @@ static int osp_accounting(
      */
     OSPPTransactionRecordFailure(
         transaction,    /* Transaction handle */
-        info.cause);    /* Release reason */
+        cause);         /* Release reason */
 
     /*
      * Send OSP UsageInd message to OSP server
@@ -1436,6 +1496,49 @@ static int osp_accounting(
         DEBUG("rlm_osp: osp_accounting success");
         return RLM_MODULE_OK;
     }
+}
+
+/*
+ * Get termination cause from accounting request
+ *
+ * param data Instance data
+ * param request Accounting request
+ * param cause Termination cause
+ * return 0 success, -1 failure
+ */
+static int osp_get_termcause(
+    rlm_osp_t* data,
+    REQUEST* request,
+    int* cause)
+{
+    char buffer[OSP_STRBUF_SIZE];
+    osp_mapping_t* mapping = &data->mapping;
+
+    DEBUG("rlm_osp: osp_get_termcause start");
+
+    /*
+     * Get release cause
+     */
+    if (osp_check_string(mapping->cause)) {
+        radius_xlat(buffer, sizeof(buffer), mapping->cause, request, NULL);
+        if (buffer[0] == '\0') {
+            /* Has checked string NULL */
+            radlog(L_ERR,
+                "rlm_osp: Failed to parse '%s' in request for release cause.",
+                mapping->cause);
+            return -1;
+        } else {
+            *cause = atoi(buffer);
+        }
+    } else {
+        radlog(L_ERR, "rlm_osp: 'releasecause' mapping undefined.");
+        return -1;
+    }
+    DEBUG("rlm_osp: releasecause = '%d'", *cause);
+
+    DEBUG("rlm_osp: osp_get_termcause success");
+
+    return 0;
 }
 
 /*
@@ -1940,14 +2043,14 @@ static int osp_get_usageinfo(
             info->release = OSP_TK_RELSRC;
         } else {
             switch (atoi(buffer)) {
-                case OSP_RELEASE_DEST:
-                    info->release = OSP_TK_RELDST;
-                    break;
-                case OSP_RELEASE_UNDEF:
-                case OSP_RELEASE_SRC:
-                default:
-                    info->release = OSP_TK_RELSRC;
-                    break;
+            case OSP_RELEASE_DEST:
+                info->release = OSP_TK_RELDST;
+                break;
+            case OSP_RELEASE_UNDEF:
+            case OSP_RELEASE_SRC:
+            default:
+                info->release = OSP_TK_RELSRC;
+                break;
             }
         }
     } else {
@@ -1955,26 +2058,6 @@ static int osp_get_usageinfo(
         info->release = OSP_TK_RELSRC;
     }
     DEBUG("rlm_osp: releasesource = '%d'", info->release);
-
-    /*
-     * Get release cause
-     */
-    if (osp_check_string(mapping->cause)) {
-        radius_xlat(buffer, sizeof(buffer), mapping->cause, request, NULL);
-        if (buffer[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_ERR,
-                "rlm_osp: Failed to parse '%s' in request for release cause.", 
-                mapping->cause);
-            return -1;
-        } else {
-            info->cause = atoi(buffer);
-        }
-    } else {
-        radlog(L_ERR, "rlm_osp: 'releasecause' mapping undefined.");
-        return -1;
-    }
-    DEBUG("rlm_osp: releasecause = '%d'", info->cause);
 
     /*
      * Get conference ID
@@ -2100,44 +2183,45 @@ static time_t osp_format_time(
     DEBUG("rlm_osp: osp_format_time start");
 
     switch (format) {
-        case OSP_TIMESTR_T:
-            tvalue = atol(timestr);
-            break;
-        case OSP_TIMESTR_C:
-            /*
-             * WWW MMM DD hh:mm:ss YYYY, assume UTC
-             */
-            strptime(timestr, "%a %b %d %T %Y", &dt);
+    case OSP_TIMESTR_T:
+        tvalue = atol(timestr);
+        break;
+    case OSP_TIMESTR_C:
+        /*
+        * WWW MMM DD hh:mm:ss YYYY, assume UTC
+        */
+        strptime(timestr, "%a %b %d %T %Y", &dt);
 
-            tzone = NULL;
-            osp_cal_timeoffset(tzone, &toffset);
+        tzone = NULL;
+        osp_cal_timeoffset(tzone, &toffset);
 
-            osp_cal_elapsed(&dt, toffset, &tvalue);
-            break;
-        case OSP_TIMESTR_ACME:
-            /*
-             * hh:mm:ss.kkk ZON MMM DD YYYY
-             */
-            size = sizeof(buffer) - 1;
-            snprintf(buffer, size, "%s", timestr);
-            buffer[size] = '\0';
+        osp_cal_elapsed(&dt, toffset, &tvalue);
+        break;
+    case OSP_TIMESTR_ACME:
+        /*
+        * hh:mm:ss.kkk ZON MMM DD YYYY
+        */
+        size = sizeof(buffer) - 1;
+        snprintf(buffer, size, "%s", timestr);
+        buffer[size] = '\0';
 
-            size = sizeof(buffer) - 1 - 8;
-            snprintf(buffer + 8, size, "%s", timestr + 16);
-            buffer[size + 8] = '\0';
+        size = sizeof(buffer) - 1 - 8;
+        snprintf(buffer + 8, size, "%s", timestr + 16);
+        buffer[size + 8] = '\0';
 
-            strptime(buffer, "%T %b %d %Y", &dt);
+        strptime(buffer, "%T %b %d %Y", &dt);
 
-            size = sizeof(buffer) - 1;
-            snprintf(buffer, size, "%s", timestr + 13);
-            buffer[3] = '\0';
+        size = sizeof(buffer) - 1;
+        snprintf(buffer, size, "%s", timestr + 13);
+        buffer[3] = '\0';
 
-            osp_cal_timeoffset(buffer, &toffset);
+        osp_cal_timeoffset(buffer, &toffset);
 
-            osp_cal_elapsed(&dt, toffset, &tvalue);
-            break;
-        case OSP_TIMESTR_MAX:
-            break;
+        osp_cal_elapsed(&dt, toffset, &tvalue);
+        break;
+    case OSP_TIMESTR_MAX:
+    default:
+        break;
     }
     DEBUG("rlm_osp: time = '%lu'", tvalue);
 
