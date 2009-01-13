@@ -67,10 +67,10 @@ RCSID("$Id$")
 #define OSP_DEF_DEVICEPORT  "5060"                      /* Mapping default device port */
 #define OSP_DEF_USAGETYPE   OSPC_ROLE_RADSRCSTOP        /* OSP default usage type for RADIUS source */
 #define OSP_DEF_DESTCOUNT   0                           /* OSP default destination count, unset */
-#define OSP_DEF_SLOST       0                           /* OSP default lost send packets */
-#define OSP_DEF_SLOSTFRACT  0                           /* OSP default lost send packet fraction */
-#define OSP_DEF_RLOST       0                           /* OSP default lost receive packets */
-#define OSP_DEF_RLOSTFRACT  0                           /* OSP default lost receive packet fraction */
+#define OSP_DEF_SLOST       -1                          /* OSP default lost send packets */
+#define OSP_DEF_SLOSTFRACT  -1                          /* OSP default lost send packet fraction */
+#define OSP_DEF_RLOST       -1                          /* OSP default lost receive packets */
+#define OSP_DEF_RLOSTFRACT  -1                          /* OSP default lost receive packet fraction */
 
 /*
  * Default RADIUS OSP mapping
@@ -98,9 +98,9 @@ RCSID("$Id$")
 #define OSP_MAP_CAUSE           "%{Acct-Terminate-Cause}"   /* Release cause, RFC 2866 */
 #define OSP_MAP_CONFID          NULL                        /* Conference ID */
 #define OSP_MAP_SLOST           NULL                        /* Lost send packets */
-#define OSP_MAP_SLOSTFRAC       NULL                        /* Lost send packet fraction */
+#define OSP_MAP_SLOSTFRACT      NULL                        /* Lost send packet fraction */
 #define OSP_MAP_RLOST           NULL                        /* Lost receive packets */
-#define OSP_MAP_RLOSTFRAC       NULL                        /* Lost receive packet fraction */
+#define OSP_MAP_RLOSTFRACT      NULL                        /* Lost receive packet fraction */
 
 /*
  * OSP log level
@@ -386,9 +386,9 @@ static const CONF_PARSER mapping_config[] = {
     { "releasecause", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.cause), NULL, OSP_MAP_CAUSE },
     { "confid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.confid), NULL, OSP_MAP_CONFID },
     { "sendlost", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.slost), NULL, OSP_MAP_SLOST },
-    { "sendlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.slostfract), NULL, OSP_MAP_SLOSTFRAC },
+    { "sendlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.slostfract), NULL, OSP_MAP_SLOSTFRACT },
     { "receivelost", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.rlost), NULL, OSP_MAP_RLOST },
-    { "receivelostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.rlostfract), NULL, OSP_MAP_RLOSTFRAC },
+    { "receivelostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.rlostfract), NULL, OSP_MAP_RLOSTFRACT },
     /*
      * End
      */
@@ -427,6 +427,7 @@ static int osp_get_termcause(rlm_osp_t* data, REQUEST* request, int* cause);
 static int osp_get_usagebase(rlm_osp_t* data, REQUEST* request, osp_usagebase_t* base);
 static void osp_format_device(char* device, char* buffer, int buffersize);
 static int osp_get_username(char* uri, char* buffer, int buffersize);
+static void osp_clean_usageinfo(osp_usageinfo_t* info);
 static int osp_get_usageinfo(osp_mapping_t* mapping, REQUEST* request, osp_usageinfo_t* info);
 static time_t osp_format_time(char* timestr, osp_timestr_t format);
 static int osp_cal_timeoffset(char* tzone, long int* toffset);
@@ -1399,7 +1400,7 @@ static int osp_accounting(
         /*
          * Clear usage info. Failing destination without these info. 
          */
-        memset(&info, 0, sizeof(info));
+        osp_clean_usageinfo(&info);
 
         break;
     default:
@@ -1886,6 +1887,30 @@ static int osp_get_username(
     DEBUG("rlm_osp: osp_get_username success");
 
     return 0;
+}
+
+/*
+ * Clean usage info data
+ *
+ * param info OSP usage information
+ * return
+ */
+static void osp_clean_usageinfo(
+    osp_usageinfo_t* info)
+{
+    info->start = 0;
+    info->alert = 0;
+    info->connect = 0;
+    info->end = 0;
+    info->duration = 0;
+    info->ispddpresent = 0;
+    info->pdd = 0;
+    info->release = 0;
+    info->confid[0] = '\0';
+    info->slost = OSP_DEF_SLOST;
+    info->slostfract = OSP_DEF_SLOSTFRACT;
+    info->rlost = OSP_DEF_RLOST;
+    info->rlostfract = OSP_DEF_RLOSTFRACT;
 }
 
 /*
