@@ -65,7 +65,6 @@ RCSID("$Id$")
 #define OSP_DEF_DEVICEID    ""                          /* OSP default device ID */
 #define OSP_DEF_DEVICEIP    "localhost"                 /* OSP default device IP */
 #define OSP_DEF_DEVICEPORT  "5060"                      /* Mapping default device port */
-#define OSP_DEF_USAGETYPE   OSPC_ROLE_RADSRCSTOP        /* OSP default usage type for RADIUS source */
 #define OSP_DEF_DESTCOUNT   0                           /* OSP default destination count, unset */
 #define OSP_DEF_SLOST       -1                          /* OSP default lost send packets */
 #define OSP_DEF_SLOSTFRACT  -1                          /* OSP default lost send packet fraction */
@@ -427,8 +426,7 @@ static int osp_get_termcause(rlm_osp_t* data, REQUEST* request, int* cause);
 static int osp_get_usagebase(rlm_osp_t* data, REQUEST* request, osp_usagebase_t* base);
 static void osp_format_device(char* device, char* buffer, int buffersize);
 static int osp_get_username(char* uri, char* buffer, int buffersize);
-static void osp_clean_usageinfo(osp_usageinfo_t* info);
-static int osp_get_usageinfo(osp_mapping_t* mapping, REQUEST* request, osp_usageinfo_t* info);
+static int osp_get_usageinfo(osp_mapping_t* mapping, REQUEST* request, int usagetype, osp_usageinfo_t* info);
 static time_t osp_format_time(char* timestr, osp_timestr_t format);
 static int osp_cal_timeoffset(char* tzone, long int* toffset);
 static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
@@ -527,7 +525,7 @@ static int osp_check_string(
     char* string)
 {
     return ((string != NULL) && (*string != '\0'));
-}   
+}
 
 /*
  * Check OSP module running parameters.
@@ -649,7 +647,7 @@ static int osp_check_provider(
         return -1;
     }
     DEBUG("rlm_osp: cas = '%d'", provider->cas);
-       
+
     for (i = 0; i < provider->cas; i++) {
         /* Has checked string NULL */
         DEBUG("rlm_osp: cacert%d = '%s'", i, provider->cacerts[i]);
@@ -1099,7 +1097,7 @@ static int osp_check_mapitem (
     }
 
     if (*item != '%') {
-        radlog(L_ERR, 
+        radlog(L_ERR,
             "rlm_osp: Failed to check mapping item '%s'.",
             item);
         return -1;
@@ -1108,16 +1106,16 @@ static int osp_check_mapitem (
     last = strlen(item) - 1;
 
     if ((item[1] != '{') && (last != 1)) {
-        radlog(L_ERR, 
+        radlog(L_ERR,
             "rlm_osp: Failed to check mapping item '%s'.",
             item);
         return -1;
     }
 
-    if (((item[1] == '{') && (item[last] != '}')) || 
+    if (((item[1] == '{') && (item[last] != '}')) ||
         ((item[1] != '{') && (item[last] == '}')))
     {
-        radlog(L_ERR, 
+        radlog(L_ERR,
             "rlm_osp: Failed to check mapping item '%s'.",
             item);
         return -1;
@@ -1140,9 +1138,9 @@ static int osp_create_provider(
     int i, j, error, result;
     unsigned long spweights[OSP_MAX_SPS];
     OSPTPRIVATEKEY privatekey;
-    OSPTCERT localcert;
-    OSPTCERT cacerts[OSP_MAX_CAS];
-    const OSPTCERT* pcacerts[OSP_MAX_CAS];
+    OSPT_CERT localcert;
+    OSPT_CERT cacerts[OSP_MAX_CAS];
+    const OSPT_CERT* pcacerts[OSP_MAX_CAS];
 
     DEBUG("rlm_osp: osp_create_provider start");
 
@@ -1295,6 +1293,7 @@ static int osp_accounting(
     osp_usageinfo_t info;
     char buffer[OSP_LOGBUF_SIZE];
     const int MAX_RETRIES = 5;
+    OSPE_ROLE role;
     int i, error;
 
     DEBUG("rlm_osp: osp_accounting start");
@@ -1305,6 +1304,15 @@ static int osp_accounting(
     }
 
     switch (vp->vp_integer) {
+    case PW_STATUS_START:
+        /*
+         * Get release cause
+         */
+        cause = 0;
+
+        role = OSPC_ROLE_RADSRCSTART;
+
+        break;
     case PW_STATUS_STOP:
         /*
          * Get release cause
@@ -1316,51 +1324,7 @@ static int osp_accounting(
             return RLM_MODULE_NOOP;
         }
 
-        /*
-         * Get usage base information
-         */
-        if (osp_get_usagebase(data, request, &base) < 0) {
-            switch (running->loglevel) {
-            case OSP_LOG_SHORT:
-                radlog(L_INFO, "rlm_osp: Failed to get usage base info.");
-                break;
-            case OSP_LOG_LONG:
-            default:
-                radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
-                /* Do not have to check string NULL */
-                radlog(L_INFO,
-                    "rlm_osp: Failed to get usage base info from '%s'.",
-                    buffer);
-                break;
-            }
-            /*
-             * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
-             */
-            return RLM_MODULE_NOOP;
-        }
-
-        /*
-         * Get usage info
-         */
-        if (osp_get_usageinfo(&data->mapping, request, &info) < 0) {
-            switch (running->loglevel) {
-            case OSP_LOG_SHORT:
-                radlog(L_INFO, "rlm_osp: Failed to get usage info.");
-                break;
-            case OSP_LOG_LONG:
-            default:
-                radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
-                /* Do not have to check string NULL */
-                radlog(L_INFO,
-                    "rlm_osp: Failed to get usage info from '%s'.",
-                    buffer);
-                break;
-            }
-            /*
-             * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
-             */
-            return RLM_MODULE_NOOP;
-        }
+        role = OSPC_ROLE_RADSRCSTOP;
 
         break;
     case PW_STATUS_ALIVE: /* Interim-Update */
@@ -1374,37 +1338,57 @@ static int osp_accounting(
             return RLM_MODULE_NOOP;
         }
 
-        /*
-         * Get usage base information
-         */
-        if (osp_get_usagebase(data, request, &base) < 0) {
-            switch (running->loglevel) {
-            case OSP_LOG_SHORT:
-                radlog(L_INFO, "rlm_osp: Failed to get usage base info.");
-                break;
-            case OSP_LOG_LONG:
-            default:
-                radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
-                /* Do not have to check string NULL */
-                radlog(L_INFO,
-                    "rlm_osp: Failed to get usage base info from '%s'.",
-                    buffer);
-                break;
-            }
-            /*
-             * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
-             */
-            return RLM_MODULE_NOOP;
-        }
-
-        /*
-         * Clear usage info. Failing destination without these info. 
-         */
-        osp_clean_usageinfo(&info);
+        role = OSPC_ROLE_RADSRCINTERIM;
 
         break;
     default:
-        DEBUG("rlm_osp: Nothing to do for requests other than Stop and Interim-Update.");
+        DEBUG("rlm_osp: Nothing to do for request type '%d'.", vp->vp_integer);
+        return RLM_MODULE_NOOP;
+    }
+
+    /*
+     * Get usage base information
+     */
+    if (osp_get_usagebase(data, request, &base) < 0) {
+        switch (running->loglevel) {
+        case OSP_LOG_SHORT:
+            radlog(L_INFO, "rlm_osp: Failed to get usage base info.");
+            break;
+        case OSP_LOG_LONG:
+        default:
+            radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
+            /* Do not have to check string NULL */
+            radlog(L_INFO,
+                "rlm_osp: Failed to get usage base info from '%s'.",
+                buffer);
+            break;
+        }
+        /*
+         * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
+         */
+        return RLM_MODULE_NOOP;
+    }
+
+    /*
+     * Get usage info
+     */
+    if (osp_get_usageinfo(&data->mapping, request, vp->vp_integer, &info) < 0) {
+        switch (running->loglevel) {
+        case OSP_LOG_SHORT:
+            radlog(L_INFO, "rlm_osp: Failed to get usage info.");
+            break;
+        case OSP_LOG_LONG:
+        default:
+            radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
+            /* Do not have to check string NULL */
+            radlog(L_INFO,
+                "rlm_osp: Failed to get usage info from '%s'.",
+                buffer);
+            break;
+        }
+        /*
+         * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
+         */
         return RLM_MODULE_NOOP;
     }
 
@@ -1425,7 +1409,7 @@ static int osp_accounting(
     error = OSPPTransactionBuildUsageFromScratch(
         transaction,            /* Transaction handle */
         base.transid,           /* Transaction ID */
-        OSP_DEF_USAGETYPE,      /* Usage type */
+        role,                   /* Usage type */
         base.source,            /* Source */
         base.destination,       /* Destination */
         base.srcdev,            /* Source device */
@@ -1570,8 +1554,8 @@ static int osp_get_usagebase(
         radius_xlat(buffer, sizeof(buffer), mapping->transid, request, NULL);
         if (buffer[0] == '\0') {
             /* Has checked string NULL */
-            radlog(L_INFO, 
-                "rlm_osp: Failed to parse '%s' in request for transsaction ID.", 
+            radlog(L_INFO,
+                "rlm_osp: Failed to parse '%s' in request for transsaction ID.",
                 mapping->transid);
             base->transid = 0;
         } else {
@@ -1591,7 +1575,7 @@ static int osp_get_usagebase(
         if (base->callid[0] == '\0') {
             /* Has checked string NULL */
             radlog(L_ERR,
-                "rlm_osp: Failed to parse '%s' in request for Call-ID.", 
+                "rlm_osp: Failed to parse '%s' in request for Call-ID.",
                 mapping->callid);
             return -1;
         }
@@ -1610,7 +1594,7 @@ static int osp_get_usagebase(
         if (buffer[0] == '\0') {
             /* Has checked string NULL */
             radlog(L_INFO,
-                "rlm_osp: Failed to parse '%s' in request for calling number.", 
+                "rlm_osp: Failed to parse '%s' in request for calling number.",
                 mapping->calling);
             base->calling[0] = '\0';
         } else if (mapping->iscallinguri) {
@@ -1641,7 +1625,7 @@ static int osp_get_usagebase(
         if (buffer[0] == '\0') {
             /* Has checked string NULL */
             radlog(L_ERR,
-                "rlm_osp: Failed to parse '%s' in request for callied number.", 
+                "rlm_osp: Failed to parse '%s' in request for callied number.",
                 mapping->called);
             return -1;
         } else if (mapping->iscalleduri) {
@@ -1678,7 +1662,7 @@ static int osp_get_usagebase(
         if (buffer[0] == '\0') {
             /* Has checked string NULL */
             radlog(L_ERR,
-                "rlm_osp: Failed to parse '%s' in request for source device.", 
+                "rlm_osp: Failed to parse '%s' in request for source device.",
                 mapping->srcdev);
             return -1;
         } else {
@@ -1698,8 +1682,8 @@ static int osp_get_usagebase(
         radius_xlat(buffer, sizeof(buffer), mapping->source, request, NULL);
         if (buffer[0] == '\0') {
             /* Has checked string NULL */
-            radlog(L_INFO, 
-                "rlm_osp: Failed to parse '%s' in request for source address.", 
+            radlog(L_INFO,
+                "rlm_osp: Failed to parse '%s' in request for source address.",
                 mapping->source);
             ip.s_addr = provider->deviceip;
             inet_ntop(AF_INET, &ip, buffer, sizeof(buffer));
@@ -1724,7 +1708,7 @@ static int osp_get_usagebase(
         if (buffer[0] == '\0') {
             /* Has checked string NULL */
             radlog(L_ERR,
-                "rlm_osp: Failed to parse '%s' in request for destination address.", 
+                "rlm_osp: Failed to parse '%s' in request for destination address.",
                 mapping->destination);
             return -1;
         } else {
@@ -1744,8 +1728,8 @@ static int osp_get_usagebase(
         radius_xlat(buffer, sizeof(buffer), mapping->destdev, request, NULL);
         if (buffer[0] == '\0') {
             /* Has checked string NULL */
-            radlog(L_INFO, 
-                "rlm_osp: Failed to parse '%s' in request for destination device.", 
+            radlog(L_INFO,
+                "rlm_osp: Failed to parse '%s' in request for destination device.",
                 mapping->destdev);
             base->destdev[0] = '\0';
         } else {
@@ -1765,8 +1749,8 @@ static int osp_get_usagebase(
         radius_xlat(buffer, sizeof(buffer), mapping->destcount, request, NULL);
         if (buffer[0] == '\0') {
             /* Has checked string NULL */
-            radlog(L_INFO, 
-                "rlm_osp: Failed to parse '%s' in request for destination count.", 
+            radlog(L_INFO,
+                "rlm_osp: Failed to parse '%s' in request for destination count.",
                 mapping->destcount);
             base->destcount = OSP_DEF_DESTCOUNT;
         } else {
@@ -1890,40 +1874,18 @@ static int osp_get_username(
 }
 
 /*
- * Clean usage info data
- *
- * param info OSP usage information
- * return
- */
-static void osp_clean_usageinfo(
-    osp_usageinfo_t* info)
-{
-    info->start = 0;
-    info->alert = 0;
-    info->connect = 0;
-    info->end = 0;
-    info->duration = 0;
-    info->ispddpresent = 0;
-    info->pdd = 0;
-    info->release = 0;
-    info->confid[0] = '\0';
-    info->slost = OSP_DEF_SLOST;
-    info->slostfract = OSP_DEF_SLOSTFRACT;
-    info->rlost = OSP_DEF_RLOST;
-    info->rlostfract = OSP_DEF_RLOSTFRACT;
-}
-
-/*
  * Get usage info from accounting request
  *
  * param mapping RADIUS OSP mapping
  * param request Accounting request
+ * param usagetype RADIUS record type
  * param info OSP usage information
  * return 0 success, -1 failure
  */
 static int osp_get_usageinfo(
     osp_mapping_t* mapping,
     REQUEST* request,
+    int usagetype,
     osp_usageinfo_t* info)
 {
     char buffer[OSP_STRBUF_SIZE];
@@ -1933,39 +1895,49 @@ static int osp_get_usageinfo(
     /*
      * Get call start time
      */
-    if (osp_check_string(mapping->start)) {
-        radius_xlat(buffer, sizeof(buffer), mapping->start, request, NULL);
-        if (buffer[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_ERR,
-                "rlm_osp: Failed to parse '%s' in request for start time.", 
-                mapping->start);
-            return -1;
+    if ((usagetype == PW_STATUS_START) || (usagetype == PW_STATUS_STOP) || (usagetype == PW_STATUS_ALIVE)) { 
+        if (osp_check_string(mapping->start)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->start, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_ERR,
+                    "rlm_osp: Failed to parse '%s' in request for start time.",
+                    mapping->start);
+                return -1;
+            } else {
+                info->start = osp_format_time(buffer, mapping->timeformat);
+            }
         } else {
-            info->start = osp_format_time(buffer, mapping->timeformat);
+            radlog(L_ERR, "rlm_osp: 'starttime' mapping undefined.");
+            return -1;
         }
     } else {
-        radlog(L_ERR, "rlm_osp: 'starttime' mapping undefined.");
-        return -1;
+        radlog(L_ERR, "rlm_osp: do not parse 'starttime'.");
+        info->start = 0;
     }
     DEBUG("rlm_osp: starttime = '%lu'", info->start);
 
     /*
      * Get call alert time
      */
-    if (osp_check_string(mapping->alert)) {
-        radius_xlat(buffer, sizeof(buffer), mapping->alert, request, NULL);
-        if (buffer[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_INFO,
-                "rlm_osp: Failed to parse '%s' in request for alert time.", 
-                mapping->alert);
-            info->alert = 0;
+    if (usagetype == PW_STATUS_STOP) {
+        if (osp_check_string(mapping->alert)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->alert, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for alert time.",
+                    mapping->alert);
+                info->alert = 0;
+            } else {
+                info->alert = osp_format_time(buffer, mapping->timeformat);
+            }
         } else {
-            info->alert = osp_format_time(buffer, mapping->timeformat);
+            DEBUG("rlm_osp: 'alerttime' mapping undefined.");
+            info->alert = 0;
         }
     } else {
-        DEBUG("rlm_osp: 'alerttime' mapping undefined.");
+        DEBUG("rlm_osp: do not parse 'alerttime'.");
         info->alert = 0;
     }
     DEBUG("rlm_osp: alerttime = '%lu'", info->alert);
@@ -1973,19 +1945,24 @@ static int osp_get_usageinfo(
     /*
      * Get call connect time
      */
-    if (osp_check_string(mapping->connect)) {
-        radius_xlat(buffer, sizeof(buffer), mapping->connect, request, NULL);
-        if (buffer[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_INFO,
-                "rlm_osp: Failed to parse '%s' in request for connect time.", 
-                mapping->connect);
-            info->connect = 0;
+    if ((usagetype == PW_STATUS_START) || (usagetype == PW_STATUS_STOP)) {
+        if (osp_check_string(mapping->connect)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->connect, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for connect time.",
+                    mapping->connect);
+                info->connect = 0;
+            } else {
+                info->connect = osp_format_time(buffer, mapping->timeformat);
+            }
         } else {
-            info->connect = osp_format_time(buffer, mapping->timeformat);
+            DEBUG("rlm_osp: 'connecttime' mapping undefined.");
+            info->connect = 0;
         }
     } else {
-        DEBUG("rlm_osp: 'connecttime' mapping undefined.");
+        DEBUG("rlm_osp: do not parse 'connecttime'.");
         info->connect = 0;
     }
     DEBUG("rlm_osp: connecttime = '%lu'", info->connect);
@@ -1993,110 +1970,139 @@ static int osp_get_usageinfo(
     /*
      * Get call end time
      */
-    if (osp_check_string(mapping->end)) {
-        radius_xlat(buffer, sizeof(buffer), mapping->end, request, NULL);
-        if (buffer[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_ERR,
-                "rlm_osp: Failed to parse '%s' in request for end time.", 
-                mapping->end);
-            return -1;
+    if (usagetype == PW_STATUS_STOP) {
+        if (osp_check_string(mapping->end)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->end, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_ERR,
+                    "rlm_osp: Failed to parse '%s' in request for end time.",
+                    mapping->end);
+                return -1;
+            } else {
+                info->end = osp_format_time(buffer, mapping->timeformat);
+            }
         } else {
-            info->end = osp_format_time(buffer, mapping->timeformat);
+            radlog(L_ERR, "rlm_osp: 'endtime' mapping undefined.");
+            return -1;
         }
     } else {
-        radlog(L_ERR, "rlm_osp: 'endtime' mapping undefined.");
-        return -1;
+        DEBUG("rlm_osp: do not parse 'endtime'.");
+        info->end = 0;
     }
     DEBUG("rlm_osp: endtime = '%lu'", info->end);
 
     /*
      * Get call duration
      */
-    if (osp_check_string(mapping->duration)) {
-        radius_xlat(buffer, sizeof(buffer), mapping->duration, request, NULL);
-        if (buffer[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_INFO,
-                "rlm_osp: Failed to parse '%s' in request for duration.", 
-                mapping->duration);
-            info->duration = difftime(info->start, info->end);
+    if (usagetype == PW_STATUS_STOP) {
+        if (osp_check_string(mapping->duration)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->duration, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for duration.",
+                    mapping->duration);
+                info->duration = difftime(info->start, info->end);
+            } else {
+                info->duration = atoi(buffer);
+            }
         } else {
-            info->duration = atoi(buffer);
+            DEBUG("rlm_osp: 'duration' mapping undefined.");
+            info->duration = difftime(info->start, info->end);
         }
     } else {
-        DEBUG("rlm_osp: 'duration' mapping undefined.");
-        info->duration = difftime(info->start, info->end);
+        DEBUG("rlm_osp: do not parse 'duration'.");
+        info->duration = 0;
     }
     DEBUG("rlm_osp: duration = '%lu'", info->duration);
 
     /*
      * Get post dial delay
      */
-    if (osp_check_string(mapping->pdd)) {
-        radius_xlat(buffer, sizeof(buffer), mapping->pdd, request, NULL);
-        if (buffer[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_INFO,
-                "rlm_osp: Failed to parse '%s' in request for post dial delay.", 
-                mapping->pdd);
+    if ((usagetype == PW_STATUS_START) || (usagetype == PW_STATUS_STOP)) {
+        if (osp_check_string(mapping->pdd)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->pdd, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for post dial delay.",
+                    mapping->pdd);
+                info->ispddpresent = 0;
+                info->pdd = 0;
+            } else {
+                info->ispddpresent = 1;
+                info->pdd = atoi(buffer);
+            }
+        } else {
+            DEBUG("rlm_osp: 'postdialdelay' mapping undefined.");
             info->ispddpresent = 0;
             info->pdd = 0;
-        } else {
-            info->ispddpresent = 1;
-            info->pdd = atoi(buffer);
         }
+        info->pdd /= OSP_TIMEUNIT_SCALE[mapping->pddunit];
     } else {
-        DEBUG("rlm_osp: 'postdialdelay' mapping undefined.");
+        DEBUG("rlm_osp: do not parse 'postdialdelay'.");
         info->ispddpresent = 0;
         info->pdd = 0;
     }
-    info->pdd /= OSP_TIMEUNIT_SCALE[mapping->pddunit];
     DEBUG("rlm_osp: ispddpresent = '%d'", info->ispddpresent);
     DEBUG("rlm_osp: postdialdelay = '%d'", info->pdd);
 
     /*
      * Get release source
      */
-    if (osp_check_string(mapping->release)) {
-        radius_xlat(buffer, sizeof(buffer), mapping->release, request, NULL);
-        if (buffer[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_INFO,
-                "rlm_osp: Failed to parse '%s' in request for release source.", 
-                mapping->release);
-            info->release = OSP_TK_RELSRC;
-        } else {
-            switch (atoi(buffer)) {
-            case OSP_RELEASE_DEST:
-                info->release = OSP_TK_RELDST;
-                break;
-            case OSP_RELEASE_UNDEF:
-            case OSP_RELEASE_SRC:
-            default:
+    if (usagetype == PW_STATUS_STOP) {
+        if (osp_check_string(mapping->release)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->release, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for release source.",
+                    mapping->release);
                 info->release = OSP_TK_RELSRC;
-                break;
+            } else {
+                switch (atoi(buffer)) {
+                case OSP_RELEASE_DEST:
+                    info->release = OSP_TK_RELDST;
+                    break;
+                case OSP_RELEASE_UNDEF:
+                case OSP_RELEASE_SRC:
+                default:
+                    info->release = OSP_TK_RELSRC;
+                    break;
+                }
             }
+        } else {
+            DEBUG("rlm_osp: 'releasesource' mapping undefined.");
+            info->release = OSP_TK_RELSRC;
         }
-    } else {
-        DEBUG("rlm_osp: 'releasesource' mapping undefined.");
+    } else if (usagetype == PW_STATUS_START) {
+        DEBUG("rlm_osp: do not parse 'releasesource'.");
         info->release = OSP_TK_RELSRC;
+    } else { /* PW_STATUS_ALIVE */
+        DEBUG("rlm_osp: do not parse 'releasesource'.");
+        info->release = OSP_TK_RELDST;
     }
     DEBUG("rlm_osp: releasesource = '%d'", info->release);
 
     /*
      * Get conference ID
      */
-    if (osp_check_string(mapping->confid)) {
-        radius_xlat(info->confid, sizeof(info->confid), mapping->confid, request, NULL);
-        if (info->confid[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_INFO,
-                "rlm_osp: Failed to parse '%s' in request for conference ID.", 
-                mapping->confid);
+    if (usagetype == PW_STATUS_STOP) {
+        if (osp_check_string(mapping->confid)) {
+            radius_xlat(info->confid, sizeof(info->confid), mapping->confid, request, NULL);
+            if (info->confid[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for conference ID.",
+                    mapping->confid);
+            }
+        } else {
+            DEBUG("rlm_osp: 'conferenceid' mapping undefined.");
+            info->confid[0] = '\0';
         }
     } else {
-        DEBUG("rlm_osp: 'conferenceid' mapping undefined.");
+        DEBUG("rlm_osp: do not parse 'conferenceid'.");
         info->confid[0] = '\0';
     }
     /* Do not have to check string NULL */
@@ -2105,19 +2111,24 @@ static int osp_get_usageinfo(
     /*
      * Get lost send packets
      */
-    if (osp_check_string(mapping->slost)) {
-        radius_xlat(buffer, sizeof(buffer), mapping->slost, request, NULL);
-        if (buffer[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_INFO,
-                "rlm_osp: Failed to parse '%s' in request for lost send packets.", 
-                mapping->slost);
-            info->slost = OSP_DEF_SLOST;
+    if (usagetype == PW_STATUS_STOP) {
+        if (osp_check_string(mapping->slost)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->slost, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for lost send packets.",
+                    mapping->slost);
+                info->slost = OSP_DEF_SLOST;
+            } else {
+                info->slost = atoi(buffer);
+            }
         } else {
-            info->slost = atoi(buffer);
+            DEBUG("rlm_osp: 'sendlost' mapping undefined.");
+            info->slost = OSP_DEF_SLOST;
         }
     } else {
-        DEBUG("rlm_osp: 'sendlost' mapping undefined.");
+        DEBUG("rlm_osp: do not parse 'sendlost'.");
         info->slost = OSP_DEF_SLOST;
     }
     DEBUG("rlm_osp: sendlost = '%d'", info->slost);
@@ -2125,19 +2136,24 @@ static int osp_get_usageinfo(
     /*
      * Get lost send packet fraction
      */
-    if (osp_check_string(mapping->slostfract)) {
-        radius_xlat(buffer, sizeof(buffer), mapping->slostfract, request, NULL);
-        if (buffer[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_INFO,
-                "rlm_osp: Failed to parse '%s' in request for lost send packet fraction.", 
-                mapping->slostfract);
-            info->slostfract = OSP_DEF_SLOSTFRACT;
+    if (usagetype == PW_STATUS_STOP) {
+        if (osp_check_string(mapping->slostfract)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->slostfract, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for lost send packet fraction.",
+                    mapping->slostfract);
+                info->slostfract = OSP_DEF_SLOSTFRACT;
+            } else {
+                info->slostfract = atoi(buffer);
+            }
         } else {
-            info->slostfract = atoi(buffer);
+            DEBUG("rlm_osp: 'sendlostfract' mapping undefined.");
+            info->slostfract = OSP_DEF_SLOSTFRACT;
         }
     } else {
-        DEBUG("rlm_osp: 'sendlostfract' mapping undefined.");
+        DEBUG("rlm_osp: do not parse 'sendlostfract'.");
         info->slostfract = OSP_DEF_SLOSTFRACT;
     }
     DEBUG("rlm_osp: sendlostfract = '%d'", info->slostfract);
@@ -2145,19 +2161,24 @@ static int osp_get_usageinfo(
     /*
      * Get lost receive packets
      */
-    if (osp_check_string(mapping->rlost)) {
-        radius_xlat(buffer, sizeof(buffer), mapping->rlost, request, NULL);
-        if (buffer[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_INFO,
-                "rlm_osp: Failed to parse '%s' in request for lost receive packets.", 
-                mapping->rlost);
-            info->rlost = OSP_DEF_SLOST;
+    if (usagetype == PW_STATUS_STOP) {
+        if (osp_check_string(mapping->rlost)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->rlost, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for lost receive packets.",
+                    mapping->rlost);
+                info->rlost = OSP_DEF_SLOST;
+            } else {
+                info->rlost = atoi(buffer);
+            }
         } else {
-            info->rlost = atoi(buffer);
+            DEBUG("rlm_osp: 'receivelost' mapping undefined.");
+            info->rlost = OSP_DEF_SLOST;
         }
     } else {
-        DEBUG("rlm_osp: 'receivelost' mapping undefined.");
+        DEBUG("rlm_osp: do not parse 'receivelost'.");
         info->rlost = OSP_DEF_SLOST;
     }
     DEBUG("rlm_osp: receivelost = '%d'", info->rlost);
@@ -2165,19 +2186,24 @@ static int osp_get_usageinfo(
     /*
      * Get lost receive packet fraction
      */
-    if (osp_check_string(mapping->rlostfract)) {
-        radius_xlat(buffer, sizeof(buffer), mapping->rlostfract, request, NULL);
-        if (buffer[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_INFO,
-                "rlm_osp: Failed to parse '%s' in request for lost receive packet fraction.", 
-                mapping->rlostfract);
-            info->rlostfract = OSP_DEF_SLOSTFRACT;
+    if (usagetype == PW_STATUS_STOP) {
+        if (osp_check_string(mapping->rlostfract)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->rlostfract, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for lost receive packet fraction.",
+                    mapping->rlostfract);
+                info->rlostfract = OSP_DEF_SLOSTFRACT;
+            } else {
+                info->rlostfract = atoi(buffer);
+            }
         } else {
-            info->rlostfract = atoi(buffer);
+            DEBUG("rlm_osp: 'receivelostfraction' mapping undefined.");
+            info->rlostfract = OSP_DEF_SLOSTFRACT;
         }
     } else {
-        DEBUG("rlm_osp: 'receivelostfraction' mapping undefined.");
+        DEBUG("rlm_osp: do not parse 'receivelostfraction'.");
         info->rlostfract = OSP_DEF_SLOSTFRACT;
     }
     DEBUG("rlm_osp: receivelostfract = '%d'", info->rlostfract);
@@ -2257,7 +2283,7 @@ static time_t osp_format_time(
 
 /*
  * Calculate time offset to GMT beased on time zone in USA
- * 
+ *
  * param tzone Time zone
  * param toffset Time offset in seconds
  * return 0 success, -1 failure
@@ -2315,7 +2341,7 @@ static int osp_cal_timeoffset(
 
 /*
  * Calculate seconds elapsed
- * 
+ *
  * param dt Breaken down time
  * param toffset Time offset in seconds
  * param elapsed Seconds elapsed
@@ -2414,3 +2440,4 @@ module_t rlm_osp = {
         NULL                /* post-auth */
     },
 };
+
