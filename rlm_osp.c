@@ -95,6 +95,7 @@ RCSID("$Id$")
 #define OSP_MAP_PDD             NULL                        /* Post dial delay */
 #define OSP_MAP_RELEASE         NULL                        /* Release source */
 #define OSP_MAP_CAUSE           "%{Acct-Terminate-Cause}"   /* Release cause, RFC 2866 */
+#define OSP_MAP_DESTPROTO       NULL                        /* Destination protocol */
 #define OSP_MAP_CONFID          NULL                        /* Conference ID */
 #define OSP_MAP_SLOST           NULL                        /* Lost send packets */
 #define OSP_MAP_SLOSTFRACT      NULL                        /* Lost send packet fraction */
@@ -116,6 +117,9 @@ typedef enum {
     OSP_ITEM_MUSTDEF = 0,   /* Mapping item must be defined */
     OSP_ITEM_DEFINED        /* Mapping item may be defined */
 } osp_itemlevel_t;
+
+#define OSP_PROTOCOL_SIP    "sip"
+#define OSP_PROTOCOL_H323   "h323"
 
 /*
  * OSP time string types
@@ -243,6 +247,7 @@ typedef struct {
     char* pdd;          /* Post dial delay */
     char* release;      /* Release source */
     char* cause;        /* Release cause */
+    char* destprot;     /* Destination protocol */
     char* confid;       /* Conference ID */
     char* slost;        /* Lost send packages */
     char* slostfract;   /* Lost send packages fraction */
@@ -272,7 +277,6 @@ typedef struct {
     char destination[OSP_STRBUF_SIZE];  /* Destination */
     char destdev[OSP_STRBUF_SIZE];      /* Destination device */
     int destcount;                      /* Destination count */
-    int cause;                          /* Release code */
 } osp_usagebase_t;
 
 /*
@@ -383,6 +387,7 @@ static const CONF_PARSER mapping_config[] = {
     { "postdialdelay", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.pdd), NULL, OSP_MAP_PDD },
     { "releasesource", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.release), NULL, OSP_MAP_RELEASE },
     { "releasecause", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.cause), NULL, OSP_MAP_CAUSE },
+    { "destinationprotocol", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destprot), NULL, OSP_MAP_DESTPROTO },
     { "confid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.confid), NULL, OSP_MAP_CONFID },
     { "sendlost", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.slost), NULL, OSP_MAP_SLOST },
     { "sendlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.slostfract), NULL, OSP_MAP_SLOSTFRACT },
@@ -422,7 +427,8 @@ static int osp_check_provider(osp_provider_t* provider);
 static int osp_check_mapping(osp_mapping_t* mapping);
 static int osp_check_mapitem(char* item, osp_itemlevel_t level);
 static int osp_create_provider(osp_provider_t* provider);
-static int osp_get_termcause(rlm_osp_t* data, REQUEST* request, int* cause);
+static int osp_get_termcause(osp_mapping_t* mapping, REQUEST* request, int* cause);
+static void osp_get_destprot(osp_mapping_t* mapping, REQUEST* request, OSPE_DEST_PROTOCOL* protocol);
 static int osp_get_usagebase(rlm_osp_t* data, REQUEST* request, osp_usagebase_t* base);
 static void osp_format_device(char* device, char* buffer, int buffersize);
 static int osp_get_username(char* uri, char* buffer, int buffersize);
@@ -997,6 +1003,20 @@ static int osp_check_mapping(
     DEBUG("rlm_osp: releasecause = '%s'", mapping->cause);
 
     /*
+     * If destination protocol is incorrect, then fail.
+     */
+    DEBUG("rlm_osp: check destination protocol mapping");
+    if (osp_check_mapitem(mapping->destprot, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'destinationprotocol'.");
+        return -1;
+    }
+    if (osp_check_string(mapping->destprot)) {
+        DEBUG("rlm_osp: destinationprtocol = '%s'", mapping->destprot);
+    } else {
+        DEBUG("rlm_osp: destinationprotocol = 'NULL'");
+    }
+
+    /*
      * If conference ID is incorrect, then fail.
      */
     DEBUG("rlm_osp: check conferenceid mapping");
@@ -1294,6 +1314,7 @@ static int osp_accounting(
     char buffer[OSP_LOGBUF_SIZE];
     const int MAX_RETRIES = 5;
     OSPE_ROLE role;
+    OSPE_DEST_PROTOCOL destprot;
     int i, error;
 
     DEBUG("rlm_osp: osp_accounting start");
@@ -1317,7 +1338,7 @@ static int osp_accounting(
         /*
          * Get release cause
          */
-        if (osp_get_termcause(data, request, &cause) < 0) {
+        if (osp_get_termcause(&data->mapping, request, &cause) < 0) {
             /*
              * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
              */
@@ -1331,7 +1352,7 @@ static int osp_accounting(
         /*
          * Get release cause
          */
-        if (osp_get_termcause(data, request, &cause) < 0) {
+        if (osp_get_termcause(&data->mapping, request, &cause) < 0) {
             /*
              * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
              */
@@ -1345,6 +1366,11 @@ static int osp_accounting(
         DEBUG("rlm_osp: Nothing to do for request type '%d'.", vp->vp_integer);
         return RLM_MODULE_NOOP;
     }
+
+    /*
+     * Get destination protocol
+     */
+    osp_get_destprot(&data->mapping, request, &destprot);
 
     /*
      * Get usage base information
@@ -1434,9 +1460,11 @@ static int osp_accounting(
     /*
      * Set release code
      */
-    OSPPTransactionRecordFailure(
+    OSPPTransactionSetTermCause(
         transaction,    /* Transaction handle */
-        cause);         /* Release reason */
+        destprot,       /* Destination protocol */
+        cause,          /* Release reason */
+        NULL);          /* Description */
 
     /*
      * Send OSP UsageInd message to OSP server
@@ -1486,18 +1514,17 @@ static int osp_accounting(
 /*
  * Get termination cause from accounting request
  *
- * param data Instance data
+ * param mapping RADIUS OSP mapping
  * param request Accounting request
  * param cause Termination cause
  * return 0 success, -1 failure
  */
 static int osp_get_termcause(
-    rlm_osp_t* data,
+    osp_mapping_t* mapping,
     REQUEST* request,
     int* cause)
 {
     char buffer[OSP_STRBUF_SIZE];
-    osp_mapping_t* mapping = &data->mapping;
 
     DEBUG("rlm_osp: osp_get_termcause start");
 
@@ -1524,6 +1551,50 @@ static int osp_get_termcause(
     DEBUG("rlm_osp: osp_get_termcause success");
 
     return 0;
+}
+
+/*
+ * Get destination protocol from accounting request
+ *
+ * param mapping RADIUS OSP mapping
+ * param request Accounting request
+ * param protocol Destination protocol
+ * return
+ */
+static void osp_get_destprot(
+    osp_mapping_t* mapping, 
+    REQUEST* request, 
+    OSPE_DEST_PROTOCOL* protocol) 
+{
+    char buffer[OSP_STRBUF_SIZE];
+
+    DEBUG("rlm_osp: osp_get_destprot start");
+
+    /*
+     * Get destination protocol
+     */
+    if (osp_check_string(mapping->destprot)) {
+        radius_xlat(buffer, sizeof(buffer), mapping->destprot, request, NULL);
+        if (buffer[0] == '\0') {
+            /* Has checked string NULL */
+            radlog(L_INFO,
+                "rlm_osp: Failed to parse '%s' in request for destination protocol.",
+                mapping->destprot);
+        }
+    } else {
+        DEBUG("rlm_osp: 'destinationprotocol' mapping undefined.");
+        buffer[0] = '\0';
+    }
+    /* Do not have to check string NULL */
+    DEBUG("rlm_osp: destinationprotocol = '%s'", buffer);
+
+    if (strcasestr(buffer, OSP_PROTOCOL_H323) != NULL) {
+        *protocol = OSPC_DPROT_Q931;
+    } else {
+        *protocol = OSPC_DPROT_SIP;
+    }
+
+    DEBUG("rlm_osp: osp_get_destprot success");
 }
 
 /*
