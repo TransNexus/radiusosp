@@ -66,6 +66,7 @@ RCSID("$Id$")
 #define OSP_DEF_DEVICEIP    "localhost"                 /* OSP default device IP */
 #define OSP_DEF_DEVICEPORT  "5060"                      /* Mapping default device port */
 #define OSP_DEF_DESTCOUNT   0                           /* OSP default destination count, unset */
+#define OSP_DEF_CAUSE       0                           /* OSP default termination cause */
 #define OSP_DEF_SLOST       -1                          /* OSP default lost send packets */
 #define OSP_DEF_SLOSTFRACT  -1                          /* OSP default lost send packet fraction */
 #define OSP_DEF_RLOST       -1                          /* OSP default lost receive packets */
@@ -117,9 +118,6 @@ typedef enum {
     OSP_ITEM_MUSTDEF = 0,   /* Mapping item must be defined */
     OSP_ITEM_DEFINED        /* Mapping item may be defined */
 } osp_itemlevel_t;
-
-#define OSP_PROTOCOL_SIP    "sip"
-#define OSP_PROTOCOL_H323   "h323"
 
 /*
  * OSP time string types
@@ -291,6 +289,9 @@ typedef struct {
     int ispddpresent;               /* Is PDD Info present */
     int pdd;                        /* Post Dial Delay */
     int release;                    /* EP that released the call */
+    OSPE_TERM_CAUSE causetype;      /* Release reason type */
+    int cause;                      /* Release reason */
+    char destprot[OSP_STRBUF_SIZE]; /* Destination protocol */
     char confid[OSP_STRBUF_SIZE];   /* Conference ID */
     int slost;                      /* Packets not received by peer */
     int slostfract;                 /* Fraction of packets not received by peer */
@@ -427,12 +428,11 @@ static int osp_check_provider(osp_provider_t* provider);
 static int osp_check_mapping(osp_mapping_t* mapping);
 static int osp_check_mapitem(char* item, osp_itemlevel_t level);
 static int osp_create_provider(osp_provider_t* provider);
-static int osp_get_termcause(osp_mapping_t* mapping, REQUEST* request, int* cause);
-static void osp_get_destprot(osp_mapping_t* mapping, REQUEST* request, OSPE_DEST_PROTOCOL* protocol);
 static int osp_get_usagebase(rlm_osp_t* data, REQUEST* request, osp_usagebase_t* base);
 static void osp_format_device(char* device, char* buffer, int buffersize);
 static int osp_get_username(char* uri, char* buffer, int buffersize);
 static int osp_get_usageinfo(osp_mapping_t* mapping, REQUEST* request, int usagetype, osp_usageinfo_t* info);
+static OSPE_TERM_CAUSE osp_get_causetype(char* protocol);
 static time_t osp_format_time(char* timestr, osp_timestr_t format);
 static int osp_cal_timeoffset(char* tzone, long int* toffset);
 static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
@@ -1308,13 +1308,11 @@ static int osp_accounting(
     osp_running_t* running = &data->running;
     osp_provider_t* provider = &data->provider;
     OSPTTRANHANDLE transaction;
-    int cause;
+    OSPE_ROLE role;
     osp_usagebase_t base;
     osp_usageinfo_t info;
     char buffer[OSP_LOGBUF_SIZE];
     const int MAX_RETRIES = 5;
-    OSPE_ROLE role;
-    OSPE_DEST_PROTOCOL destprot;
     int i, error;
 
     DEBUG("rlm_osp: osp_accounting start");
@@ -1326,51 +1324,18 @@ static int osp_accounting(
 
     switch (vp->vp_integer) {
     case PW_STATUS_START:
-        /*
-         * Get release cause
-         */
-        cause = 0;
-
         role = OSPC_ROLE_RADSRCSTART;
-
         break;
     case PW_STATUS_STOP:
-        /*
-         * Get release cause
-         */
-        if (osp_get_termcause(&data->mapping, request, &cause) < 0) {
-            /*
-             * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
-             */
-            return RLM_MODULE_NOOP;
-        }
-
         role = OSPC_ROLE_RADSRCSTOP;
-
         break;
     case PW_STATUS_ALIVE: /* Interim-Update */
-        /*
-         * Get release cause
-         */
-        if (osp_get_termcause(&data->mapping, request, &cause) < 0) {
-            /*
-             * Note: it should not return RLM_MODULE_FAIL in case requests from others come in.
-             */
-            return RLM_MODULE_NOOP;
-        }
-
         role = OSPC_ROLE_RADSRCINTERIM;
-
         break;
     default:
         DEBUG("rlm_osp: Nothing to do for request type '%d'.", vp->vp_integer);
         return RLM_MODULE_NOOP;
     }
-
-    /*
-     * Get destination protocol
-     */
-    osp_get_destprot(&data->mapping, request, &destprot);
 
     /*
      * Get usage base information
@@ -1462,8 +1427,8 @@ static int osp_accounting(
      */
     OSPPTransactionSetTermCause(
         transaction,    /* Transaction handle */
-        destprot,       /* Destination protocol */
-        cause,          /* Release reason */
+        info.causetype, /* Release reason type */
+        info.cause,     /* Release reason */
         NULL);          /* Description */
 
     /*
@@ -1509,92 +1474,6 @@ static int osp_accounting(
         DEBUG("rlm_osp: osp_accounting success");
         return RLM_MODULE_OK;
     }
-}
-
-/*
- * Get termination cause from accounting request
- *
- * param mapping RADIUS OSP mapping
- * param request Accounting request
- * param cause Termination cause
- * return 0 success, -1 failure
- */
-static int osp_get_termcause(
-    osp_mapping_t* mapping,
-    REQUEST* request,
-    int* cause)
-{
-    char buffer[OSP_STRBUF_SIZE];
-
-    DEBUG("rlm_osp: osp_get_termcause start");
-
-    /*
-     * Get release cause
-     */
-    if (osp_check_string(mapping->cause)) {
-        radius_xlat(buffer, sizeof(buffer), mapping->cause, request, NULL);
-        if (buffer[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_ERR,
-                "rlm_osp: Failed to parse '%s' in request for release cause.",
-                mapping->cause);
-            return -1;
-        } else {
-            *cause = atoi(buffer);
-        }
-    } else {
-        radlog(L_ERR, "rlm_osp: 'releasecause' mapping undefined.");
-        return -1;
-    }
-    DEBUG("rlm_osp: releasecause = '%d'", *cause);
-
-    DEBUG("rlm_osp: osp_get_termcause success");
-
-    return 0;
-}
-
-/*
- * Get destination protocol from accounting request
- *
- * param mapping RADIUS OSP mapping
- * param request Accounting request
- * param protocol Destination protocol
- * return
- */
-static void osp_get_destprot(
-    osp_mapping_t* mapping, 
-    REQUEST* request, 
-    OSPE_DEST_PROTOCOL* protocol) 
-{
-    char buffer[OSP_STRBUF_SIZE];
-
-    DEBUG("rlm_osp: osp_get_destprot start");
-
-    /*
-     * Get destination protocol
-     */
-    if (osp_check_string(mapping->destprot)) {
-        radius_xlat(buffer, sizeof(buffer), mapping->destprot, request, NULL);
-        if (buffer[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_INFO,
-                "rlm_osp: Failed to parse '%s' in request for destination protocol.",
-                mapping->destprot);
-        }
-    } else {
-        DEBUG("rlm_osp: 'destinationprotocol' mapping undefined.");
-        buffer[0] = '\0';
-    }
-    /* Do not have to check string NULL */
-    DEBUG("rlm_osp: destinationprotocol = '%s'", buffer);
-
-    if (strcasestr(buffer, OSP_PROTOCOL_H323) != NULL) {
-        *protocol = OSPC_DPROT_Q931;
-    } else {
-        *protocol = OSPC_DPROT_SIP;
-    }
-
-    DEBUG("rlm_osp: osp_get_destprot success");
 }
 
 /*
@@ -2157,6 +2036,60 @@ static int osp_get_usageinfo(
     DEBUG("rlm_osp: releasesource = '%d'", info->release);
 
     /*
+     * Get release cause
+     */
+    if ((usagetype == PW_STATUS_STOP) || (usagetype == PW_STATUS_ALIVE)) { 
+        if (osp_check_string(mapping->cause)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->cause, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_ERR,
+                    "rlm_osp: Failed to parse '%s' in request for release cause.",
+                    mapping->cause);
+                return -1;
+            } else {
+                info->cause = atoi(buffer);
+            }
+        } else {
+            radlog(L_ERR, "rlm_osp: 'releasecause' mapping undefined.");
+            return -1;
+        }
+    } else {
+        radlog(L_ERR, "rlm_osp: do not parse 'releasecause'.");
+        info->cause = OSP_DEF_CAUSE;
+    }
+    DEBUG("rlm_osp: releasecause = '%d'", info->cause);
+
+    /*
+     * Get destination protocol
+     */
+    if ((usagetype == PW_STATUS_START) || (usagetype == PW_STATUS_STOP) || (usagetype == PW_STATUS_ALIVE)) { 
+        if (osp_check_string(mapping->destprot)) {
+            radius_xlat(info->destprot, sizeof(info->destprot), mapping->destprot, request, NULL);
+            if (info->destprot[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for destination protocol.",
+                    mapping->destprot);
+            }
+        } else {
+            DEBUG("rlm_osp: 'destinationprotocol' mapping undefined.");
+            info->destprot[0] = '\0';
+        }
+    } else {
+        DEBUG("rlm_osp: do not parse 'destinationprotocol'.");
+        info->destprot[0] = '\0';
+    }
+    /* Do not have to check string NULL */
+    DEBUG("rlm_osp: destinationprotocol = '%s'", info->destprot);
+
+    /*
+     * Get release reason type
+     */
+    info->causetype = osp_get_causetype(info->destprot);
+    DEBUG("rlm_osp: termination cause type = '%d'", info->causetype);
+
+    /*
      * Get conference ID
      */
     if (usagetype == PW_STATUS_STOP) {
@@ -2282,6 +2215,34 @@ static int osp_get_usageinfo(
     DEBUG("rlm_osp: osp_get_usageinfo success");
 
     return 0;
+}
+
+/*
+ * Get termination cause type from destination protocol
+ *
+ * param protocol Destination protocol
+ * return Termination cause type
+ */
+static OSPE_TERM_CAUSE osp_get_causetype(
+    char* protocol)
+{
+    OSPE_TERM_CAUSE type = OSPC_TCAUSE_Q850;
+
+    DEBUG("rlm_osp: osp_get_causetype start");
+
+    if (osp_check_string(protocol)) {
+        /* Comparing ignore case, Solaris does not support strcasestr */
+        if (strstr(protocol, "H323") || strstr(protocol, "h323")) {
+            type = OSPC_TCAUSE_H323;
+        } else if (strstr(protocol, "SIP") || strstr(protocol, "sip") || strstr(protocol, "Sip")) {
+            type = OSPC_TCAUSE_SIP;
+        }
+    }
+    DEBUG("rlm_osp: cause type = '%d'", type);
+
+    DEBUG("rlm_osp: osp_get_causetype success");
+
+    return type;
 }
 
 /*
