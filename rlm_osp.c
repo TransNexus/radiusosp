@@ -38,7 +38,7 @@ RCSID("$Id$")
 
 #define OSP_DEF_LOGLEVEL    "1"                         /* Mapping default log level, long */
 #define OSP_DEF_HWACCE      "no"                        /* Mapping default hardware accelerate flag */
-#define OSP_MAX_SPS         8                           /* OSP max number of service points */
+#define OSP_MAX_SPS         4                           /* OSP max number of service points */
 #define OSP_DEF_SPURI       "http://osptestserver.transnexus.com:1080/osp"  /* OSP default service point URI */
 #define OSP_DEF_SPWEIGHT    "1000"                      /* Mapping default service point weight */
 #define OSP_DEF_AUDITURL    "http://localhost:1234"     /* OSP default Audit URL */
@@ -71,6 +71,7 @@ RCSID("$Id$")
 #define OSP_DEF_SLOSTFRACT  -1                          /* OSP default lost send packet fraction */
 #define OSP_DEF_RLOST       -1                          /* OSP default lost receive packets */
 #define OSP_DEF_RLOSTFRACT  -1                          /* OSP default lost receive packet fraction */
+#define OSP_MAX_INDEX       4                           /* OSP max timeout in ms */
 
 /*
  * Default RADIUS OSP mapping
@@ -102,6 +103,7 @@ RCSID("$Id$")
 #define OSP_MAP_SLOSTFRACT      NULL                        /* Lost send packet fraction */
 #define OSP_MAP_RLOST           NULL                        /* Lost receive packets */
 #define OSP_MAP_RLOSTFRACT      NULL                        /* Lost receive packet fraction */
+#define OSP_MAP_CUSTINFO        NULL                        /* Customer info */
 
 /*
  * OSP log level
@@ -224,33 +226,34 @@ typedef struct {
  * OSP module mapping parameter structure.
  */
 typedef struct {
-    char* transid;      /* Transaction ID */
-    char* callid;       /* Call-ID */
-    int iscallinguri;   /* If calling number uri */
-    char* calling;      /* Calling number */
-    int iscalleduri;    /* If called number uri */
-    char* called;       /* Called number */
-    char* srcdev;       /* Source device */
-    char* source;       /* Source */
-    char* destination;  /* Destination */
-    char* destdev;      /* Destination device */
-    char* destcount;    /* Destination count */
-    int timeformat;     /* Time string format */
-    char* start;        /* Call start time */
-    char* alert;        /* Call alert time */
-    char* connect;      /* Call connect time */
-    char* end;          /* Call end time */
-    char* duration;     /* Call duration */
-    int pddunit;        /* Post dial delay unit */
-    char* pdd;          /* Post dial delay */
-    char* release;      /* Release source */
-    char* cause;        /* Release cause */
-    char* destprot;     /* Destination protocol */
-    char* confid;       /* Conference ID */
-    char* slost;        /* Lost send packages */
-    char* slostfract;   /* Lost send packages fraction */
-    char* rlost;        /* Lost receive packages */
-    char* rlostfract;   /* Lost receive packages fraction */
+    char* transid;                  /* Transaction ID */
+    char* callid;                   /* Call-ID */
+    int iscallinguri;               /* If calling number uri */
+    char* calling;                  /* Calling number */
+    int iscalleduri;                /* If called number uri */
+    char* called;                   /* Called number */
+    char* srcdev;                   /* Source device */
+    char* source;                   /* Source */
+    char* destination;              /* Destination */
+    char* destdev;                  /* Destination device */
+    char* destcount;                /* Destination count */
+    int timeformat;                 /* Time string format */
+    char* start;                    /* Call start time */
+    char* alert;                    /* Call alert time */
+    char* connect;                  /* Call connect time */
+    char* end;                      /* Call end time */
+    char* duration;                 /* Call duration */
+    int pddunit;                    /* Post dial delay unit */
+    char* pdd;                      /* Post dial delay */
+    char* release;                  /* Release source */
+    char* cause;                    /* Release cause */
+    char* destprot;                 /* Destination protocol */
+    char* confid;                   /* Conference ID */
+    char* slost;                    /* Lost send packages */
+    char* slostfract;               /* Lost send packages fraction */
+    char* rlost;                    /* Lost receive packages */
+    char* rlostfract;               /* Lost receive packages fraction */
+    char* custinfo[OSP_MAX_INDEX];  /* Lost receive packages fraction */
 } osp_mapping_t;
 
 /*
@@ -281,22 +284,23 @@ typedef struct {
  * Usage information structure.
  */
 typedef struct {
-    time_t start;                   /* Call start time */
-    time_t alert;                   /* Call alert time */
-    time_t connect;                 /* Call connect time */
-    time_t end;                     /* Call end time */
-    time_t duration;                /* Length of call */
-    int ispddpresent;               /* Is PDD Info present */
-    int pdd;                        /* Post Dial Delay */
-    int release;                    /* EP that released the call */
-    OSPE_TERM_CAUSE causetype;      /* Release reason type */
-    int cause;                      /* Release reason */
-    char destprot[OSP_STRBUF_SIZE]; /* Destination protocol */
-    char confid[OSP_STRBUF_SIZE];   /* Conference ID */
-    int slost;                      /* Packets not received by peer */
-    int slostfract;                 /* Fraction of packets not received by peer */
-    int rlost;                      /* Packets not received that were expected */
-    int rlostfract;                 /* Fraction of packets expected but not received */
+    time_t start;                                   /* Call start time */
+    time_t alert;                                   /* Call alert time */
+    time_t connect;                                 /* Call connect time */
+    time_t end;                                     /* Call end time */
+    time_t duration;                                /* Length of call */
+    int ispddpresent;                               /* Is PDD Info present */
+    int pdd;                                        /* Post Dial Delay */
+    int release;                                    /* EP that released the call */
+    OSPE_TERM_CAUSE causetype;                      /* Release reason type */
+    int cause;                                      /* Release reason */
+    char destprot[OSP_STRBUF_SIZE];                 /* Destination protocol */
+    char confid[OSP_STRBUF_SIZE];                   /* Conference ID */
+    int slost;                                      /* Packets not received by peer */
+    int slostfract;                                 /* Fraction of packets not received by peer */
+    int rlost;                                      /* Packets not received that were expected */
+    int rlostfract;                                 /* Fraction of packets expected but not received */
+    char custinfo[OSP_MAX_INDEX][OSP_STRBUF_SIZE];  /* Conference ID */
 } osp_usageinfo_t;
 
 /*
@@ -331,18 +335,10 @@ static const CONF_PARSER provider_config[] = {
     { "spuri2", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[1]), NULL, NULL },
     { "spuri3", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[2]), NULL, NULL },
     { "spuri4", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[3]), NULL, NULL },
-    { "spuri5", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[4]), NULL, NULL },
-    { "spuri6", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[5]), NULL, NULL },
-    { "spuri7", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[6]), NULL, NULL },
-    { "spuri8", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[7]), NULL, NULL },
     { "spweight1", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.spweights[0]), NULL, OSP_DEF_SPWEIGHT },
     { "spweight2", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.spweights[1]), NULL, OSP_DEF_SPWEIGHT },
     { "spweight3", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.spweights[2]), NULL, OSP_DEF_SPWEIGHT },
     { "spweight4", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.spweights[3]), NULL, OSP_DEF_SPWEIGHT },
-    { "spweight5", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.spweights[4]), NULL, OSP_DEF_SPWEIGHT },
-    { "spweight6", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.spweights[5]), NULL, OSP_DEF_SPWEIGHT },
-    { "spweight7", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.spweights[6]), NULL, OSP_DEF_SPWEIGHT },
-    { "spweight8", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.spweights[7]), NULL, OSP_DEF_SPWEIGHT },
     { "privatekey", PW_TYPE_FILENAME, offsetof(rlm_osp_t, provider.privatekey), NULL, OSP_DEF_PRIVATEKEY },
     { "localcert", PW_TYPE_FILENAME, offsetof(rlm_osp_t, provider.localcert), NULL, OSP_DEF_LOCALCERT },
     { "cacert0", PW_TYPE_FILENAME, offsetof(rlm_osp_t, provider.cacerts[0]), NULL, OSP_DEF_CACERT },
@@ -394,6 +390,10 @@ static const CONF_PARSER mapping_config[] = {
     { "sendlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.slostfract), NULL, OSP_MAP_SLOSTFRACT },
     { "receivelost", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.rlost), NULL, OSP_MAP_RLOST },
     { "receivelostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.rlostfract), NULL, OSP_MAP_RLOSTFRACT },
+    { "customerinfo1", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[0]), NULL, OSP_MAP_CUSTINFO },
+    { "customerinfo2", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[1]), NULL, OSP_MAP_CUSTINFO },
+    { "customerinfo3", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[2]), NULL, OSP_MAP_CUSTINFO },
+    { "customerinfo4", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[3]), NULL, OSP_MAP_CUSTINFO },
     /*
      * End
      */
@@ -747,6 +747,8 @@ static int osp_check_provider(
 static int osp_check_mapping(
     osp_mapping_t* mapping)
 {
+    int i;
+
     DEBUG("rlm_osp: osp_check_mapping start");
 
     /*
@@ -1086,6 +1088,24 @@ static int osp_check_mapping(
         DEBUG("rlm_osp: receivelostfract = 'NULL'");
     }
 
+    /*
+     * If customer info are incorrect, then fail.
+     */
+    for (i = 0; i < OSP_MAX_INDEX; i++) {
+        DEBUG("rlm_osp: check customer info %d mapping", i + 1);
+        if (osp_check_mapitem(mapping->custinfo[i], OSP_ITEM_DEFINED) < 0) {
+            radlog(L_ERR, 
+                "rlm_osp: Incorrect 'customerinfo%d'.", 
+                i + 1);
+            return -1;
+        }
+        if (osp_check_string(mapping->custinfo[i])) {
+            DEBUG("rlm_osp: customerinfo%d = '%s'", i + 1, mapping->custinfo[i]);
+        } else {
+            DEBUG("rlm_osp: customerinfo%d = 'NULL'", i + 1);
+        }
+    }
+
     DEBUG("rlm_osp: osp_check_mapping success");
 
     return 0;
@@ -1420,6 +1440,18 @@ static int osp_accounting(
             error);
         OSPPTransactionDelete(transaction);
         return RLM_MODULE_FAIL;
+    }
+
+    /*
+     * Set customer info
+     */
+    for (i = 0; i < OSP_MAX_INDEX; i++) {
+        if (osp_check_string(info.custinfo[i])) {
+            OSPPTransactionSetCustomerInfo(
+                transaction,        /* Transaction handle */
+                i,                  /* Index */
+                info.custinfo[i]);  /* Customer info */
+        }
     }
 
     /*
@@ -1839,6 +1871,7 @@ static int osp_get_usageinfo(
     osp_usageinfo_t* info)
 {
     char buffer[OSP_STRBUF_SIZE];
+    int i;
 
     DEBUG("rlm_osp: osp_get_usageinfo start");
 
@@ -2173,17 +2206,17 @@ static int osp_get_usageinfo(
                 radlog(L_INFO,
                     "rlm_osp: Failed to parse '%s' in request for lost receive packets.",
                     mapping->rlost);
-                info->rlost = OSP_DEF_SLOST;
+                info->rlost = OSP_DEF_RLOST;
             } else {
                 info->rlost = atoi(buffer);
             }
         } else {
             DEBUG("rlm_osp: 'receivelost' mapping undefined.");
-            info->rlost = OSP_DEF_SLOST;
+            info->rlost = OSP_DEF_RLOST;
         }
     } else {
         DEBUG("rlm_osp: do not parse 'receivelost'.");
-        info->rlost = OSP_DEF_SLOST;
+        info->rlost = OSP_DEF_RLOST;
     }
     DEBUG("rlm_osp: receivelost = '%d'", info->rlost);
 
@@ -2198,19 +2231,46 @@ static int osp_get_usageinfo(
                 radlog(L_INFO,
                     "rlm_osp: Failed to parse '%s' in request for lost receive packet fraction.",
                     mapping->rlostfract);
-                info->rlostfract = OSP_DEF_SLOSTFRACT;
+                info->rlostfract = OSP_DEF_RLOSTFRACT;
             } else {
                 info->rlostfract = atoi(buffer);
             }
         } else {
             DEBUG("rlm_osp: 'receivelostfraction' mapping undefined.");
-            info->rlostfract = OSP_DEF_SLOSTFRACT;
+            info->rlostfract = OSP_DEF_RLOSTFRACT;
         }
     } else {
         DEBUG("rlm_osp: do not parse 'receivelostfraction'.");
-        info->rlostfract = OSP_DEF_SLOSTFRACT;
+        info->rlostfract = OSP_DEF_RLOSTFRACT;
     }
     DEBUG("rlm_osp: receivelostfract = '%d'", info->rlostfract);
+
+
+    /*
+     * Get customer info
+     */
+    for (i = 0; i < OSP_MAX_INDEX; i++) {
+        if ((usagetype == PW_STATUS_STOP) || (usagetype == PW_STATUS_ALIVE)) {
+            if (osp_check_string(mapping->custinfo[i])) {
+                radius_xlat(info->custinfo[i], sizeof(info->custinfo[i]), mapping->custinfo[i], request, NULL);
+                if (info->custinfo[i][0] == '\0') {
+                    /* Has checked string NULL */
+                    radlog(L_INFO,
+                        "rlm_osp: Failed to parse '%s' in request for customer info %d.",
+                        mapping->custinfo[i],
+                        i + 1);
+                }
+            } else {
+                DEBUG("rlm_osp: 'customerinfo%d' mapping undefined.", i + 1);
+                info->custinfo[i][0] = '\0';
+            }
+        } else {
+            DEBUG("rlm_osp: do not parse 'customerinfo%d'.", i + 1);
+            info->custinfo[i][0] = '\0';
+        }
+        /* Do not have to check string NULL */
+        DEBUG("rlm_osp: customerinfo%d = '%s'", i + 1, info->custinfo[i]);
+    }
 
     DEBUG("rlm_osp: osp_get_usageinfo success");
 
