@@ -103,7 +103,7 @@ RCSID("$Id$")
 #define OSP_MAP_SLOSTFRACT      NULL                        /* Lost send packet fraction */
 #define OSP_MAP_RLOST           NULL                        /* Lost receive packets */
 #define OSP_MAP_RLOSTFRACT      NULL                        /* Lost receive packet fraction */
-#define OSP_MAP_CUSTINFO        NULL                        /* Customer info */
+#define OSP_MAP_CUSTOMINFO      NULL                        /* User-defined info */
 
 /*
  * OSP log level
@@ -390,10 +390,10 @@ static const CONF_PARSER mapping_config[] = {
     { "sendlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.slostfract), NULL, OSP_MAP_SLOSTFRACT },
     { "receivelost", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.rlost), NULL, OSP_MAP_RLOST },
     { "receivelostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.rlostfract), NULL, OSP_MAP_RLOSTFRACT },
-    { "customerinfo1", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[0]), NULL, OSP_MAP_CUSTINFO },
-    { "customerinfo2", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[1]), NULL, OSP_MAP_CUSTINFO },
-    { "customerinfo3", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[2]), NULL, OSP_MAP_CUSTINFO },
-    { "customerinfo4", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[3]), NULL, OSP_MAP_CUSTINFO },
+    { "custominfo1", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[0]), NULL, OSP_MAP_CUSTOMINFO },
+    { "custominfo2", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[1]), NULL, OSP_MAP_CUSTOMINFO },
+    { "custominfo3", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[2]), NULL, OSP_MAP_CUSTOMINFO },
+    { "custominfo4", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[3]), NULL, OSP_MAP_CUSTOMINFO },
     /*
      * End
      */
@@ -1089,20 +1089,20 @@ static int osp_check_mapping(
     }
 
     /*
-     * If customer info are incorrect, then fail.
+     * If user-defined info are incorrect, then fail.
      */
     for (i = 0; i < OSP_MAX_INDEX; i++) {
-        DEBUG("rlm_osp: check customer info %d mapping", i + 1);
+        DEBUG("rlm_osp: check custom info %d mapping", i + 1);
         if (osp_check_mapitem(mapping->custinfo[i], OSP_ITEM_DEFINED) < 0) {
             radlog(L_ERR, 
-                "rlm_osp: Incorrect 'customerinfo%d'.", 
+                "rlm_osp: Incorrect 'custominfo%d'.", 
                 i + 1);
             return -1;
         }
         if (osp_check_string(mapping->custinfo[i])) {
-            DEBUG("rlm_osp: customerinfo%d = '%s'", i + 1, mapping->custinfo[i]);
+            DEBUG("rlm_osp: custominfo%d = '%s'", i + 1, mapping->custinfo[i]);
         } else {
-            DEBUG("rlm_osp: customerinfo%d = 'NULL'", i + 1);
+            DEBUG("rlm_osp: custominfo%d = 'NULL'", i + 1);
         }
     }
 
@@ -1443,14 +1443,14 @@ static int osp_accounting(
     }
 
     /*
-     * Set customer info
+     * Set user-defined info
      */
     for (i = 0; i < OSP_MAX_INDEX; i++) {
         if (osp_check_string(info.custinfo[i])) {
-            OSPPTransactionSetCustomerInfo(
+            OSPPTransactionSetCustomInfo(
                 transaction,        /* Transaction handle */
                 i,                  /* Index */
-                info.custinfo[i]);  /* Customer info */
+                info.custinfo[i]);  /* User-defined info */
         }
     }
 
@@ -2247,29 +2247,29 @@ static int osp_get_usageinfo(
 
 
     /*
-     * Get customer info
+     * Get user-defined info
      */
     for (i = 0; i < OSP_MAX_INDEX; i++) {
-        if ((usagetype == PW_STATUS_STOP) || (usagetype == PW_STATUS_ALIVE)) {
+        if ((usagetype == PW_STATUS_START) || (usagetype == PW_STATUS_STOP) || (usagetype == PW_STATUS_ALIVE)) {
             if (osp_check_string(mapping->custinfo[i])) {
                 radius_xlat(info->custinfo[i], sizeof(info->custinfo[i]), mapping->custinfo[i], request, NULL);
                 if (info->custinfo[i][0] == '\0') {
                     /* Has checked string NULL */
                     radlog(L_INFO,
-                        "rlm_osp: Failed to parse '%s' in request for customer info %d.",
+                        "rlm_osp: Failed to parse '%s' in request for custom info %d.",
                         mapping->custinfo[i],
                         i + 1);
                 }
             } else {
-                DEBUG("rlm_osp: 'customerinfo%d' mapping undefined.", i + 1);
+                DEBUG("rlm_osp: 'custominfo%d' mapping undefined.", i + 1);
                 info->custinfo[i][0] = '\0';
             }
         } else {
-            DEBUG("rlm_osp: do not parse 'customerinfo%d'.", i + 1);
+            DEBUG("rlm_osp: do not parse 'custominfo%d'.", i + 1);
             info->custinfo[i][0] = '\0';
         }
         /* Do not have to check string NULL */
-        DEBUG("rlm_osp: customerinfo%d = '%s'", i + 1, info->custinfo[i]);
+        DEBUG("rlm_osp: custominfo%d = '%s'", i + 1, info->custinfo[i]);
     }
 
     DEBUG("rlm_osp: osp_get_usageinfo success");
