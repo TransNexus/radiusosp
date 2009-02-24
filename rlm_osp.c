@@ -1444,7 +1444,7 @@ static int osp_accounting(
     }
 
     /*
-     * Set user-defined info
+     * Report user-defined info
      */
     for (i = 0; i < OSP_MAX_INDEX; i++) {
         if (osp_check_string(info.custinfo[i])) {
@@ -1456,7 +1456,7 @@ static int osp_accounting(
     }
 
     /*
-     * Set release code
+     * Report release code
      */
     OSPPTransactionSetTermCause(
         transaction,    /* Transaction handle */
@@ -1465,7 +1465,7 @@ static int osp_accounting(
         NULL);          /* Description */
 
     /*
-     * Set destination protocol
+     * Report destination protocol
      */
     OSPPTransactionSetDestProtocol(
         transaction,    /* Transaction handle */
@@ -2286,10 +2286,10 @@ static int osp_get_usageinfo(
 }
 
 /*
- * Parse destination protocol from string
+ * Parse protocol from string
  *
- * param protocol Destination protocol string
- * return Destination protocol
+ * param protocol Protocol string
+ * return Protocol
  */
 static OSPE_DEST_PROTOCOL osp_parse_protocol(
     char* protocol)
@@ -2306,7 +2306,7 @@ static OSPE_DEST_PROTOCOL osp_parse_protocol(
             type = OSPC_DPROT_SIP;
         }
     }
-    DEBUG("rlm_osp: destination protocol = '%d'", type);
+    DEBUG("rlm_osp: protocol type = '%d'", type);
 
     DEBUG("rlm_osp: osp_parse_protocol success");
 
