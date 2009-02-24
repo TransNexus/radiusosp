@@ -82,6 +82,7 @@ RCSID("$Id$")
 #define OSP_MAP_CALLING         "%{Calling-Station-Id}"     /* Calling number, RFC 2865 */
 #define OSP_MAP_ISCALLEDURI     "yes"                       /* Called number type, uri */
 #define OSP_MAP_CALLED          "%{Called-Station-Id}"      /* Called number, RFC 2865 */
+#define OSP_MAP_ASSERTEDID      NULL                        /* P-Asserted-Identity */
 #define OSP_MAP_SRCDEV          NULL                        /* Source device */
 #define OSP_MAP_SOURCE          "%{NAS-IP-Address}"         /* Source, RFC 2865 */
 #define OSP_MAP_DESTINATION     NULL                        /* Destination */
@@ -232,6 +233,7 @@ typedef struct {
     char* calling;                  /* Calling number */
     int iscalleduri;                /* If called number uri */
     char* called;                   /* Called number */
+    char* assertedid;               /* P-Asserted-Identity */
     char* srcdev;                   /* Source device */
     char* source;                   /* Source */
     char* destination;              /* Destination */
@@ -273,6 +275,7 @@ typedef struct {
     char callid[OSP_STRBUF_SIZE];       /* Call-ID */
     char calling[OSP_STRBUF_SIZE];      /* Calling number */
     char called[OSP_STRBUF_SIZE];       /* Called number */
+    char assertedid[OSP_STRBUF_SIZE];   /* P-Asserted-Identity */
     char srcdev[OSP_STRBUF_SIZE];       /* Source device */
     char source[OSP_STRBUF_SIZE];       /* Source */
     char destination[OSP_STRBUF_SIZE];  /* Destination */
@@ -369,6 +372,7 @@ static const CONF_PARSER mapping_config[] = {
     { "callingnumber", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.calling), NULL, OSP_MAP_CALLING },
     { "iscalleduri", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.iscalleduri), NULL, OSP_MAP_ISCALLEDURI},
     { "callednumber", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.called), NULL, OSP_MAP_CALLED },
+    { "assertedid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.assertedid), NULL, OSP_MAP_ASSERTEDID },
     { "sourcedevice", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcdev), NULL, OSP_MAP_SRCDEV},
     { "source", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.source), NULL, OSP_MAP_SOURCE },
     { "destination", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destination), NULL, OSP_MAP_DESTINATION },
@@ -811,6 +815,20 @@ static int osp_check_mapping(
     }
     /* For must define mapping item, has checked string NULL */
     DEBUG("rlm_osp: callednumber = '%s'", mapping->called);
+
+    /*
+     * If asserted ID is incorrect, then fail.
+     */
+    DEBUG("rlm_osp: check assertedid mapping");
+    if (osp_check_mapitem(mapping->assertedid, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'assertedid'.");
+        return -1;
+    }
+    if (osp_check_string(mapping->assertedid)) {
+        DEBUG("rlm_osp: assertedid = '%s'", mapping->assertedid);
+    } else {
+        DEBUG("rlm_osp: assertedid = 'NULL'");
+    }
 
     /*
      * If source device is undefined, then fail.
@@ -1444,6 +1462,13 @@ static int osp_accounting(
     }
 
     /*
+     * Report asserted ID
+     */
+    OSPPTransactionSetAssertedId(
+        transaction,        /* Transaction handle */
+        base.assertedid);   /* Asserted ID */
+
+    /*
      * Report user-defined info
      */
     for (i = 0; i < OSP_MAX_INDEX; i++) {
@@ -1643,6 +1668,24 @@ static int osp_get_usagebase(
     }
     /* Do not have to check string NULL */
     DEBUG("rlm_osp: Called Number = '%s'", base->called);
+
+    /*
+     * Get asserted ID
+     */
+    if (osp_check_string(mapping->assertedid)) {
+        radius_xlat(base->assertedid, sizeof(base->assertedid), mapping->assertedid, request, NULL);
+        if (base->assertedid[0] == '\0') {
+            /* Has checked string NULL */
+            radlog(L_INFO,
+                "rlm_osp: Failed to parse '%s' in request for asserted ID.",
+                mapping->assertedid);
+        }
+    } else {
+        DEBUG("rlm_osp: 'assertedid' mapping undefined.");
+        base->assertedid[0] = '\0';
+    }
+    /* Do not have to check string NULL */
+    DEBUG("rlm_osp: Asserted ID = '%s'", base->assertedid);
 
     /*
      * Get source device
