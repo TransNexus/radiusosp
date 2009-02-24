@@ -294,7 +294,7 @@ typedef struct {
     int release;                                    /* EP that released the call */
     OSPE_TERM_CAUSE causetype;                      /* Release reason type */
     int cause;                                      /* Release reason */
-    char destprot[OSP_STRBUF_SIZE];                 /* Destination protocol */
+    OSPE_DEST_PROTOCOL destprot;                    /* Destination protocol */
     char confid[OSP_STRBUF_SIZE];                   /* Conference ID */
     int slost;                                      /* Packets not received by peer */
     int slostfract;                                 /* Fraction of packets not received by peer */
@@ -432,7 +432,8 @@ static int osp_get_usagebase(rlm_osp_t* data, REQUEST* request, osp_usagebase_t*
 static void osp_format_device(char* device, char* buffer, int buffersize);
 static int osp_get_username(char* uri, char* buffer, int buffersize);
 static int osp_get_usageinfo(osp_mapping_t* mapping, REQUEST* request, int usagetype, osp_usageinfo_t* info);
-static OSPE_TERM_CAUSE osp_get_causetype(char* protocol);
+static OSPE_DEST_PROTOCOL osp_parse_protocol(char* protocol);
+static OSPE_TERM_CAUSE osp_get_causetype(OSPE_DEST_PROTOCOL protocol);
 static time_t osp_format_time(char* timestr, osp_timestr_t format);
 static int osp_cal_timeoffset(char* tzone, long int* toffset);
 static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
@@ -1464,6 +1465,13 @@ static int osp_accounting(
         NULL);          /* Description */
 
     /*
+     * Set destination protocol
+     */
+    OSPPTransactionSetDestProtocol(
+        transaction,    /* Transaction handle */
+        info.destprot); /* Destination protocol */
+
+    /*
      * Send OSP UsageInd message to OSP server
      */
     for (i = 1; i <= MAX_RETRIES; i++) {
@@ -2098,8 +2106,8 @@ static int osp_get_usageinfo(
      */
     if ((usagetype == PW_STATUS_START) || (usagetype == PW_STATUS_STOP) || (usagetype == PW_STATUS_ALIVE)) { 
         if (osp_check_string(mapping->destprot)) {
-            radius_xlat(info->destprot, sizeof(info->destprot), mapping->destprot, request, NULL);
-            if (info->destprot[0] == '\0') {
+            radius_xlat(buffer, sizeof(buffer), mapping->destprot, request, NULL);
+            if (buffer[0] == '\0') {
                 /* Has checked string NULL */
                 radlog(L_INFO,
                     "rlm_osp: Failed to parse '%s' in request for destination protocol.",
@@ -2107,14 +2115,14 @@ static int osp_get_usageinfo(
             }
         } else {
             DEBUG("rlm_osp: 'destinationprotocol' mapping undefined.");
-            info->destprot[0] = '\0';
+            buffer[0] = '\0';
         }
     } else {
         DEBUG("rlm_osp: do not parse 'destinationprotocol'.");
-        info->destprot[0] = '\0';
+        buffer[0] = '\0';
     }
-    /* Do not have to check string NULL */
-    DEBUG("rlm_osp: destinationprotocol = '%s'", info->destprot);
+    info->destprot = osp_parse_protocol(buffer);
+    DEBUG("rlm_osp: destinationprotocol = '%d'", info->destprot);
 
     /*
      * Get release reason type
@@ -2278,25 +2286,60 @@ static int osp_get_usageinfo(
 }
 
 /*
+ * Parse destination protocol from string
+ *
+ * param protocol Destination protocol string
+ * return Destination protocol
+ */
+static OSPE_DEST_PROTOCOL osp_parse_protocol(
+    char* protocol)
+{
+    OSPE_DEST_PROTOCOL type = OSPC_DPROT_UNKNOWN;
+
+    DEBUG("rlm_osp: osp_parse_protocol start");
+
+    if (osp_check_string(protocol)) {
+        /* Comparing ignore case, Solaris does not support strcasestr */
+        if (strstr(protocol, "H323") || strstr(protocol, "h323")) {
+            type = OSPC_DPROT_Q931;
+        } else if (strstr(protocol, "SIP") || strstr(protocol, "sip") || strstr(protocol, "Sip")) {
+            type = OSPC_DPROT_SIP;
+        }
+    }
+    DEBUG("rlm_osp: destination protocol = '%d'", type);
+
+    DEBUG("rlm_osp: osp_parse_protocol success");
+
+    return type;
+}
+
+/*
  * Get termination cause type from destination protocol
  *
  * param protocol Destination protocol
  * return Termination cause type
  */
 static OSPE_TERM_CAUSE osp_get_causetype(
-    char* protocol)
+    OSPE_DEST_PROTOCOL protocol)
 {
-    OSPE_TERM_CAUSE type = OSPC_TCAUSE_Q850;
+    OSPE_TERM_CAUSE type;
 
     DEBUG("rlm_osp: osp_get_causetype start");
 
-    if (osp_check_string(protocol)) {
-        /* Comparing ignore case, Solaris does not support strcasestr */
-        if (strstr(protocol, "H323") || strstr(protocol, "h323")) {
-            type = OSPC_TCAUSE_H323;
-        } else if (strstr(protocol, "SIP") || strstr(protocol, "sip") || strstr(protocol, "Sip")) {
-            type = OSPC_TCAUSE_SIP;
-        }
+    switch (protocol) {
+    case OSPC_DPROT_SIP:
+        type = OSPC_TCAUSE_SIP;
+        break;
+    case OSPC_DPROT_LRQ:
+    case OSPC_DPROT_Q931:
+        type = OSPC_TCAUSE_H323;
+        break;
+    case OSPC_DPROT_XMPP:
+        type = OSPC_TCAUSE_XMPP;
+        break;
+    default:
+        type = OSPC_TCAUSE_Q850;
+        break;
     }
     DEBUG("rlm_osp: cause type = '%d'", type);
 
