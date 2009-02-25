@@ -78,7 +78,6 @@ RCSID("$Id$")
  */
 #define OSP_MAP_TRANSID         NULL                        /* Transaction ID */
 #define OSP_MAP_CALLID          "%{Acct-Session-Id}"        /* Call-ID, RFC 2866 */
-#define OSP_MAP_SESSIONID       NULL                        /* Session ID */
 #define OSP_MAP_ISCALLINGURI    "yes"                       /* Calling number type, uri */
 #define OSP_MAP_CALLING         "%{Calling-Station-Id}"     /* Calling number, RFC 2865 */
 #define OSP_MAP_ISCALLEDURI     "yes"                       /* Called number type, uri */
@@ -100,6 +99,7 @@ RCSID("$Id$")
 #define OSP_MAP_RELEASE         NULL                        /* Release source */
 #define OSP_MAP_CAUSE           "%{Acct-Terminate-Cause}"   /* Release cause, RFC 2866 */
 #define OSP_MAP_DESTPROTO       NULL                        /* Destination protocol */
+#define OSP_MAP_SESSIONID       NULL                        /* Session ID */
 #define OSP_MAP_CONFID          NULL                        /* Conference ID */
 #define OSP_MAP_SLOST           NULL                        /* Lost send packets */
 #define OSP_MAP_SLOSTFRACT      NULL                        /* Lost send packet fraction */
@@ -230,8 +230,6 @@ typedef struct {
 typedef struct {
     char* transid;                  /* Transaction ID */
     char* callid;                   /* Call-ID */
-    char* insessionid;              /* Inbound Call-ID */
-    char* outsessionid;             /* Outbound Call-ID */
     int iscallinguri;               /* If calling number uri */
     char* calling;                  /* Calling number */
     int iscalleduri;                /* If called number uri */
@@ -242,6 +240,7 @@ typedef struct {
     char* destination;              /* Destination */
     char* destdev;                  /* Destination device */
     char* destcount;                /* Destination count */
+    /* Following are detail info */
     int timeformat;                 /* Time string format */
     char* start;                    /* Call start time */
     char* alert;                    /* Call alert time */
@@ -253,6 +252,8 @@ typedef struct {
     char* release;                  /* Release source */
     char* cause;                    /* Release cause */
     char* destprot;                 /* Destination protocol */
+    char* insessionid;              /* Inbound Call-ID */
+    char* outsessionid;             /* Outbound Call-ID */
     char* confid;                   /* Conference ID */
     char* slost;                    /* Lost send packages */
     char* slostfract;               /* Lost send packages fraction */
@@ -276,8 +277,6 @@ typedef struct {
 typedef struct {
     OSPTUINT64 transid;                 /* Transaction ID */
     char callid[OSP_STRBUF_SIZE];       /* Call-ID */
-    char insessionid[OSP_STRBUF_SIZE];  /* Inbound Call-ID */
-    char outsessionid[OSP_STRBUF_SIZE]; /* Outbound Call-ID */
     char calling[OSP_STRBUF_SIZE];      /* Calling number */
     char called[OSP_STRBUF_SIZE];       /* Called number */
     char assertedid[OSP_STRBUF_SIZE];   /* P-Asserted-Identity */
@@ -303,6 +302,8 @@ typedef struct {
     OSPE_TERM_CAUSE causetype;                      /* Release reason type */
     int cause;                                      /* Release reason */
     OSPE_DEST_PROTOCOL destprot;                    /* Destination protocol */
+    char insessionid[OSP_STRBUF_SIZE];              /* Inbound Call-ID */
+    char outsessionid[OSP_STRBUF_SIZE];             /* Outbound Call-ID */
     char confid[OSP_STRBUF_SIZE];                   /* Conference ID */
     int slost;                                      /* Packets not received by peer */
     int slostfract;                                 /* Fraction of packets not received by peer */
@@ -373,8 +374,6 @@ static const CONF_PARSER mapping_config[] = {
      */
     { "transactionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transid), NULL, OSP_MAP_TRANSID },
     { "callid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.callid), NULL, OSP_MAP_CALLID },
-    { "inboundsessionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.insessionid), NULL, OSP_MAP_SESSIONID },
-    { "outboundsessionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.outsessionid), NULL, OSP_MAP_SESSIONID },
     { "iscallinguri", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.iscallinguri), NULL, OSP_MAP_ISCALLINGURI},
     { "callingnumber", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.calling), NULL, OSP_MAP_CALLING },
     { "iscalleduri", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.iscalleduri), NULL, OSP_MAP_ISCALLEDURI},
@@ -396,6 +395,8 @@ static const CONF_PARSER mapping_config[] = {
     { "releasesource", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.release), NULL, OSP_MAP_RELEASE },
     { "releasecause", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.cause), NULL, OSP_MAP_CAUSE },
     { "destinationprotocol", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destprot), NULL, OSP_MAP_DESTPROTO },
+    { "inboundsessionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.insessionid), NULL, OSP_MAP_SESSIONID },
+    { "outboundsessionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.outsessionid), NULL, OSP_MAP_SESSIONID },
     { "confid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.confid), NULL, OSP_MAP_CONFID },
     { "sendlost", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.slost), NULL, OSP_MAP_SLOST },
     { "sendlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.slostfract), NULL, OSP_MAP_SLOSTFRACT },
@@ -789,34 +790,6 @@ static int osp_check_mapping(
     DEBUG("rlm_osp: callid = '%s'", mapping->callid);
 
     /*
-     * If inbound session ID is incorrect, then fail.
-     */
-    DEBUG("rlm_osp: check inbound session ID mapping");
-    if (osp_check_mapitem(mapping->insessionid, OSP_ITEM_DEFINED) < 0) {
-        radlog(L_ERR, "rlm_osp: Incorrect 'inboundsessionid'.");
-        return -1;
-    }
-    if (osp_check_string(mapping->insessionid)) {
-        DEBUG("rlm_osp: inboundsessionid = '%s'", mapping->insessionid);
-    } else {
-        DEBUG("rlm_osp: inboundsessionid = 'NULL'");
-    }
-
-    /*
-     * If outbound session ID is incorrect, then fail.
-     */
-    DEBUG("rlm_osp: check outbound session ID mapping");
-    if (osp_check_mapitem(mapping->outsessionid, OSP_ITEM_DEFINED) < 0) {
-        radlog(L_ERR, "rlm_osp: Incorrect 'outboundsessionid'.");
-        return -1;
-    }
-    if (osp_check_string(mapping->outsessionid)) {
-        DEBUG("rlm_osp: outboundsessionid = '%s'", mapping->outsessionid);
-    } else {
-        DEBUG("rlm_osp: outboundsessionid = 'NULL'");
-    }
-
-    /*
      * Nothing to check for iscallinguri
      */
     DEBUG("rlm_osp: iscallinguri = '%d'", mapping->iscallinguri);
@@ -1070,6 +1043,34 @@ static int osp_check_mapping(
         DEBUG("rlm_osp: destinationprtocol = '%s'", mapping->destprot);
     } else {
         DEBUG("rlm_osp: destinationprotocol = 'NULL'");
+    }
+
+    /*
+     * If inbound session ID is incorrect, then fail.
+     */
+    DEBUG("rlm_osp: check inbound session ID mapping");
+    if (osp_check_mapitem(mapping->insessionid, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'inboundsessionid'.");
+        return -1;
+    }
+    if (osp_check_string(mapping->insessionid)) {
+        DEBUG("rlm_osp: inboundsessionid = '%s'", mapping->insessionid);
+    } else {
+        DEBUG("rlm_osp: inboundsessionid = 'NULL'");
+    }
+
+    /*
+     * If outbound session ID is incorrect, then fail.
+     */
+    DEBUG("rlm_osp: check outbound session ID mapping");
+    if (osp_check_mapitem(mapping->outsessionid, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'outboundsessionid'.");
+        return -1;
+    }
+    if (osp_check_string(mapping->outsessionid)) {
+        DEBUG("rlm_osp: outboundsessionid = '%s'", mapping->outsessionid);
+    } else {
+        DEBUG("rlm_osp: outboundsessionid = 'NULL'");
     }
 
     /*
@@ -1496,34 +1497,6 @@ static int osp_accounting(
     }
 
     /*
-     * Report inbound session ID's
-     */
-    if (base.insessionid[0] != '\0') {
-        sessionid = OSPPCallIdNew(strlen(base.insessionid), (const unsigned char *)base.insessionid);
-        if (sessionid != NULL) {
-            OSPPTransactionSetSessionId(
-                transaction,        /* Transaction handle */
-                OSPC_DIR_INBOUND,   /* Inbound */
-                sessionid);         /* Inbound session ID */
-            OSPPCallIdDelete(&sessionid);
-        }
-    }
-
-    /*
-     * Report outbound session ID's
-     */
-    if (base.outsessionid[0] != '\0') {
-        sessionid = OSPPCallIdNew(strlen(base.outsessionid), (const unsigned char *)base.outsessionid);
-        if (sessionid != NULL) {
-            OSPPTransactionSetSessionId(
-                transaction,        /* Transaction handle */
-                OSPC_DIR_OUTBOUND,  /* Outbound */
-                sessionid);         /* Outbound session ID */
-            OSPPCallIdDelete(&sessionid);
-        }
-    }
-
-    /*
      * Report asserted ID
      */
     OSPPTransactionSetAssertedId(
@@ -1557,6 +1530,34 @@ static int osp_accounting(
     OSPPTransactionSetDestProtocol(
         transaction,    /* Transaction handle */
         info.destprot); /* Destination protocol */
+
+    /*
+     * Report inbound session ID's
+     */
+    if (info.insessionid[0] != '\0') {
+        sessionid = OSPPCallIdNew(strlen(info.insessionid), (const unsigned char *)info.insessionid);
+        if (sessionid != NULL) {
+            OSPPTransactionSetSessionId(
+                transaction,        /* Transaction handle */
+                OSPC_DIR_INBOUND,   /* Inbound */
+                sessionid);         /* Inbound session ID */
+            OSPPCallIdDelete(&sessionid);
+        }
+    }
+
+    /*
+     * Report outbound session ID's
+     */
+    if (info.outsessionid[0] != '\0') {
+        sessionid = OSPPCallIdNew(strlen(info.outsessionid), (const unsigned char *)info.outsessionid);
+        if (sessionid != NULL) {
+            OSPPTransactionSetSessionId(
+                transaction,        /* Transaction handle */
+                OSPC_DIR_OUTBOUND,  /* Outbound */
+                sessionid);         /* Outbound session ID */
+            OSPPCallIdDelete(&sessionid);
+        }
+    }
 
     /*
      * Send OSP UsageInd message to OSP server
@@ -1662,42 +1663,6 @@ static int osp_get_usagebase(
     }
     /* Do not have to check string NULL */
     DEBUG("rlm_osp: CALL-ID = '%s'", base->callid);
-
-    /*
-     * Get inbound session ID
-     */
-    if (osp_check_string(mapping->insessionid)) {
-        radius_xlat(base->insessionid, sizeof(base->insessionid), mapping->insessionid, request, NULL);
-        if (base->insessionid[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_INFO,
-                "rlm_osp: Failed to parse '%s' in request for inbound session ID.",
-                mapping->insessionid);
-        }
-    } else {
-        DEBUG("rlm_osp: 'inboundsessionid' mapping undefined.");
-        base->insessionid[0] = '\0';
-    }
-    /* Do not have to check string NULL */
-    DEBUG("rlm_osp: Inbound Session ID = '%s'", base->insessionid);
-
-    /*
-     * Get outbound session ID
-     */
-    if (osp_check_string(mapping->outsessionid)) {
-        radius_xlat(base->outsessionid, sizeof(base->outsessionid), mapping->outsessionid, request, NULL);
-        if (base->outsessionid[0] == '\0') {
-            /* Has checked string NULL */
-            radlog(L_INFO,
-                "rlm_osp: Failed to parse '%s' in request for outbound session ID.",
-                mapping->outsessionid);
-        }
-    } else {
-        DEBUG("rlm_osp: 'outboundsessionid' mapping undefined.");
-        base->outsessionid[0] = '\0';
-    }
-    /* Do not have to check string NULL */
-    DEBUG("rlm_osp: Outbound Session ID = '%s'", base->outsessionid);
 
     /*
      * Get calling number
@@ -2270,6 +2235,52 @@ static int osp_get_usageinfo(
      */
     info->causetype = osp_get_causetype(info->destprot);
     DEBUG("rlm_osp: termination cause type = '%d'", info->causetype);
+
+    /*
+     * Get inbound session ID
+     */
+    if ((usagetype == PW_STATUS_START) || (usagetype == PW_STATUS_STOP) || (usagetype == PW_STATUS_ALIVE)) { 
+        if (osp_check_string(mapping->insessionid)) {
+            radius_xlat(info->insessionid, sizeof(info->insessionid), mapping->insessionid, request, NULL);
+            if (info->insessionid[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for inbound session ID.",
+                    mapping->insessionid);
+            }
+        } else {
+            DEBUG("rlm_osp: 'inboundsessionid' mapping undefined.");
+            info->insessionid[0] = '\0';
+        }
+    } else {
+        DEBUG("rlm_osp: do not parse 'inboundsessionid'.");
+        info->insessionid[0] = '\0';
+    }
+    /* Do not have to check string NULL */
+    DEBUG("rlm_osp: Inbound Session ID = '%s'", info->insessionid);
+
+    /*
+     * Get outbound session ID
+     */
+    if ((usagetype == PW_STATUS_START) || (usagetype == PW_STATUS_STOP) || (usagetype == PW_STATUS_ALIVE)) { 
+        if (osp_check_string(mapping->outsessionid)) {
+            radius_xlat(info->outsessionid, sizeof(info->outsessionid), mapping->outsessionid, request, NULL);
+            if (info->outsessionid[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for outbound session ID.",
+                    mapping->outsessionid);
+            }
+        } else {
+            DEBUG("rlm_osp: 'outboundsessionid' mapping undefined.");
+            info->outsessionid[0] = '\0';
+        }
+    } else {
+        DEBUG("rlm_osp: do not parse 'inboundsessionid'.");
+        info->outsessionid[0] = '\0';
+    }
+    /* Do not have to check string NULL */
+    DEBUG("rlm_osp: Outbound Session ID = '%s'", info->outsessionid);
 
     /*
      * Get conference ID
