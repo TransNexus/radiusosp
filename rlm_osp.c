@@ -100,6 +100,7 @@ RCSID("$Id$")
 #define OSP_MAP_CAUSE           "%{Acct-Terminate-Cause}"   /* Release cause, RFC 2866 */
 #define OSP_MAP_DESTPROTO       NULL                        /* Destination protocol */
 #define OSP_MAP_SESSIONID       NULL                        /* Session ID */
+#define OSP_MAP_CODEC           NULL                        /* Codec */
 #define OSP_MAP_CONFID          NULL                        /* Conference ID */
 #define OSP_MAP_SLOST           NULL                        /* Lost send packets */
 #define OSP_MAP_SLOSTFRACT      NULL                        /* Lost send packet fraction */
@@ -254,6 +255,8 @@ typedef struct {
     char* destprot;                 /* Destination protocol */
     char* insessionid;              /* Inbound Call-ID */
     char* outsessionid;             /* Outbound Call-ID */
+    char* forcodec;                 /* Forward codec */
+    char* revcodec;                 /* Reverse codec */
     char* confid;                   /* Conference ID */
     char* slost;                    /* Lost send packages */
     char* slostfract;               /* Lost send packages fraction */
@@ -304,6 +307,8 @@ typedef struct {
     OSPE_DEST_PROTOCOL destprot;                    /* Destination protocol */
     char insessionid[OSP_STRBUF_SIZE];              /* Inbound Call-ID */
     char outsessionid[OSP_STRBUF_SIZE];             /* Outbound Call-ID */
+    char forcodec[OSP_STRBUF_SIZE];                 /* Forward codec */
+    char revcodec[OSP_STRBUF_SIZE];                 /* Reverse codec */
     char confid[OSP_STRBUF_SIZE];                   /* Conference ID */
     int slost;                                      /* Packets not received by peer */
     int slostfract;                                 /* Fraction of packets not received by peer */
@@ -397,6 +402,8 @@ static const CONF_PARSER mapping_config[] = {
     { "destinationprotocol", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destprot), NULL, OSP_MAP_DESTPROTO },
     { "inboundsessionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.insessionid), NULL, OSP_MAP_SESSIONID },
     { "outboundsessionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.outsessionid), NULL, OSP_MAP_SESSIONID },
+    { "forwardcodec", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.forcodec), NULL, OSP_MAP_CODEC},
+    { "reversecodec", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.revcodec), NULL, OSP_MAP_CODEC},
     { "confid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.confid), NULL, OSP_MAP_CONFID },
     { "sendlost", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.slost), NULL, OSP_MAP_SLOST },
     { "sendlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.slostfract), NULL, OSP_MAP_SLOSTFRACT },
@@ -1074,6 +1081,34 @@ static int osp_check_mapping(
     }
 
     /*
+     * If forward codec is incorrect, then fail.
+     */
+    DEBUG("rlm_osp: check forwardcodec mapping");
+    if (osp_check_mapitem(mapping->forcodec, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'forwardcodec'.");
+        return -1;
+    }
+    if (osp_check_string(mapping->forcodec)) {
+        DEBUG("rlm_osp: forwardcodec = '%s'", mapping->forcodec);
+    } else {
+        DEBUG("rlm_osp: forwardcodec = 'NULL'");
+    }
+
+    /*
+     * If reverse codec is incorrect, then fail.
+     */
+    DEBUG("rlm_osp: check reversecodec mapping");
+    if (osp_check_mapitem(mapping->revcodec, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'reversecodec'.");
+        return -1;
+    }
+    if (osp_check_string(mapping->revcodec)) {
+        DEBUG("rlm_osp: reversecodec = '%s'", mapping->revcodec);
+    } else {
+        DEBUG("rlm_osp: reversecodec = 'NULL'");
+    }
+
+    /*
      * If conference ID is incorrect, then fail.
      */
     DEBUG("rlm_osp: check conferenceid mapping");
@@ -1532,7 +1567,7 @@ static int osp_accounting(
         info.destprot); /* Destination protocol */
 
     /*
-     * Report inbound session ID's
+     * Report inbound session ID
      */
     if (info.insessionid[0] != '\0') {
         sessionid = OSPPCallIdNew(strlen(info.insessionid), (const unsigned char *)info.insessionid);
@@ -1546,7 +1581,7 @@ static int osp_accounting(
     }
 
     /*
-     * Report outbound session ID's
+     * Report outbound session ID
      */
     if (info.outsessionid[0] != '\0') {
         sessionid = OSPPCallIdNew(strlen(info.outsessionid), (const unsigned char *)info.outsessionid);
@@ -1558,6 +1593,20 @@ static int osp_accounting(
             OSPPCallIdDelete(&sessionid);
         }
     }
+
+    /*
+     * Report forward codec
+     */
+    OSPPTransactionSetForwardCodec(
+        transaction,    /* Transaction handle */
+        info.forcodec); /* Forward codec */
+
+    /*
+     * Report reverse codec
+     */
+    OSPPTransactionSetReverseCodec(
+        transaction,    /* Transaction handle */
+        info.revcodec); /* Reverse codec */
 
     /*
      * Send OSP UsageInd message to OSP server
@@ -2281,6 +2330,52 @@ static int osp_get_usageinfo(
     }
     /* Do not have to check string NULL */
     DEBUG("rlm_osp: Outbound Session ID = '%s'", info->outsessionid);
+
+    /*
+     * Get forward codec
+     */
+    if ((usagetype == PW_STATUS_START) || (usagetype == PW_STATUS_STOP)) { 
+        if (osp_check_string(mapping->forcodec)) {
+            radius_xlat(info->forcodec, sizeof(info->forcodec), mapping->forcodec, request, NULL);
+            if (info->forcodec[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for forward codec.",
+                    mapping->forcodec);
+            }
+        } else {
+            DEBUG("rlm_osp: 'forwardcodec' mapping undefined.");
+            info->forcodec[0] = '\0';
+        }
+    } else {
+        DEBUG("rlm_osp: do not parse 'forwardcodec'.");
+        info->forcodec[0] = '\0';
+    }
+    /* Do not have to check string NULL */
+    DEBUG("rlm_osp: forwardcodec = '%s'", info->forcodec);
+
+    /*
+     * Get reverse codec
+     */
+    if ((usagetype == PW_STATUS_START) || (usagetype == PW_STATUS_STOP)) { 
+        if (osp_check_string(mapping->revcodec)) {
+            radius_xlat(info->revcodec, sizeof(info->revcodec), mapping->revcodec, request, NULL);
+            if (info->revcodec[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for reverse codec.",
+                    mapping->revcodec);
+            }
+        } else {
+            DEBUG("rlm_osp: 'reversecodec' mapping undefined.");
+            info->revcodec[0] = '\0';
+        }
+    } else {
+        DEBUG("rlm_osp: do not parse 'reversecodec'.");
+        info->revcodec[0] = '\0';
+    }
+    /* Do not have to check string NULL */
+    DEBUG("rlm_osp: reversecodec = '%s'", info->revcodec);
 
     /*
      * Get conference ID
