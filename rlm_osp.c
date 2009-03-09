@@ -67,6 +67,9 @@ RCSID("$Id$")
 #define OSP_DEF_DEVICEPORT  "5060"                      /* Mapping default device port */
 #define OSP_DEF_DESTCOUNT   0                           /* OSP default destination count, unset */
 #define OSP_DEF_CAUSE       0                           /* OSP default termination cause */
+#define OSP_DEF_DELAY       -1                          /* OSP default delay */
+#define OSP_DEF_JITTER      -1                          /* OSP default jitter */
+#define OSP_DEF_PACKLOSS    -1                          /* OSP default packets lost */
 #define OSP_DEF_SLOST       -1                          /* OSP default lost send packets */
 #define OSP_DEF_SLOSTFRACT  -1                          /* OSP default lost send packet fraction */
 #define OSP_DEF_RLOST       -1                          /* OSP default lost receive packets */
@@ -102,6 +105,9 @@ RCSID("$Id$")
 #define OSP_MAP_SESSIONID       NULL                        /* Session ID */
 #define OSP_MAP_CODEC           NULL                        /* Codec */
 #define OSP_MAP_CONFID          NULL                        /* Conference ID */
+#define OSP_MAP_DELAY           NULL                        /* Delay */
+#define OSP_MAP_JITTER          NULL                        /* Jitter */
+#define OSP_MAP_PACKLOSS        NULL                        /* Packets lost */
 #define OSP_MAP_SLOST           NULL                        /* Lost send packets */
 #define OSP_MAP_SLOSTFRACT      NULL                        /* Lost send packet fraction */
 #define OSP_MAP_RLOST           NULL                        /* Lost receive packets */
@@ -258,6 +264,12 @@ typedef struct {
     char* forcodec;                 /* Forward codec */
     char* revcodec;                 /* Reverse codec */
     char* confid;                   /* Conference ID */
+    char* indelay;                  /* Inbound delay */
+    char* outdelay;                 /* Outbound delay */
+    char* injitter;                 /* Inbound jitter */
+    char* outjitter;                /* Outbound jitter */
+    char* inpackloss;               /* Inbound packets lost */
+    char* outpackloss;              /* Outbound packets lost */
     char* slost;                    /* Lost send packages */
     char* slostfract;               /* Lost send packages fraction */
     char* rlost;                    /* Lost receive packages */
@@ -310,6 +322,12 @@ typedef struct {
     char forcodec[OSP_STRBUF_SIZE];                 /* Forward codec */
     char revcodec[OSP_STRBUF_SIZE];                 /* Reverse codec */
     char confid[OSP_STRBUF_SIZE];                   /* Conference ID */
+    int indelay;                                    /* Inbound delay in ms */
+    int outdelay;                                   /* Outbound delay in ms */
+    int injitter;                                   /* Inbound jitter in ms */
+    int outjitter;                                  /* Outbound jitter in ms */
+    int inpackloss;                                 /* Inbound packets lost */
+    int outpackloss;                                /* Outbound packets lost */
     int slost;                                      /* Packets not received by peer */
     int slostfract;                                 /* Fraction of packets not received by peer */
     int rlost;                                      /* Packets not received that were expected */
@@ -405,6 +423,12 @@ static const CONF_PARSER mapping_config[] = {
     { "forwardcodec", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.forcodec), NULL, OSP_MAP_CODEC},
     { "reversecodec", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.revcodec), NULL, OSP_MAP_CODEC},
     { "confid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.confid), NULL, OSP_MAP_CONFID },
+    { "indelay", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.indelay), NULL, OSP_MAP_DELAY},
+    { "outdelay", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.outdelay), NULL, OSP_MAP_DELAY},
+    { "injitter", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.injitter), NULL, OSP_MAP_JITTER},
+    { "outjitter", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.outjitter), NULL, OSP_MAP_JITTER},
+    { "inpackloss", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.inpackloss), NULL, OSP_MAP_PACKLOSS},
+    { "outpackloss", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.outpackloss), NULL, OSP_MAP_PACKLOSS},
     { "sendlost", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.slost), NULL, OSP_MAP_SLOST },
     { "sendlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.slostfract), NULL, OSP_MAP_SLOSTFRACT },
     { "receivelost", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.rlost), NULL, OSP_MAP_RLOST },
@@ -1123,6 +1147,90 @@ static int osp_check_mapping(
     }
 
     /*
+     * If inbound delay is incorrect, then fail.
+     */
+    DEBUG("rlm_osp: check inbound delay mapping");
+    if (osp_check_mapitem(mapping->indelay, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'inbounddelay'.");
+        return -1;
+    }
+    if (osp_check_string(mapping->indelay)) {
+        DEBUG("rlm_osp: inbounddelay = '%s'", mapping->indelay);
+    } else {
+        DEBUG("rlm_osp: inbounddelay = 'NULL'");
+    }
+
+    /*
+     * If outbound delay is incorrect, then fail.
+     */
+    DEBUG("rlm_osp: check outbound delay mapping");
+    if (osp_check_mapitem(mapping->outdelay, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'outbounddelay'.");
+        return -1;
+    }
+    if (osp_check_string(mapping->outdelay)) {
+        DEBUG("rlm_osp: outbounddelay = '%s'", mapping->outdelay);
+    } else {
+        DEBUG("rlm_osp: outbounddelay = 'NULL'");
+    }
+
+    /*
+     * If inbound jitter is incorrect, then fail.
+     */
+    DEBUG("rlm_osp: check inbound jitter mapping");
+    if (osp_check_mapitem(mapping->injitter, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'inboundjitter'.");
+        return -1;
+    }
+    if (osp_check_string(mapping->injitter)) {
+        DEBUG("rlm_osp: inboundjitter = '%s'", mapping->injitter);
+    } else {
+        DEBUG("rlm_osp: inboundjitter = 'NULL'");
+    }
+
+    /*
+     * If outbound jitter is incorrect, then fail.
+     */
+    DEBUG("rlm_osp: check outbound jitter mapping");
+    if (osp_check_mapitem(mapping->outjitter, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'outboundjitter'.");
+        return -1;
+    }
+    if (osp_check_string(mapping->outjitter)) {
+        DEBUG("rlm_osp: outboundjitter = '%s'", mapping->outjitter);
+    } else {
+        DEBUG("rlm_osp: outboundjitter = 'NULL'");
+    }
+
+    /*
+     * If inbound packets lost is incorrect, then fail.
+     */
+    DEBUG("rlm_osp: check inbound packets lost mapping");
+    if (osp_check_mapitem(mapping->inpackloss, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'inboundpackloss'.");
+        return -1;
+    }
+    if (osp_check_string(mapping->inpackloss)) {
+        DEBUG("rlm_osp: inboundpackloss = '%s'", mapping->inpackloss);
+    } else {
+        DEBUG("rlm_osp: inboundpackloss = 'NULL'");
+    }
+
+    /*
+     * If outbound packets lost is incorrect, then fail.
+     */
+    DEBUG("rlm_osp: check outbound packets lost mapping");
+    if (osp_check_mapitem(mapping->outpackloss, OSP_ITEM_DEFINED) < 0) {
+        radlog(L_ERR, "rlm_osp: Incorrect 'outboundpackloss'.");
+        return -1;
+    }
+    if (osp_check_string(mapping->outpackloss)) {
+        DEBUG("rlm_osp: outboundpackloss = '%s'", mapping->outpackloss);
+    } else {
+        DEBUG("rlm_osp: outboundpackloss = 'NULL'");
+    }
+
+    /*
      * If lost send packets is incorrect, then fail.
      */
     DEBUG("rlm_osp: check sendlost mapping");
@@ -1607,6 +1715,66 @@ static int osp_accounting(
     OSPPTransactionSetReverseCodec(
         transaction,    /* Transaction handle */
         info.revcodec); /* Reverse codec */
+
+    /*
+     * Report inbound delay
+     */
+    if (info.indelay != OSP_DEF_DELAY) {
+        OSPPTransactionSetDelayMean(
+            transaction,        /* Transaction handle */
+            OSPC_DIR_INBOUND,   /* Inbound */
+            info.indelay);      /* Inbound delay */
+    }
+
+    /*
+     * Report outbound delay
+     */
+    if (info.outdelay != OSP_DEF_DELAY) {
+        OSPPTransactionSetDelayMean(
+            transaction,        /* Transaction handle */
+            OSPC_DIR_OUTBOUND,  /* Outbound */
+            info.outdelay);     /* Outbound delay */
+    }
+
+    /*
+     * Report inbound jitter
+     */
+    if (info.injitter != OSP_DEF_JITTER) {
+        OSPPTransactionSetJitterMean(
+            transaction,        /* Transaction handle */
+            OSPC_DIR_INBOUND,   /* Inbound */
+            info.injitter);     /* Inbound jitter */
+    }
+
+    /*
+     * Report outbound jitter
+     */
+    if (info.outjitter != OSP_DEF_JITTER) {
+        OSPPTransactionSetJitterMean(
+            transaction,        /* Transaction handle */
+            OSPC_DIR_OUTBOUND,  /* Outbound */
+            info.outjitter);    /* Outbound jitter*/
+    }
+
+    /*
+     * Report inbound packets lost
+     */
+    if (info.inpackloss != OSP_DEF_PACKLOSS) {
+        OSPPTransactionSetPackLossMean(
+            transaction,        /* Transaction handle */
+            OSPC_DIR_INBOUND,   /* Inbound */
+            info.inpackloss);   /* Inbound packets lost */
+    }
+
+    /*
+     * Report outbound packets lost
+     */
+    if (info.outpackloss != OSP_DEF_PACKLOSS) {
+        OSPPTransactionSetPackLossMean(
+            transaction,        /* Transaction handle */
+            OSPC_DIR_OUTBOUND,  /* Outbound */
+            info.outpackloss);  /* Outbound packets lost */
+    }
 
     /*
      * Send OSP UsageInd message to OSP server
@@ -2399,6 +2567,156 @@ static int osp_get_usageinfo(
     }
     /* Do not have to check string NULL */
     DEBUG("rlm_osp: conferenceid = '%s'", info->confid);
+
+    /*
+     * Get inbound delay 
+     */
+    if (usagetype == PW_STATUS_STOP) {
+        if (osp_check_string(mapping->indelay)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->indelay, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for inbound delay.",
+                    mapping->indelay);
+                info->indelay = OSP_DEF_DELAY;
+            } else {
+                info->indelay = atoi(buffer);
+            }
+        } else {
+            DEBUG("rlm_osp: 'inbounddelay' mapping undefined.");
+            info->indelay = OSP_DEF_DELAY;
+        }
+    } else {
+        DEBUG("rlm_osp: do not parse 'inbounddelay'.");
+        info->indelay = OSP_DEF_DELAY;
+    }
+    DEBUG("rlm_osp: inbounddelay = '%d'", info->indelay);
+
+    /*
+     * Get outbound delay 
+     */
+    if (usagetype == PW_STATUS_STOP) {
+        if (osp_check_string(mapping->outdelay)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->outdelay, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for outbound delay.",
+                    mapping->outdelay);
+                info->outdelay = OSP_DEF_DELAY;
+            } else {
+                info->outdelay = atoi(buffer);
+            }
+        } else {
+            DEBUG("rlm_osp: 'outbounddelay' mapping undefined.");
+            info->outdelay = OSP_DEF_DELAY;
+        }
+    } else {
+        DEBUG("rlm_osp: do not parse 'outbounddelay'.");
+        info->outdelay = OSP_DEF_DELAY;
+    }
+    DEBUG("rlm_osp: outbounddelay = '%d'", info->outdelay);
+
+    /*
+     * Get inbound jitter 
+     */
+    if (usagetype == PW_STATUS_STOP) {
+        if (osp_check_string(mapping->injitter)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->injitter, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for inbound jitter.",
+                    mapping->injitter);
+                info->injitter = OSP_DEF_DELAY;
+            } else {
+                info->injitter = atoi(buffer);
+            }
+        } else {
+            DEBUG("rlm_osp: 'inboundjitter' mapping undefined.");
+            info->injitter = OSP_DEF_DELAY;
+        }
+    } else {
+        DEBUG("rlm_osp: do not parse 'inboundjitter'.");
+        info->injitter = OSP_DEF_DELAY;
+    }
+    DEBUG("rlm_osp: inboundjitter = '%d'", info->injitter);
+
+    /*
+     * Get outbound jitter 
+     */
+    if (usagetype == PW_STATUS_STOP) {
+        if (osp_check_string(mapping->outjitter)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->outjitter, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for outbound jitter.",
+                    mapping->outjitter);
+                info->outjitter = OSP_DEF_DELAY;
+            } else {
+                info->outjitter = atoi(buffer);
+            }
+        } else {
+            DEBUG("rlm_osp: 'outboundjitter' mapping undefined.");
+            info->outjitter = OSP_DEF_DELAY;
+        }
+    } else {
+        DEBUG("rlm_osp: do not parse 'outboundjitter'.");
+        info->outjitter = OSP_DEF_DELAY;
+    }
+    DEBUG("rlm_osp: outboundjitter = '%d'", info->outjitter);
+
+    /*
+     * Get inbound packloss 
+     */
+    if (usagetype == PW_STATUS_STOP) {
+        if (osp_check_string(mapping->inpackloss)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->inpackloss, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for inbound packets lost.",
+                    mapping->inpackloss);
+                info->inpackloss = OSP_DEF_DELAY;
+            } else {
+                info->inpackloss = atoi(buffer);
+            }
+        } else {
+            DEBUG("rlm_osp: 'inboundpackloss' mapping undefined.");
+            info->inpackloss = OSP_DEF_DELAY;
+        }
+    } else {
+        DEBUG("rlm_osp: do not parse 'inboundpackloss'.");
+        info->inpackloss = OSP_DEF_DELAY;
+    }
+    DEBUG("rlm_osp: inboundpackloss = '%d'", info->inpackloss);
+
+    /*
+     * Get outbound packloss 
+     */
+    if (usagetype == PW_STATUS_STOP) {
+        if (osp_check_string(mapping->outpackloss)) {
+            radius_xlat(buffer, sizeof(buffer), mapping->outpackloss, request, NULL);
+            if (buffer[0] == '\0') {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s' in request for outbound packets lost.",
+                    mapping->outpackloss);
+                info->outpackloss = OSP_DEF_DELAY;
+            } else {
+                info->outpackloss = atoi(buffer);
+            }
+        } else {
+            DEBUG("rlm_osp: 'outboundpackloss' mapping undefined.");
+            info->outpackloss = OSP_DEF_DELAY;
+        }
+    } else {
+        DEBUG("rlm_osp: do not parse 'outboundpackloss'.");
+        info->outpackloss = OSP_DEF_DELAY;
+    }
+    DEBUG("rlm_osp: outboundpackloss = '%d'", info->outpackloss);
 
     /*
      * Get lost send packets
