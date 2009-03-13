@@ -66,8 +66,10 @@ RCSID("$Id$")
 #define OSP_TIMEOUT_MAX     60000                       /* OSP max timeout in ms */
 #define OSP_CUSTOMERID_DEF  ""                          /* OSP default customer ID */
 #define OSP_DEVICEID_DEF    ""                          /* OSP default device ID */
-#define OSP_DEVICEIP_DEF    "localhost"                 /* OSP default device IP */
-#define OSP_DEVICEPORT_DEF  "5060"                      /* Mapping default device port */
+#define OSP_DEVICEIP_DEF    "localhost"                 /* Mapping default device IP */
+#define OSP_DEVICEPORT_DEF  "0"                         /* Mapping default device port */
+#define OSP_IP_DEF          0                           /* OSP default IP */
+#define OSP_PORT_DEF        0                           /* OSP default port */
 #define OSP_DESTCOUNT_DEF   0                           /* OSP default destination count, unset */
 #define OSP_CAUSE_DEF       0                           /* OSP default termination cause */
 #define OSP_TIME_DEF        0                           /* OSP default time value */
@@ -444,6 +446,7 @@ static int osp_check_mapping(osp_mapping_t* mapping);
 static int osp_check_itemmap(char* item, osp_deflevel_t level);
 static int osp_create_provider(osp_provider_t* provider);
 static int osp_get_usageinfo(rlm_osp_t* data, REQUEST* request, int type, osp_usage_t* usage);
+static void osp_create_device(uint32_t ip, int prot, char* buffer, int buffersize);
 static void osp_format_device(char* device, char* buffer, int buffersize);
 static int osp_get_username(char* uri, char* buffer, int buffersize);
 static OSPE_DEST_PROTOCOL osp_parse_protocol(char* protocol);
@@ -629,12 +632,12 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
  * param _name Item name
  * param _lev Must or may be defined
  * param _map Item mapping string
- * param _def Default IP address
+ * param _ip Default IP address
+ * param _port Default prot
  * param _buf Buffer
- * param _ip IP buffer
  * param _val Item value
  */
-#define OSP_GET_IP(_req, _flag, _name, _lev, _map, _def, _buf, _ip, _val) { \
+#define OSP_GET_IP(_req, _flag, _name, _lev, _map, _ip, _port, _buf, _val) { \
     if (_flag) { \
         if (OSP_CHECK_STRING(_map)) { \
             radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
@@ -645,9 +648,7 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
                     return -1; \
                 } else { \
                     radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
-                    _ip.s_addr = _def; \
-                    inet_ntop(AF_INET, &_ip, _buf, sizeof(_buf)); \
-                    osp_format_device(_buf, _val, sizeof(_val)); \
+                    osp_create_device(_ip, _port, _val, sizeof(_val)); \
                 } \
             } else { \
                 osp_format_device(_buf, _val, sizeof(_val)); \
@@ -658,16 +659,12 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
                 return -1; \
             } else { \
                 DEBUG("rlm_osp: '%s' mapping undefined.", _name); \
-                _ip.s_addr = _def; \
-                inet_ntop(AF_INET, &_ip, _buf, sizeof(_buf)); \
-                osp_format_device(_buf, _val, sizeof(_val)); \
+                osp_create_device(_ip, _port, _val, sizeof(_val)); \
             } \
         } \
     } else { \
         DEBUG("rlm_osp: do not parse '%s'.", _name); \
-        _ip.s_addr = _def; \
-        inet_ntop(AF_INET, &_ip, _buf, sizeof(_buf)); \
-        osp_format_device(_buf, _val, sizeof(_val)); \
+        osp_create_device(_ip, _port, _val, sizeof(_val)); \
     } \
     /* Do not have to check string NULL */ \
     DEBUG("rlm_osp: '%s' = '%s'", _name, _val); \
@@ -1601,9 +1598,7 @@ static int osp_get_usageinfo(
     osp_provider_t* provider = &data->provider;
     osp_mapping_t* mapping = &data->mapping;
     char buffer[OSP_STRBUF_SIZE];
-    struct in_addr ip;
-    int parse;
-    int i, value, size;
+    int parse, size, i;
 
     DEBUG("rlm_osp: osp_get_usageinfo start");
 
@@ -1623,16 +1618,16 @@ static int osp_get_usageinfo(
     OSP_GET_STRING(request, TRUE, "assertedid", OSP_DEF_MAY, mapping->assertedid, usage->assertedid);
 
     /* Get source device */
-    OSP_GET_IP(request, TRUE, "sourcedevice", OSP_DEF_MUST, mapping->srcdev, 0, buffer, ip, usage->srcdev);
+    OSP_GET_IP(request, TRUE, "sourcedevice", OSP_DEF_MUST, mapping->srcdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev);
 
     /* Get source */
-    OSP_GET_IP(request, TRUE, "source", OSP_DEF_MAY, mapping->source, provider->deviceip, buffer, ip, usage->source);
+    OSP_GET_IP(request, TRUE, "source", OSP_DEF_MAY, mapping->source, provider->deviceip, provider->deviceport, buffer, usage->source);
 
     /* Get destination */
-    OSP_GET_IP(request, TRUE, "destination", OSP_DEF_MUST, mapping->destination, 0, buffer, ip, usage->destination);
+    OSP_GET_IP(request, TRUE, "destination", OSP_DEF_MUST, mapping->destination, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination);
 
     /* Get destination device */
-    OSP_GET_IP(request, TRUE, "destinationdevice", OSP_DEF_MAY, mapping->destdev, 0, buffer, ip, usage->destdev);
+    OSP_GET_IP(request, TRUE, "destinationdevice", OSP_DEF_MAY, mapping->destdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destdev);
 
     /* Get destination count */
     OSP_GET_INTEGER(request, TRUE, "destinationcount", OSP_DEF_MAY, mapping->destcount, OSP_DESTCOUNT_DEF, buffer, usage->destcount);
@@ -1678,8 +1673,10 @@ static int osp_get_usageinfo(
 
     /* Get post dial delay */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
-    OSP_GET_INTEGER(request, parse, "postdialdelay", OSP_DEF_MAY, mapping->pdd, OSP_STATS_DEF, buffer, value);
-    usage->pdd = value / OSP_TIMEUNIT_SCALE[mapping->pddunit];
+    OSP_GET_INTEGER(request, parse, "postdialdelay", OSP_DEF_MAY, mapping->pdd, OSP_STATS_DEF, buffer, usage->pdd);
+    if (usage->pdd != OSP_STATS_DEF) {
+        usage->pdd /= OSP_TIMEUNIT_SCALE[mapping->pddunit];
+    }
     DEBUG("rlm_osp: Post dial delay = '%d'", usage->pdd);
 
     /* Get release source */
@@ -1801,6 +1798,43 @@ static int osp_get_usageinfo(
     DEBUG("rlm_osp: osp_get_usageinfo success");
 
     return 0;
+}
+
+/*
+ * Create device IP with port
+ *
+ * param ip Device IP address
+ * param port Device port
+ * param buffer Buffer
+ * param buffersize Size of buffer
+ * return
+ */
+static void osp_create_device(
+    uint32_t ip,
+    int port,
+    char* buffer,
+    int buffersize)
+{
+    struct in_addr inp;
+    char tmpbuf[OSP_STRBUF_SIZE];
+
+    DEBUG("rlm_osp: osp_create_device start");
+
+    if (ip == OSP_IP_DEF) {
+        buffer[0] = '\0';
+    } else {
+        inp.s_addr = ip;
+        inet_ntop(AF_INET, &inp, tmpbuf, sizeof(tmpbuf));
+    
+        if (port == OSP_PORT_DEF) {
+            snprintf(buffer, buffersize, "[%s]", tmpbuf);
+        } else {
+            snprintf(buffer, buffersize, "[%s]:%d", tmpbuf, port);
+        }
+    }
+    DEBUG("rlm_osp: Device = '%s'", buffer);
+
+    DEBUG("rlm_osp: osp_create_device success");
 }
 
 /*
