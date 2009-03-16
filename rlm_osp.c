@@ -67,7 +67,7 @@ RCSID("$Id$")
 #define OSP_CUSTOMERID_DEF  ""                          /* OSP default customer ID */
 #define OSP_DEVICEID_DEF    ""                          /* OSP default device ID */
 #define OSP_DEVICEIP_DEF    "localhost"                 /* Mapping default device IP */
-#define OSP_DEVICEPORT_DEF  "0"                         /* Mapping default device port */
+#define OSP_DEVICEPORT_DEF  "5060"                      /* Mapping default device port */
 #define OSP_IP_DEF          0                           /* OSP default IP */
 #define OSP_PORT_DEF        0                           /* OSP default port */
 #define OSP_DESTCOUNT_DEF   0                           /* OSP default destination count, unset */
@@ -909,6 +909,8 @@ static int osp_check_provider(
     osp_provider_t* provider)
 {
     int i;
+    struct in_addr ip;
+    char buffer[OSP_STRBUF_SIZE];
 
     DEBUG("rlm_osp: osp_check_provider start");
 
@@ -1001,6 +1003,14 @@ static int osp_check_provider(
 
     /* If timeout is wrong, then fail. */
     OSP_CHECK_RANGE("timeout", provider->timeout, OSP_TIMEOUT_MIN, OSP_TIMEOUT_MAX);
+
+    /* Nothing to check for deviceip */
+    ip.s_addr = provider->deviceip;
+    inet_ntop(AF_INET, &ip, buffer, sizeof(buffer));
+    DEBUG("rlm_osp: 'deviceip' = '%s'", buffer);
+
+    /* Nothing to check for deviceport */
+    DEBUG("rlm_osp: 'deviceport' = '%d'", provider->deviceport);
 
     DEBUG("rlm_osp: osp_check_provider success");
 
