@@ -91,6 +91,7 @@ RCSID("$Id$")
 #define OSP_MAP_DESTINATION     NULL                        /* Destination */
 #define OSP_MAP_DESTDEV         NULL                        /* Destination device */
 #define OSP_MAP_DESTCOUNT       NULL                        /* Destination count */
+#define OSP_MAP_NETWORKID       NULL                        /* Network ID */
 #define OSP_MAP_TIMEFORMAT      "0"                         /* Time string format, integer string */
 #define OSP_MAP_START           "%{Acct-Session-Start-Time}"/* Call start time, FreeRADIUS internal */
 #define OSP_MAP_ALERT           NULL                        /* Call alert time */
@@ -245,6 +246,8 @@ typedef struct {
     char* destination;              /* Destination */
     char* destdev;                  /* Destination device */
     char* destcount;                /* Destination count */
+    char* snid;                     /* Source network ID */
+    char* dnid;                     /* Destination network ID */
     int timeformat;                 /* Time string format */
     char* start;                    /* Call start time */
     char* alert;                    /* Call alert time */
@@ -297,6 +300,8 @@ typedef struct {
     char destination[OSP_STRBUF_SIZE];              /* Destination */
     char destdev[OSP_STRBUF_SIZE];                  /* Destination device */
     int destcount;                                  /* Destination count */
+    char snid[OSP_STRBUF_SIZE];                     /* Source network ID */
+    char dnid[OSP_STRBUF_SIZE];                     /* Destination network ID */
     time_t start;                                   /* Call start time */
     time_t alert;                                   /* Call alert time */
     time_t connect;                                 /* Call connect time */
@@ -392,6 +397,8 @@ static const CONF_PARSER mapping_config[] = {
     { "destination", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destination), NULL, OSP_MAP_DESTINATION },
     { "destinationdevice", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destdev), NULL, OSP_MAP_DESTDEV },
     { "destinationcount", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destcount), NULL, OSP_MAP_DESTCOUNT },
+    { "sourcenetworkid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.snid), NULL, OSP_MAP_NETWORKID },
+    { "destinationnetworkid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.dnid), NULL, OSP_MAP_NETWORKID },
     { "timeformat", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.timeformat), NULL, OSP_MAP_TIMEFORMAT },
     { "starttime", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.start), NULL, OSP_MAP_START },
     { "alerttime", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.alert), NULL, OSP_MAP_ALERT },
@@ -1067,6 +1074,12 @@ static int osp_check_mapping(
     /* If destination count is incorrect, then fail. */
     OSP_CHECK_ITEMMAP("destinationcount", OSP_DEF_MAY, mapping->destcount);
 
+    /* If source network ID is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP("sourcenetworkid", OSP_DEF_MAY, mapping->snid);
+
+    /* If destination network ID is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP("destinationnetworkid", OSP_DEF_MAY, mapping->dnid);
+
     /* If time string format is wrong, then fail. */
     OSP_CHECK_RANGE("timeformat", mapping->timeformat, OSP_TIMESTR_MIN, OSP_TIMESTR_MAX);
 
@@ -1440,6 +1453,19 @@ static int osp_accounting(
         return RLM_MODULE_FAIL;
     }
 
+    /* Report destination count */
+    if (usage.destcount != OSP_DESTCOUNT_DEF) {
+        OSPPTransactionSetDestinationCount(
+            transaction,
+            usage.destcount);
+    }
+
+    /* Report network ID */
+    OSPPTransactionSetNetworkIds(
+        transaction,
+        usage.snid,
+        usage.dnid);
+
     /* Report asserted ID */
     OSPPTransactionSetAssertedId(
         transaction,        /* Transaction handle */
@@ -1641,6 +1667,12 @@ static int osp_get_usageinfo(
 
     /* Get destination count */
     OSP_GET_INTEGER(request, TRUE, "destinationcount", OSP_DEF_MAY, mapping->destcount, OSP_DESTCOUNT_DEF, buffer, usage->destcount);
+
+    /* Get source network ID */
+    OSP_GET_STRING(request, TRUE, "sourcenetworkid", OSP_DEF_MAY, mapping->snid, usage->snid);
+
+    /* Get destination network ID */
+    OSP_GET_STRING(request, TRUE, "destinationnetworkid", OSP_DEF_MAY, mapping->dnid, usage->dnid);
 
     /* Get call start time */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
