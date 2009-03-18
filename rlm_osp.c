@@ -1460,10 +1460,14 @@ static int osp_accounting(
             usage.destcount);
     }
 
-    /* Report network ID */
-    OSPPTransactionSetNetworkIds(
+    /* Report source network ID */
+    OSPPTransactionSetSrcNetworkId(
         transaction,
-        usage.snid,
+        usage.snid);
+
+    /* Report destination network ID */
+    OSPPTransactionSetDestNetworkId(
+        transaction,
         usage.dnid);
 
     /* Report asserted ID */
