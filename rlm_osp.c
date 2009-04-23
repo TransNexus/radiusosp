@@ -32,15 +32,18 @@ RCSID("$Id$")
 
 #include "osp/osp.h"
 #include "osp/osputils.h"
+#include "osp/ospb64.h"
 
 /*
  * OSP module constants.
  */
 #define OSP_STRBUF_SIZE     256
+#define OSP_KEYBUF_SIZE     1024
 #define OSP_LOGBUF_SIZE     1024
 
 #define OSP_LOGLEVEL_DEF    "1"                         /* Mapping default log level, long */
 #define OSP_HWACCE_DEF      "no"                        /* Mapping default hardware accelerate flag */
+#define OSP_SECURITY_DEF    "no"                        /* Mapping default security flag */
 #define OSP_SPS_MAX         4                           /* OSP max number of service points */
 #define OSP_SPURI_DEF       "http://osptestserver.transnexus.com:1080/osp"  /* OSP default service point URI */
 #define OSP_SPWEIGHT_DEF    "1000"                      /* Mapping default service point weight */
@@ -212,6 +215,7 @@ typedef struct {
  */
 typedef struct {
     int accelerate;             /* Hardware accelerate flag */
+    int security;               /* Security flag */
     int sps;                    /* Number of service points */
     char* spuris[OSP_SPS_MAX];  /* Service point URIs */
     int spweights[OSP_SPS_MAX]; /* Service point weights */
@@ -354,6 +358,7 @@ static const CONF_PARSER provider_config[] = {
      *   parser to read them.
      */
     { "accelerate", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, provider.accelerate), NULL, OSP_HWACCE_DEF },
+    { "security", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, provider.security), NULL, OSP_SECURITY_DEF },
     { "spuri1", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[0]), NULL, OSP_SPURI_DEF },
     { "spuri2", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[1]), NULL, NULL },
     { "spuri3", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[2]), NULL, NULL },
@@ -807,6 +812,11 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
     DEBUG("rlm_osp: '%s' = '%lu'", _name, _val); \
 }
 
+/* OSP default certificates */
+const char* B64PKey = "MIIBOgIBAAJBAK8t5l+PUbTC4lvwlNxV5lpl+2dwSZGW46dowTe6y133XyVEwNiiRma2YNk3xKs/TJ3Wl9Wpns2SYEAJsFfSTukCAwEAAQJAPz13vCm2GmZ8Zyp74usTxLCqSJZNyMRLHQWBM0g44Iuy4wE3vpi7Wq+xYuSOH2mu4OddnxswCP4QhaXVQavTAQIhAOBVCKXtppEw9UaOBL4vW0Ed/6EA/1D8hDW6St0h7EXJAiEAx+iRmZKhJD6VT84dtX5ZYNVk3j3dAcIOovpzUj9a0CECIEduTCapmZQ5xqAEsLXuVlxRtQgLTUD4ZxDElPn8x0MhAiBE2HlcND0+qDbvtwJQQOUzDgqg5xk3w8capboVdzAlQQIhAMC+lDL7+gDYkNAft5Mu+NObJmQs4Cr+DkDFsKqoxqrm";
+const char* B64LCert = "MIIBeTCCASMCEHqkOHVRRWr+1COq3CR/xsowDQYJKoZIhvcNAQEEBQAwOzElMCMGA1UEAxMcb3NwdGVzdHNlcnZlci50cmFuc25leHVzLmNvbTESMBAGA1UEChMJT1NQU2VydmVyMB4XDTA1MDYyMzAwMjkxOFoXDTA2MDYyNDAwMjkxOFowRTELMAkGA1UEBhMCQVUxEzARBgNVBAgTClNvbWUtU3RhdGUxITAfBgNVBAoTGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDBcMA0GCSqGSIb3DQEBAQUAA0sAMEgCQQCvLeZfj1G0wuJb8JTcVeZaZftncEmRluOnaME3ustd918lRMDYokZmtmDZN8SrP0yd1pfVqZ7NkmBACbBX0k7pAgMBAAEwDQYJKoZIhvcNAQEEBQADQQDnV8QNFVVJx/+7IselU0wsepqMurivXZzuxOmTEmTVDzCJx1xhA8jd3vGAj7XDIYiPub1PV23eY5a2ARJuw5w9";
+const char* B64CACert = "MIIBYDCCAQoCAQEwDQYJKoZIhvcNAQEEBQAwOzElMCMGA1UEAxMcb3NwdGVzdHNlcnZlci50cmFuc25leHVzLmNvbTESMBAGA1UEChMJT1NQU2VydmVyMB4XDTAyMDIwNDE4MjU1MloXDTEyMDIwMzE4MjU1MlowOzElMCMGA1UEAxMcb3NwdGVzdHNlcnZlci50cmFuc25leHVzLmNvbTESMBAGA1UEChMJT1NQU2VydmVyMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAPGeGwV41EIhX0jEDFLRXQhDEr50OUQPq+f55VwQd0TQNts06BP29+UiNdRW3c3IRHdZcJdC1Cg68ME9cgeq0h8CAwEAATANBgkqhkiG9w0BAQQFAANBAGkzBSj1EnnmUxbaiG1N4xjIuLAWydun7o3bFk2tV8dBIhnuh445obYyk1EnQ27kI7eACCILBZqi2MHDOIMnoN0=";
+
 /*
  * Do any per-module initialization that is separate to each
  * configured instance of the module.  e.g. set up connections
@@ -955,42 +965,45 @@ static int osp_check_provider(
         DEBUG("rlm_osp: 'spweight%d' = '%d'", i + 1, provider->spweights[i]);
     }
 
-    /* If privatekey is undefined, then fail. */
-    if (!OSP_CHECK_STRING(provider->privatekey)) {
-        radlog(L_ERR, "rlm_osp: 'privatekey' must be defined.");
-        return -1;
-    }
-    /* Has checked string NULL */
-    DEBUG("rlm_osp: 'privatekey' = '%s'", provider->privatekey);
-
-    /* If localcert is undefined, then fail. */
-    if (!OSP_CHECK_STRING(provider->localcert)) {
-        radlog(L_ERR, "rlm_osp: 'localcert' must be defined.");
-        return -1;
-    }
-    /* Has checked string NULL */
-    DEBUG("rlm_osp: 'locacert' = '%s'", provider->localcert);
-
-    /* Calculate number of cacerts */
-    provider->cas = 0;
-    for (i = 0; i < OSP_CAS_MAX; i++) {
-        if (OSP_CHECK_STRING(provider->cacerts[i]))  {
-            provider->cas++;
-        } else {
-            break;
+    /* If security flag is set, check certificate file names. Otherwise, use default certificates */
+    if (provider->security) {
+        /* If privatekey is undefined, then fail. */
+        if (!OSP_CHECK_STRING(provider->privatekey)) {
+            radlog(L_ERR, "rlm_osp: 'privatekey' must be defined.");
+            return -1;
         }
-    }
-
-    /* If number of cacerts is wrong, then fail. */
-    if (provider->cas == 0) {
-        radlog(L_ERR, "rlm_osp: 'cacert0' must be defined.");
-        return -1;
-    }
-    DEBUG("rlm_osp: 'cas' = '%d'", provider->cas);
-
-    for (i = 0; i < provider->cas; i++) {
         /* Has checked string NULL */
-        DEBUG("rlm_osp: 'cacert%d' = '%s'", i, provider->cacerts[i]);
+        DEBUG("rlm_osp: 'privatekey' = '%s'", provider->privatekey);
+
+        /* If localcert is undefined, then fail. */
+        if (!OSP_CHECK_STRING(provider->localcert)) {
+            radlog(L_ERR, "rlm_osp: 'localcert' must be defined.");
+            return -1;
+        }
+        /* Has checked string NULL */
+        DEBUG("rlm_osp: 'locacert' = '%s'", provider->localcert);
+
+        /* Calculate number of cacerts */
+        provider->cas = 0;
+        for (i = 0; i < OSP_CAS_MAX; i++) {
+            if (OSP_CHECK_STRING(provider->cacerts[i]))  {
+                provider->cas++;
+            } else {
+                break;
+            }
+        }
+
+        /* If number of cacerts is wrong, then fail. */
+        if (provider->cas == 0) {
+            radlog(L_ERR, "rlm_osp: 'cacert0' must be defined.");
+            return -1;
+        }
+        DEBUG("rlm_osp: 'cas' = '%d'", provider->cas);
+
+        for (i = 0; i < provider->cas; i++) {
+            /* Has checked string NULL */
+            DEBUG("rlm_osp: 'cacert%d' = '%s'", i, provider->cacerts[i]);
+        }
     }
 
     /* If SSL life time is wrong, then fail. */
@@ -1233,18 +1246,20 @@ static int osp_check_itemmap (
 static int osp_create_provider(
     osp_provider_t* provider)
 {
-    int i, j, error, result;
+    int i, error, result = -1;
     unsigned long spweights[OSP_SPS_MAX];
     OSPTPRIVATEKEY privatekey;
     OSPT_CERT localcert;
     OSPT_CERT cacerts[OSP_CAS_MAX];
     const OSPT_CERT* pcacerts[OSP_CAS_MAX];
+    unsigned char privatekeydata[OSP_KEYBUF_SIZE];
+    unsigned char localcertdata[OSP_KEYBUF_SIZE];
+    unsigned char cacertdata[OSP_KEYBUF_SIZE];
 
     DEBUG("rlm_osp: osp_create_provider start");
 
     /* Initialize OSP */
-    error = OSPPInit(provider->accelerate);
-    if (error != OSPC_ERR_NO_ERROR) {
+    if ((error = OSPPInit(provider->accelerate)) != OSPC_ERR_NO_ERROR) {
         radlog(L_ERR,
             "Failed to initalize OSP, error '%d'.",
             error);
@@ -1256,101 +1271,119 @@ static int osp_create_provider(
         spweights[i] = provider->spweights[i];
     }
 
-    /* Load private key */
-    error = OSPPUtilLoadPEMPrivateKey((unsigned char*)provider->privatekey, &privatekey);
-    if (error != OSPC_ERR_NO_ERROR) {
-        /* Has checked string NULL by osp_check_provider */
-        radlog(L_ERR,
-            "rlm_osp: Failed to load privatekey '%s', error '%d'.",
-            provider->privatekey,
-            error);
-        OSPPCleanup();
-        return -1;
+    if (provider->security) {
+        privatekey.PrivateKeyData = NULL;
+        privatekey.PrivateKeyLength = 0;
+
+        localcert.CertData = NULL;
+        localcert.CertDataLength = 0;
+
+        for (i = 0; i < provider->cas; i++) {
+            cacerts[i].CertData = NULL;
+            cacerts[i].CertDataLength = 0;
+        }
+
+        if ((error = OSPPUtilLoadPEMPrivateKey((unsigned char*)provider->privatekey, &privatekey)) != OSPC_ERR_NO_ERROR) {
+            /* Has checked string NULL by osp_check_provider */
+            radlog(L_ERR,
+                "rlm_osp: Failed to load privatekey '%s', error '%d'.",
+                provider->privatekey,
+                error);
+        } else if ((error = OSPPUtilLoadPEMCert((unsigned char*)provider->localcert, &localcert)) != OSPC_ERR_NO_ERROR) {
+            /* Has checked string NULL by osp_check_provider */
+            radlog(L_ERR,
+                "rlm_osp: Failed to load localcert '%s', error '%d'.",
+                provider->localcert,
+                error);
+        } else {
+            for (i = 0; i < provider->cas; i++) {
+                if ((error = OSPPUtilLoadPEMCert((unsigned char*)provider->cacerts[i], &cacerts[i])) != OSPC_ERR_NO_ERROR) {
+                    cacerts[i].CertData = NULL;
+                    /* Has checked string NULL by osp_check_provider */
+                    radlog(L_ERR,
+                        "rlm_osp: Failed to load cacert '%s', error '%d'.",
+                        provider->cacerts[i],
+                        error);
+                    break;
+                } else {
+                    pcacerts[i] = &cacerts[i];
+                }
+            }
+        }
+    } else {
+        privatekey.PrivateKeyData = privatekeydata;
+        privatekey.PrivateKeyLength = sizeof(privatekeydata);
+
+        localcert.CertData = localcertdata;
+        localcert.CertDataLength = sizeof(localcertdata);
+
+        provider->cas = 1;
+        cacerts[0].CertData = cacertdata;
+        cacerts[0].CertDataLength = sizeof(cacertdata);
+        pcacerts[0] = &cacerts[0];
+
+        if ((error = OSPPBase64Decode(B64PKey, strlen(B64PKey), privatekey.PrivateKeyData, &privatekey.PrivateKeyLength)) != OSPC_ERR_NO_ERROR) {
+            radlog(L_ERR,
+                "rlm_osp: Failed to decode private key, error '%d'.",
+                error);
+        } else if ((error = OSPPBase64Decode(B64LCert, strlen(B64LCert), localcert.CertData, &localcert.CertDataLength)) != OSPC_ERR_NO_ERROR) {
+            radlog(L_ERR,
+                "rlm_osp: Failed to decode loca cert, error '%d'.",
+                error);
+        } else if ((error = OSPPBase64Decode(B64CACert, strlen(B64CACert), cacerts[0].CertData, &cacerts[0].CertDataLength)) != OSPC_ERR_NO_ERROR) {
+            radlog(L_ERR,
+                "rlm_osp: Failed to decode cacert, error '%d'.",
+                error);
+        }
     }
 
-    /* Load local cert */
-    error = OSPPUtilLoadPEMCert((unsigned char*)provider->localcert, &localcert);
-    if (error != OSPC_ERR_NO_ERROR) {
-        /* Has checked string NULL by osp_check_provider */
-        radlog(L_ERR,
-            "rlm_osp: Failed to load localcert '%s', error '%d'.",
-            provider->localcert,
-            error);
+    if (error == OSPC_ERR_NO_ERROR) {
+        /* Create a provider handle */
+        error = OSPPProviderNew(
+            provider->sps,                  /* Number of service points */
+            (const char**)provider->spuris, /* Service point URIs */
+            spweights,                      /* Service point weights */
+            OSP_AUDITURL_DEF,               /* Audit URL */
+            &privatekey,                    /* Private key */
+            &localcert,                     /* Local cert */
+            provider->cas,                  /* Number of cacerts */
+            pcacerts,                       /* Cacerts */
+            OSP_VALIDATION_DEF,             /* Token Validation mode */
+            provider->ssllifetime,          /* SSL life time */
+            provider->maxconn,              /* Max number of connections */
+            provider->persistence,          /* Persistence */
+            provider->retrydelay,           /* Retry delay */
+            provider->retrylimit,           /* Times of retry */
+            provider->timeout,              /* Timeout */
+            OSP_CUSTOMERID_DEF,             /* Customer ID */
+            OSP_DEVICEID_DEF,               /* Device ID */
+            &provider->handle);             /* Provider handle */
+        if (error != OSPC_ERR_NO_ERROR) {
+            radlog(L_ERR,
+                "rlm_osp: Failed to create provider, error '%d'.",
+                error);
+            OSPPCleanup();
+        } else {
+            DEBUG("rlm_osp: osp_create_provider success");
+            result = 0;
+        }
+    } else {
+        OSPPCleanup();
+    }
+
+    if (provider->security) {
+        /* Release temp key buffers */
+        for (i = 0; i < provider->cas; i++) {
+            if (cacerts[i].CertData != NULL) {
+                free(cacerts[i].CertData);
+            }
+        }
+        if (localcert.CertData != NULL) {
+            free(localcert.CertData);
+        }
         if (privatekey.PrivateKeyData != NULL) {
             free(privatekey.PrivateKeyData);
         }
-        OSPPCleanup();
-        return -1;
-    }
-
-    /* Load cacerts */
-    for (i = 0; i < provider->cas; i++) {
-        error = OSPPUtilLoadPEMCert((unsigned char*)provider->cacerts[i], &cacerts[i]);
-        if (error != OSPC_ERR_NO_ERROR) {
-            /* Has checked string NULL by osp_check_provider */
-            radlog(L_ERR,
-                "rlm_osp: Failed to load cacert '%s', error '%d'.",
-                provider->cacerts[i],
-                error);
-            for (j = 0; j < i; j++) {
-                if (cacerts[j].CertData != NULL) {
-                    free(cacerts[j].CertData);
-                }
-            }
-            if (localcert.CertData != NULL) {
-                free(localcert.CertData);
-            }
-            if (privatekey.PrivateKeyData != NULL) {
-                free(privatekey.PrivateKeyData);
-            }
-            OSPPCleanup();
-            return -1;
-        }
-        pcacerts[i] = &cacerts[i];
-    }
-
-    /* Create a provider handle */
-    error = OSPPProviderNew(
-        provider->sps,                  /* Number of service points */
-        (const char**)provider->spuris, /* Service point URIs */
-        spweights,                      /* Service point weights */
-        OSP_AUDITURL_DEF,               /* Audit URL */
-        &privatekey,                    /* Private key */
-        &localcert,                     /* Local cert */
-        provider->cas,                  /* Number of cacerts */
-        pcacerts,                       /* Cacerts */
-        OSP_VALIDATION_DEF,             /* Token Validation mode */
-        provider->ssllifetime,          /* SSL life time */
-        provider->maxconn,              /* Max number of connections */
-        provider->persistence,          /* Persistence */
-        provider->retrydelay,           /* Retry delay */
-        provider->retrylimit,           /* Times of retry */
-        provider->timeout,              /* Timeout */
-        OSP_CUSTOMERID_DEF,             /* Customer ID */
-        OSP_DEVICEID_DEF,               /* Device ID */
-        &provider->handle);             /* Provider handle */
-    if (error != OSPC_ERR_NO_ERROR) {
-        radlog(L_ERR,
-            "rlm_osp: Failed to create provider, error '%d'.",
-            error);
-        OSPPCleanup();
-        result = -1;
-    } else {
-        DEBUG("rlm_osp: osp_create_provider success");
-        result = 0;
-    }
-
-    /* Release temp key buffers */
-    for (i = 0; i < provider->cas; i++) {
-        if (cacerts[i].CertData != NULL) {
-            free(cacerts[i].CertData);
-        }
-    }
-    if (localcert.CertData != NULL) {
-        free(localcert.CertData);
-    }
-    if (privatekey.PrivateKeyData != NULL) {
-        free(privatekey.PrivateKeyData);
     }
 
     return result;
