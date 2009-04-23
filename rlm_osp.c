@@ -2002,7 +2002,13 @@ static int osp_get_username(
     if ((end = strchr(start, '@')) == NULL) {
         *buffer = '\0';
     } else {
+        /* Check if there is a password */
         if (((tmp = strchr(start, ':')) != NULL) && (tmp < end )) {
+            end = tmp;
+        }
+
+        /* Check if there is user part parameter, such as npdi */
+        if (((tmp = strchr(start, ';')) != NULL) && (tmp < end )) {
             end = tmp;
         }
 
@@ -2111,32 +2117,31 @@ static time_t osp_format_time(
         break;
     case OSP_TIMESTR_C:
         /* WWW MMM DD hh:mm:ss YYYY, assume UTC */
-        strptime(timestr, "%a %b %d %T %Y", &dt);
-
         tzone = NULL;
-        osp_cal_timeoffset(tzone, &toffset);
-
-        osp_cal_elapsed(&dt, toffset, &tvalue);
+        if (osp_cal_timeoffset(tzone, &toffset) == 0) {
+            strptime(timestr, "%a %b %d %T %Y", &dt);
+            osp_cal_elapsed(&dt, toffset, &tvalue);
+        }
         break;
     case OSP_TIMESTR_ACME:
         /* hh:mm:ss.kkk ZON MMM DD YYYY */
         size = sizeof(buffer) - 1;
-        snprintf(buffer, size, "%s", timestr);
-        buffer[size] = '\0';
-
-        size = sizeof(buffer) - 1 - 8;
-        snprintf(buffer + 8, size, "%s", timestr + 16);
-        buffer[size + 8] = '\0';
-
-        strptime(buffer, "%T %b %d %Y", &dt);
-
-        size = sizeof(buffer) - 1;
         snprintf(buffer, size, "%s", timestr + 13);
         buffer[3] = '\0';
 
-        osp_cal_timeoffset(buffer, &toffset);
+        if (osp_cal_timeoffset(buffer, &toffset) == 0) {
+            size = sizeof(buffer) - 1;
+            snprintf(buffer, size, "%s", timestr);
+            buffer[size] = '\0';
 
-        osp_cal_elapsed(&dt, toffset, &tvalue);
+            size = sizeof(buffer) - 1 - 8;
+            snprintf(buffer + 8, size, "%s", timestr + 16);
+            buffer[size + 8] = '\0';
+
+            strptime(buffer, "%T %b %d %Y", &dt);
+
+            osp_cal_elapsed(&dt, toffset, &tvalue);
+        }
         break;
     default:
         break;
