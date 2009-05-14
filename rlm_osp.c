@@ -274,6 +274,10 @@ typedef struct {
     char* outjitter;                /* Outbound jitter */
     char* inpackloss;               /* Inbound packets lost */
     char* outpackloss;              /* Outbound packets lost */
+    char* inrfactor;                /* Inbound R-Factor */
+    char* outrfactor;               /* Outbound R-Factor */
+    char* inmos;                    /* Inbound MOS */
+    char* outmos;                   /* Outbound MOS */
     char* slost;                    /* Lost send packages */
     char* slostfract;               /* Lost send packages fraction */
     char* rlost;                    /* Lost receive packages */
@@ -327,6 +331,10 @@ typedef struct {
     int outjitter;                                  /* Outbound jitter in ms */
     int inpackloss;                                 /* Inbound packets lost */
     int outpackloss;                                /* Outbound packets lost */
+    int inrfactor;                                  /* Inbound R-Factor */
+    int outrfactor;                                 /* Outbound R-Factor */
+    int inmos;                                      /* Inbound MOS */
+    int outmos;                                     /* Outbound MOS */
     int slost;                                      /* Packets not received by peer */
     int slostfract;                                 /* Fraction of packets not received by peer */
     int rlost;                                      /* Packets not received that were expected */
@@ -426,6 +434,10 @@ static const CONF_PARSER mapping_config[] = {
     { "outboundjitter", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.outjitter), NULL, OSP_MAP_STATS },
     { "inboundpackloss", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.inpackloss), NULL, OSP_MAP_STATS },
     { "outboundpackloss", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.outpackloss), NULL, OSP_MAP_STATS },
+    { "inboundrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.inrfactor), NULL, OSP_MAP_STATS },
+    { "outboundrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.outrfactor), NULL, OSP_MAP_STATS },
+    { "inboundmos", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.inmos), NULL, OSP_MAP_STATS },
+    { "outboundmos", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.outmos), NULL, OSP_MAP_STATS },
     { "sendlost", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.slost), NULL, OSP_MAP_STATS },
     { "sendlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.slostfract), NULL, OSP_MAP_STATS },
     { "receivelost", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.rlost), NULL, OSP_MAP_STATS },
@@ -745,7 +757,6 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
                     return -1; \
                 } else { \
                     radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
-                    return -1; \
                     _val = _def; \
                 } \
             } else { \
@@ -1158,6 +1169,18 @@ static int osp_check_mapping(
 
     /* If outbound packets lost is incorrect, then fail. */
     OSP_CHECK_ITEMMAP("outboundpackloss", OSP_DEF_MAY, mapping->outpackloss);
+
+    /* If inbound R-Factor is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP("inboundrfactor", OSP_DEF_MAY, mapping->inrfactor);
+
+    /* If outbound R-Factor is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP("outboundrfactor", OSP_DEF_MAY, mapping->outrfactor);
+
+    /* If inbound MOS is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP("inboundmos", OSP_DEF_MAY, mapping->inmos);
+
+    /* If outbound MOS is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP("outboundmos", OSP_DEF_MAY, mapping->outmos);
 
     /* If lost send packets is incorrect, then fail. */
     OSP_CHECK_ITEMMAP("sendlost", OSP_DEF_MAY, mapping->slost);
@@ -1612,6 +1635,38 @@ static int osp_accounting(
             usage.outpackloss); /* Outbound packets lost */
     }
 
+    /* Report inbound R-Factor */
+    if (usage.inrfactor!= OSP_STATS_DEF) {
+        OSPPTransactionSetRFactor(
+            transaction,        /* Transaction handle */
+            OSPC_DIR_INBOUND,   /* Inbound */
+            usage.inrfactor);   /* Inbound R-Factor */
+    }
+
+    /* Report outbound R-Factor */
+    if (usage.outrfactor != OSP_STATS_DEF) {
+        OSPPTransactionSetRFactor(
+            transaction,        /* Transaction handle */
+            OSPC_DIR_OUTBOUND,  /* Outbound */
+            usage.outrfactor);  /* Outbound R-Factor */
+    }
+
+    /* Report inbound MOS */
+    if (usage.inmos != OSP_STATS_DEF) {
+        OSPPTransactionSetMOS(
+            transaction,        /* Transaction handle */
+            OSPC_DIR_INBOUND,   /* Inbound */
+            usage.inmos);       /* Inbound MOS */
+    }
+
+    /* Report outbound MOS */
+    if (usage.outmos != OSP_STATS_DEF) {
+        OSPPTransactionSetMOS(
+            transaction,        /* Transaction handle */
+            OSPC_DIR_OUTBOUND,  /* Outbound */
+            usage.outmos);      /* Outbound MOS */
+    }
+
     /* Send OSP UsageInd message to OSP server */
     for (i = 1; i <= MAX_RETRIES; i++) {
         error = OSPPTransactionReportUsage(
@@ -1850,6 +1905,22 @@ static int osp_get_usageinfo(
     /* Get outbound packloss */
     parse = (type == PW_STATUS_STOP);
     OSP_GET_INTEGER(request, parse, "outboundpackloss", OSP_DEF_MAY, mapping->outpackloss, OSP_STATS_DEF, buffer, usage->outpackloss);
+
+    /* Get inbound R-Factor */
+    parse = (type == PW_STATUS_STOP);
+    OSP_GET_INTEGER(request, parse, "inboundrfactor", OSP_DEF_MAY, mapping->inrfactor, OSP_STATS_DEF, buffer, usage->inrfactor);
+
+    /* Get outbound R-Factor */
+    parse = (type == PW_STATUS_STOP);
+    OSP_GET_INTEGER(request, parse, "outboundrfactor", OSP_DEF_MAY, mapping->outrfactor, OSP_STATS_DEF, buffer, usage->outrfactor);
+
+    /* Get inbound MOS */
+    parse = (type == PW_STATUS_STOP);
+    OSP_GET_INTEGER(request, parse, "inboundmos", OSP_DEF_MAY, mapping->inmos, OSP_STATS_DEF, buffer, usage->inmos);
+
+    /* Get outbound MOS */
+    parse = (type == PW_STATUS_STOP);
+    OSP_GET_INTEGER(request, parse, "outboundmos", OSP_DEF_MAY, mapping->outmos, OSP_STATS_DEF, buffer, usage->outmos);
 
     /* Get lost send packets */
     parse = (type == PW_STATUS_STOP);
