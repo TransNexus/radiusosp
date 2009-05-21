@@ -44,7 +44,7 @@ if test x$with_[]modname != xno; then
 	smart_try_dir="$osptk_inc_dir"
 	FR_SMART_CHECK_INCLUDE(osp/osp.h)
 	if test "x$ac_cv_header_osp_osp_h" != "xyes"; then
-		fail="$fail osp.h"
+		fail="$fail osp/osp.h"
 	fi
 
 	dnl # Check for OSPToolkit libraries
@@ -57,6 +57,30 @@ if test x$with_[]modname != xno; then
 	fi
 	LIBS=$org_LIBS
 
+	dnl # Check for OSP Toolkit version
+	AC_MSG_CHECKING(for OSP Toolkit version)
+	AC_RUN_IFELSE(
+		[AC_LANG_SOURCE([[
+			#include <osp/osp.h>
+			#define REQ_VER_MAJOR	3
+			#define REQ_VER_MINOR	5
+			#define REQ_VER_BUGFIX	1
+			int main(void) {
+				int ver = OSP_CLIENT_TOOLKIT_VERSION_MAJOR * 10000 + OSP_CLIENT_TOOLKIT_VERSION_MINOR * 100 + OSP_CLIENT_TOOLKIT_VERSION_BUGFIX;
+				int req = REQ_VER_MAJOR * 10000 + REQ_VER_MINOR * 100 + REQ_VER_BUGFIX;
+				return (ver < req) ? 1 : 0;
+			}
+		]])],
+		[osptk_compatible=yes],
+		[osptk_compatible=no]
+	)
+	if test "$osptk_compatible" = "yes"; then
+		AC_MSG_RESULT(yes)
+	else
+		AC_MSG_RESULT(no)
+		fail="$fail OSP Toolkit version"
+	fi
+ 
 	targetname=modname
 else
 	targetname=

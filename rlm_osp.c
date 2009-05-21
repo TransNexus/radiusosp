@@ -76,7 +76,8 @@ RCSID("$Id$")
 #define OSP_DESTCOUNT_DEF   0                           /* OSP default destination count, unset */
 #define OSP_CAUSE_DEF       0                           /* OSP default termination cause */
 #define OSP_TIME_DEF        0                           /* OSP default time value */
-#define OSP_STATS_DEF       -1                          /* OSP default statistics */
+#define OSP_STATSINT_DEF    ((int)-1)                   /* OSP default statistics, integer */
+#define OSP_STATSFLOAT_DEF  ((float)-1.0)               /* OSP default statistics, float */
 #define OSP_INDEX_MAX       4                           /* OSP max timeout in ms */
 
 /*
@@ -110,6 +111,7 @@ RCSID("$Id$")
 #define OSP_MAP_CODEC           NULL                        /* Codec */
 #define OSP_MAP_CONFID          NULL                        /* Conference ID */
 #define OSP_MAP_STATS           NULL                        /* Statistics */
+#define OSP_MAP_SCALE           "4"                         /* Scale, 1 */
 #define OSP_MAP_CUSTOMINFO      NULL                        /* User-defined info */
 
 /*
@@ -204,6 +206,26 @@ typedef enum {
 #define OSP_TK_RELDST   1
 
 /*
+ * Gerenal scale 
+ */
+typedef enum {
+    OSP_SCALE_MIN = 0,
+    OSP_SCALE_00001 = OSP_SCALE_MIN,    /* 0.0001 */
+    OSP_SCALE_0001,                     /* 0.001 */
+    OSP_SCALE_001,                      /* 0.01 */
+    OSP_SCALE_01,                       /* 0.1 */
+    OSP_SCALE_1,                        /* 1 */
+    OSP_SCALE_10,                       /* 10 */
+    OSP_SCALE_100,                      /* 100 */
+    OSP_SCALE_1000,                     /* 1000 */
+    OSP_SCALE_10000,                    /* 10000 */
+    OSP_SCALE_MAX = OSP_SCALE_10000,
+    OSP_SCALE_NUMBER
+} osp_scale_t;
+
+float OSP_SCALE_TABLE[OSP_SCALE_NUMBER] = { 0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000 };
+
+/*
  * OSP module running parameter structure
  */
 typedef struct {
@@ -274,8 +296,10 @@ typedef struct {
     char* outjitter;                /* Outbound jitter */
     char* inpackloss;               /* Inbound packets lost */
     char* outpackloss;              /* Outbound packets lost */
+    int rfactorscale;               /* R-Factor scale index */
     char* inrfactor;                /* Inbound R-Factor */
     char* outrfactor;               /* Outbound R-Factor */
+    int mosscale;                   /* MOS scale index */
     char* inmos;                    /* Inbound MOS */
     char* outmos;                   /* Outbound MOS */
     char* slost;                    /* Lost send packages */
@@ -331,10 +355,10 @@ typedef struct {
     int outjitter;                                  /* Outbound jitter in ms */
     int inpackloss;                                 /* Inbound packets lost */
     int outpackloss;                                /* Outbound packets lost */
-    int inrfactor;                                  /* Inbound R-Factor */
-    int outrfactor;                                 /* Outbound R-Factor */
-    int inmos;                                      /* Inbound MOS */
-    int outmos;                                     /* Outbound MOS */
+    float inrfactor;                                /* Inbound R-Factor */
+    float outrfactor;                               /* Outbound R-Factor */
+    float inmos;                                    /* Inbound MOS */
+    float outmos;                                   /* Outbound MOS */
     int slost;                                      /* Packets not received by peer */
     int slostfract;                                 /* Fraction of packets not received by peer */
     int rlost;                                      /* Packets not received that were expected */
@@ -434,8 +458,10 @@ static const CONF_PARSER mapping_config[] = {
     { "outboundjitter", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.outjitter), NULL, OSP_MAP_STATS },
     { "inboundpackloss", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.inpackloss), NULL, OSP_MAP_STATS },
     { "outboundpackloss", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.outpackloss), NULL, OSP_MAP_STATS },
+    { "rfactorscaleindex", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.rfactorscale), NULL, OSP_MAP_SCALE},
     { "inboundrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.inrfactor), NULL, OSP_MAP_STATS },
     { "outboundrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.outrfactor), NULL, OSP_MAP_STATS },
+    { "mosscaleindex", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.mosscale), NULL, OSP_MAP_SCALE},
     { "inboundmos", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.inmos), NULL, OSP_MAP_STATS },
     { "outboundmos", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.outmos), NULL, OSP_MAP_STATS },
     { "sendlost", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.slost), NULL, OSP_MAP_STATS },
@@ -776,6 +802,51 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
         _val = _def; \
     } \
     DEBUG("rlm_osp: '%s' = '%d'", _name, _val); \
+}
+
+/*
+ * Get float
+ *
+ * param _req FreeRADIUS request
+ * param _flag Parse flag
+ * param _name Item name
+ * param _lev Must or may be defined
+ * param _map Item mapping string
+ * param _sca Item scale index
+ * param _def Item default value
+ * param _buf Buffer
+ * param _val Item value
+ */
+#define OSP_GET_FLOAT(_req, _flag, _name, _lev, _map, _sca, _def, _buf, _val) { \
+    if (_flag) { \
+        if (OSP_CHECK_STRING(_map)) { \
+            radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
+            if (_buf[0] == '\0') { \
+                /* Has checked string NULL */ \
+                if (_lev == OSP_DEF_MUST) { \
+                    radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    return -1; \
+                } else { \
+                    radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    _val = _def; \
+                } \
+            } else { \
+                _val = (float)atoi(_buf) * OSP_SCALE_TABLE[_sca]; \
+            } \
+        } else { \
+            if (_lev == OSP_DEF_MUST) { \
+                radlog(L_ERR, "rlm_osp: '%s' mapping undefined.", _name); \
+                return -1; \
+            } else { \
+                DEBUG("rlm_osp: '%s' mapping undefined.", _name); \
+                _val = _def; \
+            } \
+        } \
+    } else { \
+        DEBUG("rlm_osp: do not parse '%s'.", _name); \
+        _val = _def; \
+    } \
+    DEBUG("rlm_osp: '%s' = '%.4f'", _name, _val); \
 }
 
 /*
@@ -1170,11 +1241,17 @@ static int osp_check_mapping(
     /* If outbound packets lost is incorrect, then fail. */
     OSP_CHECK_ITEMMAP("outboundpackloss", OSP_DEF_MAY, mapping->outpackloss);
 
+    /* If R-Factor scale index is wrong, then fail. */
+    OSP_CHECK_RANGE("rfactorscaleindex", mapping->rfactorscale, OSP_SCALE_MIN, OSP_SCALE_MAX);
+
     /* If inbound R-Factor is incorrect, then fail. */
     OSP_CHECK_ITEMMAP("inboundrfactor", OSP_DEF_MAY, mapping->inrfactor);
 
     /* If outbound R-Factor is incorrect, then fail. */
     OSP_CHECK_ITEMMAP("outboundrfactor", OSP_DEF_MAY, mapping->outrfactor);
+
+    /* If MOS scale index is wrong, then fail. */
+    OSP_CHECK_RANGE("mosscaleindex", mapping->mosscale, OSP_SCALE_MIN, OSP_SCALE_MAX);
 
     /* If inbound MOS is incorrect, then fail. */
     OSP_CHECK_ITEMMAP("inboundmos", OSP_DEF_MAY, mapping->inmos);
@@ -1588,7 +1665,7 @@ static int osp_accounting(
         usage.revcodec);    /* Reverse codec */
 
     /* Report inbound delay */
-    if (usage.indelay != OSP_STATS_DEF) {
+    if (usage.indelay != OSP_STATSINT_DEF) {
         OSPPTransactionSetDelayMean(
             transaction,        /* Transaction handle */
             OSPC_DIR_INBOUND,   /* Inbound */
@@ -1596,7 +1673,7 @@ static int osp_accounting(
     }
 
     /* Report outbound delay */
-    if (usage.outdelay != OSP_STATS_DEF) {
+    if (usage.outdelay != OSP_STATSINT_DEF) {
         OSPPTransactionSetDelayMean(
             transaction,        /* Transaction handle */
             OSPC_DIR_OUTBOUND,  /* Outbound */
@@ -1604,7 +1681,7 @@ static int osp_accounting(
     }
 
     /* Report inbound jitter */
-    if (usage.injitter != OSP_STATS_DEF) {
+    if (usage.injitter != OSP_STATSINT_DEF) {
         OSPPTransactionSetJitterMean(
             transaction,        /* Transaction handle */
             OSPC_DIR_INBOUND,   /* Inbound */
@@ -1612,7 +1689,7 @@ static int osp_accounting(
     }
 
     /* Report outbound jitter */
-    if (usage.outjitter != OSP_STATS_DEF) {
+    if (usage.outjitter != OSP_STATSINT_DEF) {
         OSPPTransactionSetJitterMean(
             transaction,        /* Transaction handle */
             OSPC_DIR_OUTBOUND,  /* Outbound */
@@ -1620,7 +1697,7 @@ static int osp_accounting(
     }
 
     /* Report inbound packets lost */
-    if (usage.inpackloss != OSP_STATS_DEF) {
+    if (usage.inpackloss != OSP_STATSINT_DEF) {
         OSPPTransactionSetPackLossMean(
             transaction,        /* Transaction handle */
             OSPC_DIR_INBOUND,   /* Inbound */
@@ -1628,7 +1705,7 @@ static int osp_accounting(
     }
 
     /* Report outbound packets lost */
-    if (usage.outpackloss != OSP_STATS_DEF) {
+    if (usage.outpackloss != OSP_STATSINT_DEF) {
         OSPPTransactionSetPackLossMean(
             transaction,        /* Transaction handle */
             OSPC_DIR_OUTBOUND,  /* Outbound */
@@ -1636,7 +1713,7 @@ static int osp_accounting(
     }
 
     /* Report inbound R-Factor */
-    if (usage.inrfactor!= OSP_STATS_DEF) {
+    if (usage.inrfactor != OSP_STATSFLOAT_DEF) {
         OSPPTransactionSetRFactor(
             transaction,        /* Transaction handle */
             OSPC_DIR_INBOUND,   /* Inbound */
@@ -1644,7 +1721,7 @@ static int osp_accounting(
     }
 
     /* Report outbound R-Factor */
-    if (usage.outrfactor != OSP_STATS_DEF) {
+    if (usage.outrfactor != OSP_STATSFLOAT_DEF) {
         OSPPTransactionSetRFactor(
             transaction,        /* Transaction handle */
             OSPC_DIR_OUTBOUND,  /* Outbound */
@@ -1652,7 +1729,7 @@ static int osp_accounting(
     }
 
     /* Report inbound MOS */
-    if (usage.inmos != OSP_STATS_DEF) {
+    if (usage.inmos != OSP_STATSFLOAT_DEF) {
         OSPPTransactionSetMOS(
             transaction,        /* Transaction handle */
             OSPC_DIR_INBOUND,   /* Inbound */
@@ -1660,7 +1737,7 @@ static int osp_accounting(
     }
 
     /* Report outbound MOS */
-    if (usage.outmos != OSP_STATS_DEF) {
+    if (usage.outmos != OSP_STATSFLOAT_DEF) {
         OSPPTransactionSetMOS(
             transaction,        /* Transaction handle */
             OSPC_DIR_OUTBOUND,  /* Outbound */
@@ -1676,7 +1753,7 @@ static int osp_accounting(
             usage.end,                      /* Call end time */
             usage.alert,                    /* Call alert time */
             usage.connect,                  /* Call connect time */
-            (usage.pdd != OSP_STATS_DEF),   /* If PDD info present */
+            (usage.pdd != OSP_STATSINT_DEF),/* If PDD info present */
             usage.pdd,                      /* Post dial delay */
             usage.release,                  /* Who released the call */
             usage.confid,                   /* Conference ID */
@@ -1807,8 +1884,8 @@ static int osp_get_usageinfo(
 
     /* Get post dial delay */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
-    OSP_GET_INTEGER(request, parse, "postdialdelay", OSP_DEF_MAY, mapping->pdd, OSP_STATS_DEF, buffer, usage->pdd);
-    if (usage->pdd != OSP_STATS_DEF) {
+    OSP_GET_INTEGER(request, parse, "postdialdelay", OSP_DEF_MAY, mapping->pdd, OSP_STATSINT_DEF, buffer, usage->pdd);
+    if (usage->pdd != OSP_STATSINT_DEF) {
         usage->pdd /= OSP_TIMEUNIT_SCALE[mapping->pddunit];
     }
     DEBUG("rlm_osp: Post dial delay = '%d'", usage->pdd);
@@ -1884,59 +1961,59 @@ static int osp_get_usageinfo(
 
     /* Get inbound delay */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_INTEGER(request, parse, "inbounddelay", OSP_DEF_MAY, mapping->indelay, OSP_STATS_DEF, buffer, usage->indelay);
+    OSP_GET_INTEGER(request, parse, "inbounddelay", OSP_DEF_MAY, mapping->indelay, OSP_STATSINT_DEF, buffer, usage->indelay);
 
     /* Get outbound delay */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_INTEGER(request, parse, "outbounddelay", OSP_DEF_MAY, mapping->outdelay, OSP_STATS_DEF, buffer, usage->outdelay);
+    OSP_GET_INTEGER(request, parse, "outbounddelay", OSP_DEF_MAY, mapping->outdelay, OSP_STATSINT_DEF, buffer, usage->outdelay);
 
     /* Get inbound jitter */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_INTEGER(request, parse, "inboundjitter", OSP_DEF_MAY, mapping->injitter, OSP_STATS_DEF, buffer, usage->injitter);
+    OSP_GET_INTEGER(request, parse, "inboundjitter", OSP_DEF_MAY, mapping->injitter, OSP_STATSINT_DEF, buffer, usage->injitter);
 
     /* Get outbound jitter */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_INTEGER(request, parse, "outboundjitter", OSP_DEF_MAY, mapping->outjitter, OSP_STATS_DEF, buffer, usage->outjitter);
+    OSP_GET_INTEGER(request, parse, "outboundjitter", OSP_DEF_MAY, mapping->outjitter, OSP_STATSINT_DEF, buffer, usage->outjitter);
 
     /* Get inbound packloss */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_INTEGER(request, parse, "inboundpackloss", OSP_DEF_MAY, mapping->inpackloss, OSP_STATS_DEF, buffer, usage->inpackloss);
+    OSP_GET_INTEGER(request, parse, "inboundpackloss", OSP_DEF_MAY, mapping->inpackloss, OSP_STATSINT_DEF, buffer, usage->inpackloss);
 
     /* Get outbound packloss */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_INTEGER(request, parse, "outboundpackloss", OSP_DEF_MAY, mapping->outpackloss, OSP_STATS_DEF, buffer, usage->outpackloss);
+    OSP_GET_INTEGER(request, parse, "outboundpackloss", OSP_DEF_MAY, mapping->outpackloss, OSP_STATSINT_DEF, buffer, usage->outpackloss);
 
     /* Get inbound R-Factor */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_INTEGER(request, parse, "inboundrfactor", OSP_DEF_MAY, mapping->inrfactor, OSP_STATS_DEF, buffer, usage->inrfactor);
+    OSP_GET_FLOAT(request, parse, "inboundrfactor", OSP_DEF_MAY, mapping->inrfactor, mapping->rfactorscale, OSP_STATSFLOAT_DEF, buffer, usage->inrfactor);
 
     /* Get outbound R-Factor */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_INTEGER(request, parse, "outboundrfactor", OSP_DEF_MAY, mapping->outrfactor, OSP_STATS_DEF, buffer, usage->outrfactor);
+    OSP_GET_FLOAT(request, parse, "outboundrfactor", OSP_DEF_MAY, mapping->outrfactor, mapping->rfactorscale, OSP_STATSFLOAT_DEF, buffer, usage->outrfactor);
 
     /* Get inbound MOS */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_INTEGER(request, parse, "inboundmos", OSP_DEF_MAY, mapping->inmos, OSP_STATS_DEF, buffer, usage->inmos);
+    OSP_GET_FLOAT(request, parse, "inboundmos", OSP_DEF_MAY, mapping->inmos, mapping->mosscale, OSP_STATSFLOAT_DEF, buffer, usage->inmos);
 
     /* Get outbound MOS */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_INTEGER(request, parse, "outboundmos", OSP_DEF_MAY, mapping->outmos, OSP_STATS_DEF, buffer, usage->outmos);
+    OSP_GET_FLOAT(request, parse, "outboundmos", OSP_DEF_MAY, mapping->outmos, mapping->mosscale, OSP_STATSFLOAT_DEF, buffer, usage->outmos);
 
     /* Get lost send packets */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_INTEGER(request, parse, "sendlost", OSP_DEF_MAY, mapping->slost, OSP_STATS_DEF, buffer, usage->slost);
+    OSP_GET_INTEGER(request, parse, "sendlost", OSP_DEF_MAY, mapping->slost, OSP_STATSINT_DEF, buffer, usage->slost);
 
     /* Get lost send packet fraction */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_INTEGER(request, parse, "sendlostfraction", OSP_DEF_MAY, mapping->slostfract, OSP_STATS_DEF, buffer, usage->slostfract);
+    OSP_GET_INTEGER(request, parse, "sendlostfraction", OSP_DEF_MAY, mapping->slostfract, OSP_STATSINT_DEF, buffer, usage->slostfract);
 
     /* Get lost receive packets */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_INTEGER(request, parse, "receivelost", OSP_DEF_MAY, mapping->rlost, OSP_STATS_DEF, buffer, usage->rlost);
+    OSP_GET_INTEGER(request, parse, "receivelost", OSP_DEF_MAY, mapping->rlost, OSP_STATSINT_DEF, buffer, usage->rlost);
 
     /* Get lost receive packet fraction */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_INTEGER(request, parse, "receivelostfraction", OSP_DEF_MAY, mapping->rlostfract, OSP_STATS_DEF, buffer, usage->rlostfract);
+    OSP_GET_INTEGER(request, parse, "receivelostfraction", OSP_DEF_MAY, mapping->rlostfract, OSP_STATSINT_DEF, buffer, usage->rlostfract);
 
     /* Get user-defined info */
     for (i = 0; i < OSP_INDEX_MAX; i++) {
