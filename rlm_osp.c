@@ -2042,7 +2042,7 @@ static void osp_report_statsinfo(
             }
 
             /* Report rfactor */
-            if (mVAR.rfactor != OSP_STATSINT_DEF) {
+            if (mVAR.rfactor != OSP_STATSFLOAT_DEF) {
                 OSPPTransactionSetRFactor(
                     transaction,    /* Transaction handle */
                     range,          /* Range */
@@ -2051,7 +2051,7 @@ static void osp_report_statsinfo(
             }
 
             /* Report mos */
-            if (mVAR.mos != OSP_STATSINT_DEF) {
+            if (mVAR.mos != OSP_STATSFLOAT_DEF) {
                 OSPPTransactionSetMOS(
                     transaction,    /* Transaction handle */
                     range,          /* Range */
@@ -2322,7 +2322,7 @@ static int osp_get_statsinfo(
 
             /* Get jitter variance */
             mSTR(name, "jittervariance");
-            OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mMAP.jitter.var, OSP_SCALE_1, OSP_STATSINT_DEF, buffer, mVAR.jitter.var);
+            OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mMAP.jitter.var, OSP_SCALE_1, OSP_STATSFLOAT_DEF, buffer, mVAR.jitter.var);
 
             /* Get delay samples */
             mSTR(name, "delaysamples");
@@ -2342,7 +2342,7 @@ static int osp_get_statsinfo(
 
             /* Get delay variance */
             mSTR(name, "delayvariance");
-            OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mMAP.delay.var, OSP_SCALE_1, OSP_STATSINT_DEF, buffer, mVAR.delay.var);
+            OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mMAP.delay.var, OSP_SCALE_1, OSP_STATSFLOAT_DEF, buffer, mVAR.delay.var);
 
             /* Get octets */
             mSTR(name, "octets");
@@ -2354,11 +2354,11 @@ static int osp_get_statsinfo(
 
             /* Get rfactor is */
             mSTR(name, "rfactor");
-            OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mMAP.rfactor, mapping->rfactorscale, OSP_STATSINT_DEF, buffer, mVAR.rfactor);
+            OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mMAP.rfactor, mapping->rfactorscale, OSP_STATSFLOAT_DEF, buffer, mVAR.rfactor);
 
             /* Get mos */
             mSTR(name, "mos");
-            OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mMAP.mos, mapping->mosscale, OSP_STATSINT_DEF, buffer, mVAR.mos);
+            OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mMAP.mos, mapping->mosscale, OSP_STATSFLOAT_DEF, buffer, mVAR.mos);
         }
     }
 
