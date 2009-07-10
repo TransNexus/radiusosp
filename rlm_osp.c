@@ -85,6 +85,7 @@ RCSID("$Id$")
 /*
  * Default RADIUS OSP mapping
  */
+#define OSP_MAP_CLIENTTYPE      "0"                         /* RADIUS client type, undefined */
 #define OSP_MAP_TRANSID         NULL                        /* Transaction ID */
 #define OSP_MAP_CALLID          "%{Acct-Session-Id}"        /* Call-ID, RFC 2866 */
 #define OSP_MAP_ISCALLINGURI    "yes"                       /* Calling number type, uri */
@@ -134,9 +135,32 @@ typedef enum {
 } osp_deflevel_t;
 
 /*
+ * RADIUS client types
+ */
+typedef enum {
+    OSP_CLIENT_MIN = 0,
+    OSP_CLIENT_UNDEF = OSP_CLIENT_MIN,  /* Undefined */
+    OSP_CLIENT_ACME,                    /* ACME */
+    OSP_CLIENT_NEXTONE,                 /* NexTone */
+    OSP_CLIENT_MAX = OSP_CLIENT_NEXTONE,
+    OSP_CLIENT_NUMBER
+} osp_client_t;
+
+/*
  * Normal string buffer type
  */
 typedef char    osp_string_t[OSP_STRBUF_SIZE];
+
+/*
+ * Integer string format types
+ */
+typedef enum {
+    OSP_INTSTR_MIN = 0,
+    OSP_INTSTR_DEC = OSP_INTSTR_MIN,    /* Decimal */
+    OSP_INTSTR_HEX,                     /* Hex */
+    OSP_INTSTR_MAX = OSP_INTSTR_HEX,
+    OSP_INTSTR_NUMBER
+} osp_intstr_t;
 
 /*
  * OSP time string types
@@ -186,7 +210,7 @@ typedef enum {
 #define OSP_TOFF_AKDT (-8*60*60)    /* Alaska Daylight Time */
 
 /*
- * Post dial delay unit
+ * Time unit
  */
 typedef enum {
     OSP_TIMEUNIT_MIN = 0,
@@ -351,6 +375,7 @@ typedef struct {
  * OSP module mapping parameter structure.
  */
 typedef struct {
+    int clienttype;                 /* RADIUS client type */
     char* transid;                  /* Transaction ID */
     char* callid;                   /* Call-ID */
     int iscallinguri;               /* If calling number uri */
@@ -490,6 +515,7 @@ static const CONF_PARSER mapping_config[] = {
      *
      *   All custom info must be listed to allow config parser to read them.
      */
+    { "radiusclienttype", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.clienttype), NULL, OSP_MAP_CLIENTTYPE },
     { "transactionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transid), NULL, OSP_MAP_TRANSID },
     { "callid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.callid), NULL, OSP_MAP_CALLID },
     { "iscallinguri", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.iscallinguri), NULL, OSP_MAP_ISCALLINGURI },
@@ -908,11 +934,12 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
  * param _name Item name
  * param _lev Must or may be defined
  * param _map Item mapping string
+ * param _fmt Integer string format
  * param _def Item default value
  * param _buf Buffer
  * param _val Item value
  */
-#define OSP_GET_INTEGER(_req, _flag, _name, _lev, _map, _def, _buf, _val) { \
+#define OSP_GET_INTEGER(_req, _flag, _name, _lev, _map, _fmt, _def, _buf, _val) { \
     if (_flag) { \
         if (OSP_CHECK_STRING(_map)) { \
             radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
@@ -926,7 +953,11 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
                     _val = _def; \
                 } \
             } else { \
-                _val = atoi(_buf); \
+                if (_fmt == OSP_INTSTR_HEX) { \
+                    sscanf(_buf, "%x", &_val); \
+                } else { \
+                    _val = atoi(_buf); \
+                } \
             } \
         } else { \
             if (_lev == OSP_DEF_MUST) { \
@@ -2084,6 +2115,7 @@ static int osp_get_usageinfo(
     osp_mapping_t* mapping = &data->mapping;
     char buffer[OSP_STRBUF_SIZE];
     int parse, size, i;
+    osp_intstr_t format;
 
     DEBUG("rlm_osp: osp_get_usageinfo start");
 
@@ -2115,7 +2147,7 @@ static int osp_get_usageinfo(
     OSP_GET_IP(request, TRUE, "destinationdevice", OSP_DEF_MAY, mapping->destdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destdev);
 
     /* Get destination count */
-    OSP_GET_INTEGER(request, TRUE, "destinationcount", OSP_DEF_MAY, mapping->destcount, OSP_DESTCOUNT_DEF, buffer, usage->destcount);
+    OSP_GET_INTEGER(request, TRUE, "destinationcount", OSP_DEF_MAY, mapping->destcount, OSP_INTSTR_DEC, OSP_DESTCOUNT_DEF, buffer, usage->destcount);
 
     /* Get source network ID */
     OSP_GET_STRING(request, TRUE, "sourcenetworkid", OSP_DEF_MAY, mapping->snid, usage->snid);
@@ -2164,7 +2196,7 @@ static int osp_get_usageinfo(
 
     /* Get post dial delay */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
-    OSP_GET_INTEGER(request, parse, "postdialdelay", OSP_DEF_MAY, mapping->pdd, OSP_STATSINT_DEF, buffer, usage->pdd);
+    OSP_GET_INTEGER(request, parse, "postdialdelay", OSP_DEF_MAY, mapping->pdd, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, usage->pdd);
     if (usage->pdd != OSP_STATSINT_DEF) {
         usage->pdd /= OSP_TIMEUNIT_SCALE[mapping->pddunit];
     }
@@ -2207,7 +2239,17 @@ static int osp_get_usageinfo(
 
     /* Get release cause */
     parse = ((type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
-    OSP_GET_INTEGER(request, parse, "releasecause", OSP_DEF_MUST, mapping->cause, OSP_CAUSE_DEF, buffer, usage->cause);
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_NEXTONE:
+        format = OSP_INTSTR_HEX;
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    default:
+        format = OSP_INTSTR_DEC;
+        break;
+    }
+    OSP_GET_INTEGER(request, parse, "releasecause", OSP_DEF_MUST, mapping->cause, format, OSP_CAUSE_DEF, buffer, usage->cause);
 
     /* Get destination protocol */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
@@ -2282,16 +2324,16 @@ static int osp_get_statsinfo(
         parse = (type == PW_STATUS_STOP);
     
         /* Get lost send packets */
-        OSP_GET_INTEGER(request, parse, "sendlostpackets", OSP_DEF_MAY, mapping->slost.pack, OSP_STATSINT_DEF, buffer, stats->slost.pack);
+        OSP_GET_INTEGER(request, parse, "sendlostpackets", OSP_DEF_MAY, mapping->slost.pack, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, stats->slost.pack);
     
         /* Get lost send packet fraction */
-        OSP_GET_INTEGER(request, parse, "sendlostfraction", OSP_DEF_MAY, mapping->slost.fract, OSP_STATSINT_DEF, buffer, stats->slost.fract);
+        OSP_GET_INTEGER(request, parse, "sendlostfraction", OSP_DEF_MAY, mapping->slost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, stats->slost.fract);
     
         /* Get lost receive packets */
-        OSP_GET_INTEGER(request, parse, "receivelostpackets", OSP_DEF_MAY, mapping->rlost.pack, OSP_STATSINT_DEF, buffer, stats->rlost.pack);
+        OSP_GET_INTEGER(request, parse, "receivelostpackets", OSP_DEF_MAY, mapping->rlost.pack, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, stats->rlost.pack);
     
         /* Get lost receive packet fraction */
-        OSP_GET_INTEGER(request, parse, "receivelostfraction", OSP_DEF_MAY, mapping->rlost.fract, OSP_STATSINT_DEF, buffer, stats->rlost.fract);
+        OSP_GET_INTEGER(request, parse, "receivelostfraction", OSP_DEF_MAY, mapping->rlost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, stats->rlost.fract);
     
         for (group = OSP_GROUP_RTP; group < OSP_GROUP_NUMBER; group++) {
             for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
@@ -2302,27 +2344,27 @@ static int osp_get_statsinfo(
     
                 /* Get packets lost packets */
                 mSTR(name, "lostpackets");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.lost.pack, OSP_STATSINT_DEF, buffer, mVAR.lost.pack);
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.lost.pack, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.lost.pack);
     
                 /* Get packets lost fraction */
                 mSTR(name, "lostfraction");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.lost.fract, OSP_STATSINT_DEF, buffer, mVAR.lost.fract);
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.lost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.lost.fract);
     
                 /* Get jitter samples */
                 mSTR(name, "jittersamples");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.jitter.samp, OSP_STATSINT_DEF, buffer, mVAR.jitter.samp);
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.jitter.samp, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.jitter.samp);
     
                 /* Get jitter minimim */
                 mSTR(name, "jitterminimum");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.jitter.min, OSP_STATSINT_DEF, buffer, mVAR.jitter.min);
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.jitter.min, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.jitter.min);
     
                 /* Get jitter maximum */
                 mSTR(name, "jittermaximum");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.jitter.max, OSP_STATSINT_DEF, buffer, mVAR.jitter.max);
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.jitter.max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.jitter.max);
     
                 /* Get jitter mean */
                 mSTR(name, "jittermean");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.jitter.mean, OSP_STATSINT_DEF, buffer, mVAR.jitter.mean);
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.jitter.mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.jitter.mean);
     
                 /* Get jitter variance */
                 mSTR(name, "jittervariance");
@@ -2330,19 +2372,19 @@ static int osp_get_statsinfo(
     
                 /* Get delay samples */
                 mSTR(name, "delaysamples");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.delay.samp, OSP_STATSINT_DEF, buffer, mVAR.delay.samp);
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.delay.samp, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.delay.samp);
     
                 /* Get delay minimim */
                 mSTR(name, "delayminimum");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.delay.min, OSP_STATSINT_DEF, buffer, mVAR.delay.min);
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.delay.min, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.delay.min);
     
                 /* Get delay maximum */
                 mSTR(name, "delaymaximum");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.delay.max, OSP_STATSINT_DEF, buffer, mVAR.delay.max);
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.delay.max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.delay.max);
     
                 /* Get delay mean */
                 mSTR(name, "delaymean");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.delay.mean, OSP_STATSINT_DEF, buffer, mVAR.delay.mean);
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.delay.mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.delay.mean);
     
                 /* Get delay variance */
                 mSTR(name, "delayvariance");
@@ -2350,11 +2392,11 @@ static int osp_get_statsinfo(
     
                 /* Get octets */
                 mSTR(name, "octets");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.octets, OSP_STATSINT_DEF, buffer, mVAR.octets);
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.octets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.octets);
     
                 /* Get packets */
                 mSTR(name, "packets");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.packets, OSP_STATSINT_DEF, buffer, mVAR.packets);
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.packets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.packets);
     
                 /* Get rfactor is */
                 mSTR(name, "rfactor");
@@ -2546,9 +2588,11 @@ static OSPE_DEST_PROTOCOL osp_parse_protocol(
 
     if (OSP_CHECK_STRING(protocol)) {
         /* Comparing ignore case, Solaris does not support strcasestr */
-        if (strstr(protocol, "H323") || strstr(protocol, "h323")) {
+        if (strstr(protocol, "H323") || strstr(protocol, "h323") || 
+            strstr(protocol, "CISCO") || strstr(protocol, "Cisco") || strstr(protocol, "cisco"))
+        {
             type = OSPC_DPROT_Q931;
-        } else if (strstr(protocol, "SIP") || strstr(protocol, "sip") || strstr(protocol, "Sip")) {
+        } else if (strstr(protocol, "SIP") || strstr(protocol, "Sip") || strstr(protocol, "sip")) {
             type = OSPC_DPROT_SIP;
         }
     }
