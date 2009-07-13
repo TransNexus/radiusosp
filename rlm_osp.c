@@ -86,6 +86,7 @@ RCSID("$Id$")
  * Default RADIUS OSP mapping
  */
 #define OSP_MAP_CLIENTTYPE      "0"                         /* RADIUS client type, undefined */
+#define OSP_MAP_ORIGIN          NULL                        /* Call origin */
 #define OSP_MAP_TRANSID         NULL                        /* Transaction ID */
 #define OSP_MAP_CALLID          "%{Acct-Session-Id}"        /* Call-ID, RFC 2866 */
 #define OSP_MAP_ISCALLINGURI    "yes"                       /* Calling number type, uri */
@@ -145,6 +146,17 @@ typedef enum {
     OSP_CLIENT_MAX = OSP_CLIENT_NEXTONE,
     OSP_CLIENT_NUMBER
 } osp_client_t;
+
+#define OSP_CISCOCALL_INIT  "originate" /* Call originate, outbound */
+#define OSP_CISCOCALL_TERM  "answer"    /* Call answer, inbound */
+
+/*
+ * Call origin types
+ */
+typedef enum {
+    OSP_ORIGIN_INIT = 0,    /* Initiating, outbound */
+    OSP_ORIGIN_TERM         /* Terminating, inbound */
+} osp_origin_t;
 
 /*
  * Normal string buffer type
@@ -223,20 +235,38 @@ typedef enum {
 int OSP_TIMEUNIT_SCALE[OSP_TIMEUNIT_NUMBER] = { 1, 1000 };
 
 /*
+ * OSP Toolkit release source
+ */
+#define OSP_TK_RELSRC   0
+#define OSP_TK_RELDST   1
+
+/*
  * OSP release source
  */
 typedef enum {
     OSP_RELEASE_UNDEF = 0,  /* Unknown */
     OSP_RELEASE_SRC,        /* Source releases the call */
     OSP_RELEASE_DEST,       /* Destination releases the call */
-    OSP_RELEASE_MAX
 } osp_release_t;
 
 /*
- * OSPTK release source
+ * Cisco release source
  */
-#define OSP_TK_RELSRC   0
-#define OSP_TK_RELDST   1
+typedef enum {
+    OSP_CISCOREL_UNDEF = 0,
+    OSP_CISCOREL_CALLINGPSTN,
+    OSP_CISCOREL_CALLINGVOIP,
+    OSP_CISCOREL_CALLEDPSTN,
+    OSP_CISCOREL_CALLEDVOIP,
+    OSP_CISCOREL_INTPOST,
+    OSP_CISCOREL_INTVOIP,
+    OSP_CISCOREL_INTAPPL,
+    OSP_CISCOREL_INTAAA,
+    OSP_CISCOREL_CONSOLE,
+    OSP_CISCOREL_EXTRADIUS,
+    OSP_CISCOREL_EXTAPPL,
+    OSP_CISCOREL_EXTAGENT
+} osp_ciscorelease_t;
 
 /*
  * Gerenal scale 
@@ -376,6 +406,7 @@ typedef struct {
  */
 typedef struct {
     int clienttype;                 /* RADIUS client type */
+    char* origin;                   /* Call origin */
     char* transid;                  /* Transaction ID */
     char* callid;                   /* Call-ID */
     int iscallinguri;               /* If calling number uri */
@@ -423,6 +454,7 @@ typedef struct {
  * Usage information structure.
  */
 typedef struct {
+    int origin;                             /* Call origin */
     OSPTUINT64 transid;                     /* Transaction ID */
     osp_string_t callid;                    /* Call-ID */
     osp_string_t calling;                   /* Calling number */
@@ -516,6 +548,7 @@ static const CONF_PARSER mapping_config[] = {
      *   All custom info must be listed to allow config parser to read them.
      */
     { "radiusclienttype", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.clienttype), NULL, OSP_MAP_CLIENTTYPE },
+    { "callorigin", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.origin), NULL, OSP_MAP_ORIGIN },
     { "transactionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transid), NULL, OSP_MAP_TRANSID },
     { "callid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.callid), NULL, OSP_MAP_CALLID },
     { "iscallinguri", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.iscallinguri), NULL, OSP_MAP_ISCALLINGURI },
@@ -665,7 +698,7 @@ static int osp_get_statsinfo(osp_statsmap_t* mapping, REQUEST* request, int type
 static void osp_create_device(uint32_t ip, int prot, char* buffer, int buffersize);
 static void osp_format_device(char* device, char* buffer, int buffersize);
 static int osp_get_username(char* uri, char* buffer, int buffersize);
-static OSPE_DEST_PROTOCOL osp_parse_protocol(char* protocol);
+static OSPE_DEST_PROTOCOL osp_parse_protocol(osp_mapping_t* mapping, char* protocol);
 static OSPE_TERM_CAUSE osp_get_causetype(OSPE_DEST_PROTOCOL protocol);
 static time_t osp_format_time(char* timestr, osp_timestr_t format);
 static int osp_cal_timeoffset(char* tzone, long int* toffset);
@@ -722,7 +755,11 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
 #define OSP_CHECK_ITEMMAP(_name, _lev, _map) { \
     DEBUG("rlm_osp: check '%s' mapping", _name); \
     if (osp_check_itemmap(_map, _lev) < 0) { \
-        radlog(L_ERR, "rlm_osp: Incorrect '%s' mapping '%s'.", _name, _map); \
+        if (OSP_CHECK_STRING(_map)) { \
+            radlog(L_ERR, "rlm_osp: Incorrect '%s' mapping '%s'.", _name, _map); \
+        } else { \
+            radlog(L_ERR, "rlm_osp: Incorrect '%s' mapping 'NULL'.", _name); \
+        } \
         return -1; \
     } \
     if (OSP_CHECK_STRING(_map)) { \
@@ -1309,6 +1346,20 @@ static int osp_check_mapping(
     char buffer[OSP_STRBUF_SIZE];
 
     DEBUG("rlm_osp: osp_check_mapping start");
+
+    /* If RADIUS client type is wrong, then fail. */
+    OSP_CHECK_RANGE("radiusclienttype", mapping->clienttype, OSP_CLIENT_MIN, OSP_CLIENT_MAX);
+
+    /* If call origin is undefined for NexTone, then fail. */
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_NEXTONE:
+        OSP_CHECK_ITEMMAP("callorigin", OSP_DEF_MUST, mapping->origin);
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    default:
+        break;
+    }
 
     /* If transaction ID is incorrect, then fail. */
     OSP_CHECK_ITEMMAP("transactionid", OSP_DEF_MAY, mapping->transid);
@@ -2116,8 +2167,26 @@ static int osp_get_usageinfo(
     char buffer[OSP_STRBUF_SIZE];
     int parse, size, i;
     osp_intstr_t format;
+    int release;
 
     DEBUG("rlm_osp: osp_get_usageinfo start");
+
+    /* Get call origin */
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_NEXTONE:
+        OSP_GET_STRING(request, TRUE, "callorigin", OSP_DEF_MUST, mapping->origin, buffer);
+        if (!strcmp(buffer, OSP_CISCOCALL_INIT)) {
+            usage->origin = OSP_ORIGIN_INIT;
+        } else {
+            usage->origin = OSP_ORIGIN_TERM;
+        }
+        DEBUG("rlm_osp: Call origin type = '%d'", usage->origin);
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    default:
+        break;
+    }
 
     /* Get transaction ID */
     OSP_GET_LONGLONG(request, TRUE, "transactionid", OSP_DEF_MAY, mapping->transid, 0, buffer, usage->transid);
@@ -2213,14 +2282,42 @@ static int osp_get_usageinfo(
                     mapping->release);
                 usage->release = OSP_TK_RELSRC;
             } else {
-                switch (atoi(buffer)) {
-                case OSP_RELEASE_DEST:
-                    usage->release = OSP_TK_RELDST;
+                release = atoi(buffer);
+                switch (mapping->clienttype) {
+                case OSP_CLIENT_NEXTONE:
+                    switch (release) {
+                    case OSP_CISCOREL_CALLEDPSTN:
+                    case OSP_CISCOREL_CALLEDVOIP:
+                        usage->release = OSP_TK_RELDST;
+                        break;
+                    case OSP_CISCOREL_CALLINGPSTN:
+                    case OSP_CISCOREL_CALLINGVOIP:
+                    case OSP_CISCOREL_INTPOST:
+                    case OSP_CISCOREL_INTVOIP:
+                    case OSP_CISCOREL_INTAPPL:
+                    case OSP_CISCOREL_INTAAA:
+                    case OSP_CISCOREL_CONSOLE:
+                    case OSP_CISCOREL_EXTRADIUS:
+                    case OSP_CISCOREL_EXTAPPL:
+                    case OSP_CISCOREL_EXTAGENT:
+                    default:
+                        usage->release = OSP_TK_RELSRC;
+                        break;
+                    }
                     break;
-                case OSP_RELEASE_UNDEF:
-                case OSP_RELEASE_SRC:
+                case OSP_CLIENT_UNDEF:
+                case OSP_CLIENT_ACME:
                 default:
-                    usage->release = OSP_TK_RELSRC;
+                    switch (release) {
+                    case OSP_RELEASE_DEST:
+                        usage->release = OSP_TK_RELDST;
+                        break;
+                    case OSP_RELEASE_UNDEF:
+                    case OSP_RELEASE_SRC:
+                    default:
+                        usage->release = OSP_TK_RELSRC;
+                        break;
+                    }
                     break;
                 }
             }
@@ -2254,7 +2351,7 @@ static int osp_get_usageinfo(
     /* Get destination protocol */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     OSP_GET_STRING(request, parse, "destinationprotocol", OSP_DEF_MAY, mapping->destprot, buffer);
-    usage->destprot = osp_parse_protocol(buffer);
+    usage->destprot = osp_parse_protocol(mapping, buffer);
     DEBUG("rlm_osp: Destination protocol type = '%d'", usage->destprot);
 
     /* Get release reason type */
@@ -2281,7 +2378,7 @@ static int osp_get_usageinfo(
     parse = (type == PW_STATUS_STOP);
     OSP_GET_STRING(request, parse, "conferenceid",  OSP_DEF_MAY, mapping->confid, usage->confid);
 
-    /* Get inbound delay */
+    /* Get statistics */
     osp_get_statsinfo(&data->mapping.stats, request, type, &usage->stats);
 
     /* Get user-defined info */
@@ -2576,10 +2673,12 @@ static int osp_get_username(
 /*
  * Parse protocol from string
  *
+ * param mapping Mapping parameters
  * param protocol Protocol string
  * return Protocol
  */
 static OSPE_DEST_PROTOCOL osp_parse_protocol(
+    osp_mapping_t* mapping,
     char* protocol)
 {
     OSPE_DEST_PROTOCOL type = OSPC_DPROT_UNKNOWN;
@@ -2588,12 +2687,23 @@ static OSPE_DEST_PROTOCOL osp_parse_protocol(
 
     if (OSP_CHECK_STRING(protocol)) {
         /* Comparing ignore case, Solaris does not support strcasestr */
-        if (strstr(protocol, "H323") || strstr(protocol, "h323") || 
-            strstr(protocol, "CISCO") || strstr(protocol, "Cisco") || strstr(protocol, "cisco"))
-        {
-            type = OSPC_DPROT_Q931;
-        } else if (strstr(protocol, "SIP") || strstr(protocol, "Sip") || strstr(protocol, "sip")) {
+        if (strstr(protocol, "SIP") || strstr(protocol, "Sip") || strstr(protocol, "sip")) {
             type = OSPC_DPROT_SIP;
+        } else {
+            switch (mapping->clienttype) {
+            case OSP_CLIENT_NEXTONE:
+                if (strstr(protocol, "CISCO") || strstr(protocol, "Cisco") || strstr(protocol, "cisco")) {
+                    type = OSPC_DPROT_Q931;
+                }
+                break;
+            case OSP_CLIENT_UNDEF:
+            case OSP_CLIENT_ACME:
+            default:
+                if (strstr(protocol, "H323") || strstr(protocol, "h323")) {
+                    type = OSPC_DPROT_Q931;
+                }
+                break;
+            }
         }
     }
     DEBUG("rlm_osp: Protocol type = '%d'", type);
