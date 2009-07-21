@@ -94,8 +94,9 @@ RCSID("$Id$")
 #define OSP_MAP_ISCALLEDURI     "yes"                       /* Called number type, uri */
 #define OSP_MAP_CALLED          "%{Called-Station-Id}"      /* Called number, RFC 2865 */
 #define OSP_MAP_ASSERTEDID      NULL                        /* P-Asserted-Identity */
-#define OSP_MAP_SRCDEV          NULL                        /* Source device */
 #define OSP_MAP_SOURCE          "%{NAS-IP-Address}"         /* Source, RFC 2865 */
+#define OSP_MAP_PROXY           "%{NAS-IP-Address}"         /* Proxy, RFC 2865 */
+#define OSP_MAP_SRCDEV          NULL                        /* Source device */
 #define OSP_MAP_DESTINATION     NULL                        /* Destination */
 #define OSP_MAP_DESTDEV         NULL                        /* Destination device */
 #define OSP_MAP_DESTCOUNT       NULL                        /* Destination count */
@@ -414,8 +415,9 @@ typedef struct {
     int iscalleduri;                /* If called number uri */
     char* called;                   /* Called number */
     char* assertedid;               /* P-Asserted-Identity */
-    char* srcdev;                   /* Source device */
     char* source;                   /* Source */
+    char* proxy;                    /* Proxy, only for call leg type records */
+    char* srcdev;                   /* Source device */
     char* destination;              /* Destination */
     char* destdev;                  /* Destination device */
     char* destcount;                /* Destination count */
@@ -460,8 +462,8 @@ typedef struct {
     osp_string_t calling;                   /* Calling number */
     osp_string_t called;                    /* Called number */
     osp_string_t assertedid;                /* P-Asserted-Identity */
-    osp_string_t srcdev;                    /* Source device */
     osp_string_t source;                    /* Source */
+    osp_string_t srcdev;                    /* Source device */
     osp_string_t destination;               /* Destination */
     osp_string_t destdev;                   /* Destination device */
     int destcount;                          /* Destination count */
@@ -556,8 +558,9 @@ static const CONF_PARSER mapping_config[] = {
     { "iscalleduri", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.iscalleduri), NULL, OSP_MAP_ISCALLEDURI },
     { "callednumber", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.called), NULL, OSP_MAP_CALLED },
     { "assertedid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.assertedid), NULL, OSP_MAP_ASSERTEDID },
-    { "sourcedevice", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcdev), NULL, OSP_MAP_SRCDEV },
     { "source", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.source), NULL, OSP_MAP_SOURCE },
+    { "proxy", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.proxy), NULL, OSP_MAP_PROXY },
+    { "sourcedevice", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcdev), NULL, OSP_MAP_SRCDEV },
     { "destination", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destination), NULL, OSP_MAP_DESTINATION },
     { "destinationdevice", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destdev), NULL, OSP_MAP_DESTDEV },
     { "destinationcount", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destcount), NULL, OSP_MAP_DESTCOUNT },
@@ -1382,11 +1385,22 @@ static int osp_check_mapping(
     /* If asserted ID is incorrect, then fail. */
     OSP_CHECK_ITEMMAP("assertedid", OSP_DEF_MAY, mapping->assertedid);
 
-    /* If source device is undefined, then fail. */
-    OSP_CHECK_ITEMMAP("sourcedevice", OSP_DEF_MUST, mapping->srcdev);
-
     /* If source is incorrect, then fail. */
     OSP_CHECK_ITEMMAP("source", OSP_DEF_MAY, mapping->source);
+
+    /* If proxy is undefined for NexTone, then fail. */
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_NEXTONE:
+        OSP_CHECK_ITEMMAP("proxy", OSP_DEF_MUST, mapping->proxy);
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    default:
+        break;
+    }
+
+    /* If source device is undefined, then fail. */
+    OSP_CHECK_ITEMMAP("sourcedevice", OSP_DEF_MUST, mapping->srcdev);
 
     /* If destination is undefined, then fail. */
     OSP_CHECK_ITEMMAP("destination", OSP_DEF_MUST, mapping->destination);
@@ -2203,14 +2217,36 @@ static int osp_get_usageinfo(
     /* Get asserted ID */
     OSP_GET_STRING(request, TRUE, "assertedid", OSP_DEF_MAY, mapping->assertedid, usage->assertedid);
 
-    /* Get source device */
-    OSP_GET_IP(request, TRUE, "sourcedevice", OSP_DEF_MUST, mapping->srcdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev);
-
     /* Get source */
     OSP_GET_IP(request, TRUE, "source", OSP_DEF_MAY, mapping->source, provider->deviceip, provider->deviceport, buffer, usage->source);
 
-    /* Get destination */
-    OSP_GET_IP(request, TRUE, "destination", OSP_DEF_MUST, mapping->destination, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination);
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_NEXTONE:
+        if (usage->origin == OSP_ORIGIN_INIT) {
+            /* Get proxy/source device */
+            OSP_GET_IP(request, TRUE, "proxy", OSP_DEF_MUST, mapping->proxy, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev);
+
+            /* Get destination */
+            OSP_GET_IP(request, TRUE, "destination", OSP_DEF_MUST, mapping->destination, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination);
+        } else {
+            /* Get source device */
+            OSP_GET_IP(request, TRUE, "sourcedevice", OSP_DEF_MUST, mapping->srcdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev);
+
+            /* Get proxy/destination */
+            OSP_GET_IP(request, TRUE, "proxy", OSP_DEF_MUST, mapping->proxy, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination);
+        }
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    default:
+        /* Get source device */
+        OSP_GET_IP(request, TRUE, "sourcedevice", OSP_DEF_MUST, mapping->srcdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev);
+
+        /* Get destination */
+        OSP_GET_IP(request, TRUE, "destination", OSP_DEF_MUST, mapping->destination, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination);
+
+        break;
+    }
 
     /* Get destination device */
     OSP_GET_IP(request, TRUE, "destinationdevice", OSP_DEF_MAY, mapping->destdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destdev);
