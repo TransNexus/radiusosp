@@ -2400,6 +2400,17 @@ static int osp_get_usageinfo(
 
     /* Get outbound session ID */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_NEXTONE:
+        if (usage->origin == OSP_ORIGIN_TERM) {
+            parse = FALSE;
+        }
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    default:
+        break;
+    }
     OSP_GET_STRING(request, parse, "outboundsessionid", OSP_DEF_MAY, mapping->outsessionid, usage->outsessionid);
 
     /* Get forward codec */
