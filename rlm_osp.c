@@ -397,8 +397,8 @@ typedef struct {
     int retrydelay;             /* Retry delay */
     int retrylimit;             /* Times of retry */
     int timeout;                /* Timeout */
-    uint32_t deviceip;          /* NAS IP address */
-    int deviceport;             /* NAS port */
+    uint32_t deviceip;          /* OSP reporting IP address */
+    int deviceport;             /* OSP reporting IP port */
     OSPTPROVHANDLE handle;      /* OSP provider handle */
 } osp_provider_t;
 
@@ -702,7 +702,7 @@ static void osp_create_device(uint32_t ip, int prot, char* buffer, int buffersiz
 static void osp_format_device(char* device, char* buffer, int buffersize);
 static int osp_get_username(char* uri, char* buffer, int buffersize);
 static OSPE_DEST_PROTOCOL osp_parse_protocol(osp_mapping_t* mapping, char* protocol);
-static OSPE_TERM_CAUSE osp_get_causetype(OSPE_DEST_PROTOCOL protocol);
+static OSPE_TERM_CAUSE osp_get_causetype(osp_mapping_t* mapping, OSPE_DEST_PROTOCOL protocol);
 static time_t osp_format_time(char* timestr, osp_timestr_t format);
 static int osp_cal_timeoffset(char* tzone, long int* toffset);
 static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
@@ -1866,7 +1866,7 @@ static int osp_accounting(
                 buffer);
             break;
         }
-        /* Note: it should not return RLM_MODULE_FAIL in case requests from others come in. */
+        /* Note: it should not return RLM_MODULE_FAIL in case requests from others. */
         return RLM_MODULE_NOOP;
     }
 
@@ -2391,7 +2391,7 @@ static int osp_get_usageinfo(
     DEBUG("rlm_osp: Destination protocol type = '%d'", usage->destprot);
 
     /* Get release reason type */
-    usage->causetype = osp_get_causetype(usage->destprot);
+    usage->causetype = osp_get_causetype(mapping, usage->destprot);
     DEBUG("rlm_osp: Termination cause type = '%d'", usage->causetype);
 
     /* Get inbound session ID */
@@ -2763,29 +2763,40 @@ static OSPE_DEST_PROTOCOL osp_parse_protocol(
 /*
  * Get termination cause type from destination protocol
  *
+ * param mapping Mapping parameters
  * param protocol Destination protocol
  * return Termination cause type
  */
 static OSPE_TERM_CAUSE osp_get_causetype(
+    osp_mapping_t* mapping,
     OSPE_DEST_PROTOCOL protocol)
 {
     OSPE_TERM_CAUSE type;
 
     DEBUG("rlm_osp: osp_get_causetype start");
 
-    switch (protocol) {
-    case OSPC_DPROT_SIP:
-        type = OSPC_TCAUSE_SIP;
-        break;
-    case OSPC_DPROT_LRQ:
-    case OSPC_DPROT_Q931:
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_NEXTONE:
         type = OSPC_TCAUSE_H323;
         break;
-    case OSPC_DPROT_XMPP:
-        type = OSPC_TCAUSE_XMPP;
-        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
     default:
-        type = OSPC_TCAUSE_Q850;
+        switch (protocol) {
+        case OSPC_DPROT_SIP:
+            type = OSPC_TCAUSE_SIP;
+            break;
+        case OSPC_DPROT_LRQ:
+        case OSPC_DPROT_Q931:
+            type = OSPC_TCAUSE_H323;
+            break;
+        case OSPC_DPROT_XMPP:
+            type = OSPC_TCAUSE_XMPP;
+            break;
+        default:
+            type = OSPC_TCAUSE_Q850;
+            break;
+        }
         break;
     }
     DEBUG("rlm_osp: Cause type = '%d'", type);
