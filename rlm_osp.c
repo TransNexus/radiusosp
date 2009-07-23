@@ -80,12 +80,17 @@ RCSID("$Id$")
 #define OSP_TIME_DEF        0                           /* OSP default time value */
 #define OSP_STATSINT_DEF    ((int)-1)                   /* OSP default statistics, integer */
 #define OSP_STATSFLOAT_DEF  ((float)-1.0)               /* OSP default statistics, float */
-#define OSP_INDEX_MAX       4                           /* OSP max number of custom info */
+#define OSP_SUBNET_MAX      4                           /* OSP max number of subnets in a subnet list */
+#define OSP_NETMASK_DEF     0xFFFFFFFF                  /* OSP default subnet mask */
+#define OSP_NET_DELIMITER   "/"                         /* OSP delimiter string for subnet (ip/mask) */
+#define OSP_LIST_DELIMITER  ",; "                       /* OSP delimiter string for subnet list */
+#define OSP_CUSTOMINFO_MAX  4                           /* OSP max number of custom info */
 
 /*
  * Default RADIUS OSP mapping
  */
 #define OSP_MAP_CLIENTTYPE      "0"                         /* RADIUS client type, undefined */
+#define OSP_MAP_NETLIST         NULL                        /* Subnet list */
 #define OSP_MAP_ORIGIN          NULL                        /* Call origin */
 #define OSP_MAP_TRANSID         NULL                        /* Transaction ID */
 #define OSP_MAP_CALLID          "%{Acct-Session-Id}"        /* Call-ID, RFC 2866 */
@@ -148,6 +153,25 @@ typedef enum {
     OSP_CLIENT_NUMBER
 } osp_client_t;
 
+/*
+ * Subnet
+ */
+typedef struct {
+    uint32_t ip;    /* Subnet IP */
+    uint32_t mask;  /* Subnet mask */
+} osp_subnet_t;
+
+/*
+ * Subnet list
+ */
+typedef struct {
+    int number;                             /* Number of subnets */
+    osp_subnet_t subnet[OSP_SUBNET_MAX];    /* Subnets */
+} osp_netlist_t;
+
+/*
+ * Cisco h323-call-origin value strings
+ */
 #define OSP_CISCOCALL_INIT  "originate" /* Call originate, outbound */
 #define OSP_CISCOCALL_TERM  "answer"    /* Call answer, inbound */
 
@@ -406,41 +430,43 @@ typedef struct {
  * OSP module mapping parameter structure.
  */
 typedef struct {
-    int clienttype;                 /* RADIUS client type */
-    char* origin;                   /* Call origin */
-    char* transid;                  /* Transaction ID */
-    char* callid;                   /* Call-ID */
-    int iscallinguri;               /* If calling number uri */
-    char* calling;                  /* Calling number */
-    int iscalleduri;                /* If called number uri */
-    char* called;                   /* Called number */
-    char* assertedid;               /* P-Asserted-Identity */
-    char* source;                   /* Source */
-    char* proxy;                    /* Proxy, only for call leg type records */
-    char* srcdev;                   /* Source device */
-    char* destination;              /* Destination */
-    char* destdev;                  /* Destination device */
-    char* destcount;                /* Destination count */
-    char* snid;                     /* Source network ID */
-    char* dnid;                     /* Destination network ID */
-    int timeformat;                 /* Time string format */
-    char* start;                    /* Call start time */
-    char* alert;                    /* Call alert time */
-    char* connect;                  /* Call connect time */
-    char* end;                      /* Call end time */
-    char* duration;                 /* Call duration */
-    int pddunit;                    /* Post dial delay unit */
-    char* pdd;                      /* Post dial delay */
-    char* release;                  /* Release source */
-    char* cause;                    /* Release cause */
-    char* destprot;                 /* Destination protocol */
-    char* insessionid;              /* Inbound Call-ID */
-    char* outsessionid;             /* Outbound Call-ID */
-    char* forcodec;                 /* Forward codec */
-    char* revcodec;                 /* Reverse codec */
-    char* confid;                   /* Conference ID */
-    osp_statsmap_t stats;           /* Statistics */
-    char* custinfo[OSP_INDEX_MAX];  /* Custom info */
+    int clienttype;                     /* RADIUS client type */
+    char* ignoreddeststr;               /* Ignored destination subnet list string */
+    osp_netlist_t ignoreddestlist;      /* Ignored destination subnet list */
+    char* origin;                       /* Call origin */
+    char* transid;                      /* Transaction ID */
+    char* callid;                       /* Call-ID */
+    int iscallinguri;                   /* If calling number uri */
+    char* calling;                      /* Calling number */
+    int iscalleduri;                    /* If called number uri */
+    char* called;                       /* Called number */
+    char* assertedid;                   /* P-Asserted-Identity */
+    char* source;                       /* Source */
+    char* proxy;                        /* Proxy, only for call leg type records */
+    char* srcdev;                       /* Source device */
+    char* destination;                  /* Destination */
+    char* destdev;                      /* Destination device */
+    char* destcount;                    /* Destination count */
+    char* snid;                         /* Source network ID */
+    char* dnid;                         /* Destination network ID */
+    int timeformat;                     /* Time string format */
+    char* start;                        /* Call start time */
+    char* alert;                        /* Call alert time */
+    char* connect;                      /* Call connect time */
+    char* end;                          /* Call end time */
+    char* duration;                     /* Call duration */
+    int pddunit;                        /* Post dial delay unit */
+    char* pdd;                          /* Post dial delay */
+    char* release;                      /* Release source */
+    char* cause;                        /* Release cause */
+    char* destprot;                     /* Destination protocol */
+    char* insessionid;                  /* Inbound Call-ID */
+    char* outsessionid;                 /* Outbound Call-ID */
+    char* forcodec;                     /* Forward codec */
+    char* revcodec;                     /* Reverse codec */
+    char* confid;                       /* Conference ID */
+    osp_statsmap_t stats;               /* Statistics */
+    char* custinfo[OSP_CUSTOMINFO_MAX]; /* Custom info */
 } osp_mapping_t;
 
 /*
@@ -456,36 +482,36 @@ typedef struct {
  * Usage information structure.
  */
 typedef struct {
-    int origin;                             /* Call origin */
-    OSPTUINT64 transid;                     /* Transaction ID */
-    osp_string_t callid;                    /* Call-ID */
-    osp_string_t calling;                   /* Calling number */
-    osp_string_t called;                    /* Called number */
-    osp_string_t assertedid;                /* P-Asserted-Identity */
-    osp_string_t source;                    /* Source */
-    osp_string_t srcdev;                    /* Source device */
-    osp_string_t destination;               /* Destination */
-    osp_string_t destdev;                   /* Destination device */
-    int destcount;                          /* Destination count */
-    osp_string_t snid;                      /* Source network ID */
-    osp_string_t dnid;                      /* Destination network ID */
-    time_t start;                           /* Call start time */
-    time_t alert;                           /* Call alert time */
-    time_t connect;                         /* Call connect time */
-    time_t end;                             /* Call end time */
-    time_t duration;                        /* Length of call */
-    int pdd;                                /* Post Dial Delay */
-    int release;                            /* EP that released the call */
-    OSPE_TERM_CAUSE causetype;              /* Release reason type */
-    int cause;                              /* Release reason */
-    OSPE_DEST_PROTOCOL destprot;            /* Destination protocol */
-    osp_string_t insessionid;               /* Inbound Call-ID */
-    osp_string_t outsessionid;              /* Outbound Call-ID */
-    osp_string_t forcodec;                  /* Forward codec */
-    osp_string_t revcodec;                  /* Reverse codec */
-    osp_string_t confid;                    /* Conference ID */
-    osp_stats_t stats;                      /* Statistics */
-    osp_string_t custinfo[OSP_INDEX_MAX];   /* Conference ID */
+    int origin;                                 /* Call origin */
+    OSPTUINT64 transid;                         /* Transaction ID */
+    osp_string_t callid;                        /* Call-ID */
+    osp_string_t calling;                       /* Calling number */
+    osp_string_t called;                        /* Called number */
+    osp_string_t assertedid;                    /* P-Asserted-Identity */
+    osp_string_t source;                        /* Source */
+    osp_string_t srcdev;                        /* Source device */
+    osp_string_t destination;                   /* Destination */
+    osp_string_t destdev;                       /* Destination device */
+    int destcount;                              /* Destination count */
+    osp_string_t snid;                          /* Source network ID */
+    osp_string_t dnid;                          /* Destination network ID */
+    time_t start;                               /* Call start time */
+    time_t alert;                               /* Call alert time */
+    time_t connect;                             /* Call connect time */
+    time_t end;                                 /* Call end time */
+    time_t duration;                            /* Length of call */
+    int pdd;                                    /* Post Dial Delay */
+    int release;                                /* EP that released the call */
+    OSPE_TERM_CAUSE causetype;                  /* Release reason type */
+    int cause;                                  /* Release reason */
+    OSPE_DEST_PROTOCOL destprot;                /* Destination protocol */
+    osp_string_t insessionid;                   /* Inbound Call-ID */
+    osp_string_t outsessionid;                  /* Outbound Call-ID */
+    osp_string_t forcodec;                      /* Forward codec */
+    osp_string_t revcodec;                      /* Reverse codec */
+    osp_string_t confid;                        /* Conference ID */
+    osp_stats_t stats;                          /* Statistics */
+    osp_string_t custinfo[OSP_CUSTOMINFO_MAX];  /* Conference ID */
 } osp_usage_t;
 
 /*
@@ -550,6 +576,7 @@ static const CONF_PARSER mapping_config[] = {
      *   All custom info must be listed to allow config parser to read them.
      */
     { "radiusclienttype", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.clienttype), NULL, OSP_MAP_CLIENTTYPE },
+    { "ignoreddestinationlist", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.ignoreddeststr), NULL, OSP_MAP_NETLIST },
     { "callorigin", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.origin), NULL, OSP_MAP_ORIGIN },
     { "transactionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transid), NULL, OSP_MAP_TRANSID },
     { "callid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.callid), NULL, OSP_MAP_CALLID },
@@ -692,11 +719,13 @@ static const CONF_PARSER module_config[] = {
 static int osp_check_running(osp_running_t* running);
 static int osp_check_provider(osp_provider_t* provider);
 static int osp_check_mapping(osp_mapping_t* mapping);
+static int osp_parse_netlist(char* liststr, osp_netlist_t* list);
 static int osp_check_statsmap(osp_statsmap_t* stats);
 static int osp_check_itemmap(char* item, osp_deflevel_t level);
 static int osp_create_provider(osp_provider_t* provider);
 static void osp_report_statsinfo(OSPTTRANHANDLE transaction, osp_statsmap_t* mapping, osp_stats_t* stats);
 static int osp_get_usageinfo(rlm_osp_t* data, REQUEST* request, int type, osp_usage_t* usage);
+static int osp_match_ip(osp_netlist_t* list, uint32_t ip);
 static int osp_get_statsinfo(osp_statsmap_t* mapping, REQUEST* request, int type, osp_stats_t* stats);
 static void osp_create_device(uint32_t ip, int prot, char* buffer, int buffersize);
 static void osp_format_device(char* device, char* buffer, int buffersize);
@@ -1353,6 +1382,12 @@ static int osp_check_mapping(
     /* If RADIUS client type is wrong, then fail. */
     OSP_CHECK_RANGE("radiusclienttype", mapping->clienttype, OSP_CLIENT_MIN, OSP_CLIENT_MAX);
 
+    /* If ignored destination subnet list string is incorrect, then fail. */
+    DEBUG("rlm_osp: parse 'ignoreddestinationlist'"); \
+    if (osp_parse_netlist(mapping->ignoreddeststr, &mapping->ignoreddestlist) < 0) {
+        return -1;
+    }
+
     /* If call origin is undefined for NexTone, then fail. */
     switch (mapping->clienttype) {
     case OSP_CLIENT_NEXTONE:
@@ -1466,17 +1501,69 @@ static int osp_check_mapping(
     OSP_CHECK_ITEMMAP("conferenceid", OSP_DEF_MAY, mapping->confid);
 
     /* If statistcs are incorrect, then fail. */
-    if (osp_check_statsmap(&mapping->stats) != 0) {
+    if (osp_check_statsmap(&mapping->stats) < 0) {
         return -1;
     }
 
     /* If user-defined info are incorrect, then fail. */
-    for (i = 0; i < OSP_INDEX_MAX; i++) {
+    for (i = 0; i < OSP_CUSTOMINFO_MAX; i++) {
         snprintf(buffer, sizeof(buffer), "custominfo%d", i + 1);
         OSP_CHECK_ITEMMAP(buffer, OSP_DEF_MAY, mapping->custinfo[i]);
     }
 
     DEBUG("rlm_osp: osp_check_mapping success");
+
+    return 0;
+}
+
+/*
+ * Parse subnet list.
+ *
+ * param liststr Subnet list string
+ * param list Subnet list
+ * return 0 success, -1 failure
+ */
+static int osp_parse_netlist(
+    char* liststr,
+    osp_netlist_t* list)
+{
+    char listbuf[OSP_STRBUF_SIZE];
+    char buffer[OSP_STRBUF_SIZE];
+    struct in_addr ip;
+    char* subnet;
+    char* tmplist;
+    char* ipstr;
+    char* tmpnet;
+    int i;
+
+    DEBUG("rlm_osp: osp_parse_netlist start");
+
+    strncpy(listbuf, liststr, OSP_STRBUF_SIZE);
+    for (i = 0, subnet = strtok_r(listbuf, OSP_LIST_DELIMITER, &tmplist);
+        (i < OSP_SUBNET_MAX) && subnet;
+        i++, subnet = strtok_r(NULL, OSP_LIST_DELIMITER, &tmplist)) 
+    {
+        if (((ipstr = strtok_r(subnet, OSP_NET_DELIMITER, &tmpnet)) == NULL) || (inet_pton(AF_INET, ipstr, &ip) != 1)) {
+            radlog(L_INFO, 
+                "rlm_osp: Failed to parse IP address from '%s'.", 
+                subnet);
+            break;
+        } else {
+            list->subnet[i].ip = ip.s_addr;
+            inet_ntop(AF_INET, &ip, buffer, sizeof(buffer));
+            DEBUG("rlm_osp: subnet[%d] ip = '%s'", i, buffer);
+
+            if (((ipstr = strtok_r(NULL, OSP_NET_DELIMITER, &tmpnet)) == NULL) || (inet_pton(AF_INET, ipstr, &ip) != 1)) {
+                ip.s_addr = OSP_NETMASK_DEF;
+            }
+            list->subnet[i].mask = ip.s_addr;
+            inet_ntop(AF_INET, &ip, buffer, sizeof(buffer));
+            DEBUG("rlm_osp: subnet[%d] mask = '%s'", i, buffer);
+        }
+    }
+    list->number = i;
+
+    DEBUG("rlm_osp: osp_parse_netlist success");
 
     return 0;
 }
@@ -1852,7 +1939,8 @@ static int osp_accounting(
     }
 
     /* Get usage information */
-    if (osp_get_usageinfo(data, request, vp->vp_integer, &usage) < 0) {
+    error = osp_get_usageinfo(data, request, vp->vp_integer, &usage);
+    if (error < 0) {
         switch (running->loglevel) {
         case OSP_LOG_SHORT:
             radlog(L_INFO, "rlm_osp: Failed to get usage info.");
@@ -1867,6 +1955,22 @@ static int osp_accounting(
             break;
         }
         /* Note: it should not return RLM_MODULE_FAIL in case requests from others. */
+        return RLM_MODULE_NOOP;
+    } else if (error == 1) {
+        switch (running->loglevel) {
+        case OSP_LOG_SHORT:
+            radlog(L_INFO, "rlm_osp: ignore record for destination.");
+            break;
+        case OSP_LOG_LONG:
+        default:
+            radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
+            /* Do not have to check string NULL */
+            radlog(L_INFO,
+                "rlm_osp: ignore record '%s' for destination.",
+                buffer);
+            break;
+        }
+        /* Note: it should not return RLM_MODULE_FAIL. */
         return RLM_MODULE_NOOP;
     }
 
@@ -1928,7 +2032,7 @@ static int osp_accounting(
         usage.assertedid);  /* Asserted ID */
 
     /* Report user-defined info */
-    for (i = 0; i < OSP_INDEX_MAX; i++) {
+    for (i = 0; i < OSP_CUSTOMINFO_MAX; i++) {
         if (OSP_CHECK_STRING(usage.custinfo[i])) {
             OSPPTransactionSetCustomInfo(
                 transaction,        /* Transaction handle */
@@ -2168,7 +2272,7 @@ static void osp_report_statsinfo(
  * param request Accounting request
  * param type RADIUS record type
  * param usage OSP usage info
- * return 0 success, -1 failure
+ * return 0 success, 1 ignore for destination, -1 failure
  */
 static int osp_get_usageinfo(
     rlm_osp_t* data,
@@ -2182,6 +2286,7 @@ static int osp_get_usageinfo(
     int parse, size, i;
     osp_intstr_t format;
     int release;
+    struct in_addr dest;
 
     DEBUG("rlm_osp: osp_get_usageinfo start");
 
@@ -2246,6 +2351,14 @@ static int osp_get_usageinfo(
         OSP_GET_IP(request, TRUE, "destination", OSP_DEF_MUST, mapping->destination, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination);
 
         break;
+    }
+
+    /* Check if the record is for a destination should be ignored */
+    if (inet_pton(AF_INET, usage->destination, &dest) == 1) {
+        if (osp_match_ip(&mapping->ignoreddestlist, dest.s_addr) == 0) {
+            DEBUG("rlm_osp: ignore record for destination '%s'.", usage->destination);
+            return 1;
+        }
     }
 
     /* Get destination device */
@@ -2429,13 +2542,43 @@ static int osp_get_usageinfo(
     osp_get_statsinfo(&data->mapping.stats, request, type, &usage->stats);
 
     /* Get user-defined info */
-    for (i = 0; i < OSP_INDEX_MAX; i++) {
+    for (i = 0; i < OSP_CUSTOMINFO_MAX; i++) {
         snprintf(buffer, sizeof(buffer), "custominfo%d", i + 1);
         parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
         OSP_GET_STRING(request, parse, buffer, OSP_DEF_MAY, mapping->custinfo[i], usage->custinfo[i]);
     }
 
     DEBUG("rlm_osp: osp_get_usageinfo success");
+
+    return 0;
+}
+
+/*
+ * Find an IP in subnet list
+ *
+ * param list Subnet list
+ * param ip IP address
+ * return 0 success, -1 failure
+ */
+static int osp_match_ip(
+    osp_netlist_t* list,
+    uint32_t ip)
+{
+    int i;
+
+    DEBUG("rlm_osp: osp_get_statsinfo start");
+
+    for (i = 0; i < list->number; i++) {
+        if ((list->subnet[i].ip & list->subnet[i].mask) ^ (ip & list->subnet[i].mask)) {
+            break;
+        }
+    }
+    if (i >= list->number) {
+        DEBUG("rlm_osp: osp_get_statsinfo failed");
+        return -1;
+    }
+
+    DEBUG("rlm_osp: osp_get_statsinfo success");
 
     return 0;
 }
@@ -2635,7 +2778,7 @@ static void osp_format_device(
     }
 
     size = buffersize - 1;
-    if (inet_aton(tmpbuf, &inp) != 0) {
+    if (inet_pton(AF_INET, tmpbuf, &inp) != 1) {
         if (tmpptr != NULL) {
             snprintf(buffer, size, "[%s]:%s", tmpbuf, tmpptr);
         } else {
