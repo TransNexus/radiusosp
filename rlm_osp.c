@@ -725,7 +725,7 @@ static int osp_check_itemmap(char* item, osp_deflevel_t level);
 static int osp_create_provider(osp_provider_t* provider);
 static void osp_report_statsinfo(OSPTTRANHANDLE transaction, osp_statsmap_t* mapping, osp_stats_t* stats);
 static int osp_get_usageinfo(rlm_osp_t* data, REQUEST* request, int type, osp_usage_t* usage);
-static int osp_match_ip(osp_netlist_t* list, uint32_t ip);
+static int osp_match_subnet(osp_netlist_t* list, uint32_t ip);
 static int osp_get_statsinfo(osp_statsmap_t* mapping, REQUEST* request, int type, osp_stats_t* stats);
 static void osp_create_device(uint32_t ip, int prot, char* buffer, int buffersize);
 static void osp_format_device(char* device, char* buffer, int buffersize);
@@ -1538,30 +1538,34 @@ static int osp_parse_netlist(
 
     DEBUG("rlm_osp: osp_parse_netlist start");
 
-    strncpy(listbuf, liststr, OSP_STRBUF_SIZE);
-    for (i = 0, subnet = strtok_r(listbuf, OSP_LIST_DELIMITER, &tmplist);
-        (i < OSP_SUBNET_MAX) && subnet;
-        i++, subnet = strtok_r(NULL, OSP_LIST_DELIMITER, &tmplist)) 
-    {
-        if (((ipstr = strtok_r(subnet, OSP_NET_DELIMITER, &tmpnet)) == NULL) || (inet_pton(AF_INET, ipstr, &ip) != 1)) {
-            radlog(L_INFO, 
-                "rlm_osp: Failed to parse IP address from '%s'.", 
-                subnet);
-            break;
-        } else {
-            list->subnet[i].ip = ip.s_addr;
-            inet_ntop(AF_INET, &ip, buffer, sizeof(buffer));
-            DEBUG("rlm_osp: subnet[%d] ip = '%s'", i, buffer);
-
-            if (((ipstr = strtok_r(NULL, OSP_NET_DELIMITER, &tmpnet)) == NULL) || (inet_pton(AF_INET, ipstr, &ip) != 1)) {
-                ip.s_addr = OSP_NETMASK_DEF;
+    if (liststr) {
+        strncpy(listbuf, liststr, OSP_STRBUF_SIZE);
+        for (i = 0, subnet = strtok_r(listbuf, OSP_LIST_DELIMITER, &tmplist);
+            (i < OSP_SUBNET_MAX) && subnet;
+            i++, subnet = strtok_r(NULL, OSP_LIST_DELIMITER, &tmplist)) 
+        {
+            if (((ipstr = strtok_r(subnet, OSP_NET_DELIMITER, &tmpnet)) == NULL) || (inet_pton(AF_INET, ipstr, &ip) != 1)) {
+                radlog(L_INFO, 
+                    "rlm_osp: Failed to parse IP address from '%s'.", 
+                    subnet);
+                break;
+            } else {
+                list->subnet[i].ip = ip.s_addr;
+                inet_ntop(AF_INET, &ip, buffer, sizeof(buffer));
+                DEBUG("rlm_osp: subnet[%d] ip = '%s'", i, buffer);
+    
+                if (((ipstr = strtok_r(NULL, OSP_NET_DELIMITER, &tmpnet)) == NULL) || (inet_pton(AF_INET, ipstr, &ip) != 1)) {
+                    ip.s_addr = OSP_NETMASK_DEF;
+                }
+                list->subnet[i].mask = ip.s_addr;
+                inet_ntop(AF_INET, &ip, buffer, sizeof(buffer));
+                DEBUG("rlm_osp: subnet[%d] mask = '%s'", i, buffer);
             }
-            list->subnet[i].mask = ip.s_addr;
-            inet_ntop(AF_INET, &ip, buffer, sizeof(buffer));
-            DEBUG("rlm_osp: subnet[%d] mask = '%s'", i, buffer);
         }
+        list->number = i;
+    } else {
+        list->number = 0;
     }
-    list->number = i;
 
     DEBUG("rlm_osp: osp_parse_netlist success");
 
@@ -2355,7 +2359,7 @@ static int osp_get_usageinfo(
 
     /* Check if the record is for a destination should be ignored */
     if (inet_pton(AF_INET, usage->destination, &dest) == 1) {
-        if (osp_match_ip(&mapping->ignoreddestlist, dest.s_addr) == 0) {
+        if (osp_match_subnet(&mapping->ignoreddestlist, dest.s_addr) == 0) {
             DEBUG("rlm_osp: ignore record for destination '%s'.", usage->destination);
             return 1;
         }
@@ -2554,31 +2558,31 @@ static int osp_get_usageinfo(
 }
 
 /*
- * Find an IP in subnet list
+ * Match IP in subnet list
  *
  * param list Subnet list
  * param ip IP address
  * return 0 success, -1 failure
  */
-static int osp_match_ip(
+static int osp_match_subnet(
     osp_netlist_t* list,
     uint32_t ip)
 {
     int i;
 
-    DEBUG("rlm_osp: osp_get_statsinfo start");
+    DEBUG("rlm_osp: osp_match_subnet start");
 
     for (i = 0; i < list->number; i++) {
-        if ((list->subnet[i].ip & list->subnet[i].mask) ^ (ip & list->subnet[i].mask)) {
+        if (!((list->subnet[i].ip & list->subnet[i].mask) ^ (ip & list->subnet[i].mask))) {
             break;
         }
     }
     if (i >= list->number) {
-        DEBUG("rlm_osp: osp_get_statsinfo failed");
+        DEBUG("rlm_osp: osp_match_subnet failed");
         return -1;
     }
 
-    DEBUG("rlm_osp: osp_get_statsinfo success");
+    DEBUG("rlm_osp: osp_match_subnet success");
 
     return 0;
 }
