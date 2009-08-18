@@ -106,6 +106,8 @@ RCSID("$Id$")
 #define OSP_MAP_DESTDEV         NULL                        /* Destination device */
 #define OSP_MAP_DESTCOUNT       NULL                        /* Destination count */
 #define OSP_MAP_NETWORKID       NULL                        /* Network ID */
+#define OSP_MAP_DIVUSER         NULL                        /* Diversion user */
+#define OSP_MAP_DIVHOST         NULL                        /* Diversion host */
 #define OSP_MAP_TIMEFORMAT      "0"                         /* Time string format, integer string */
 #define OSP_MAP_START           "%{Acct-Session-Start-Time}"/* Call start time, FreeRADIUS internal */
 #define OSP_MAP_ALERT           NULL                        /* Call alert time */
@@ -449,6 +451,8 @@ typedef struct {
     char* destcount;                    /* Destination count */
     char* snid;                         /* Source network ID */
     char* dnid;                         /* Destination network ID */
+    char* divuser;                      /* Diversion user */
+    char* divhost;                      /* Diversion host */
     int timeformat;                     /* Time string format */
     char* start;                        /* Call start time */
     char* alert;                        /* Call alert time */
@@ -495,6 +499,8 @@ typedef struct {
     int destcount;                              /* Destination count */
     osp_string_t snid;                          /* Source network ID */
     osp_string_t dnid;                          /* Destination network ID */
+    osp_string_t divuser;                       /* Diversion user */
+    osp_string_t divhost;                       /* Diversion host */
     time_t start;                               /* Call start time */
     time_t alert;                               /* Call alert time */
     time_t connect;                             /* Call connect time */
@@ -593,6 +599,8 @@ static const CONF_PARSER mapping_config[] = {
     { "destinationcount", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destcount), NULL, OSP_MAP_DESTCOUNT },
     { "sourcenetworkid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.snid), NULL, OSP_MAP_NETWORKID },
     { "destinationnetworkid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.dnid), NULL, OSP_MAP_NETWORKID },
+    { "diversionuser", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.divuser), NULL, OSP_MAP_DIVUSER },
+    { "diversionhost", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.divhost), NULL, OSP_MAP_DIVHOST },
     { "timestringformat", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.timeformat), NULL, OSP_MAP_TIMEFORMAT },
     { "starttime", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.start), NULL, OSP_MAP_START },
     { "alerttime", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.alert), NULL, OSP_MAP_ALERT },
@@ -729,7 +737,8 @@ static int osp_match_subnet(osp_netlist_t* list, uint32_t ip);
 static int osp_get_statsinfo(osp_statsmap_t* mapping, REQUEST* request, int type, osp_stats_t* stats);
 static void osp_create_device(uint32_t ip, int prot, char* buffer, int buffersize);
 static void osp_format_device(char* device, char* buffer, int buffersize);
-static int osp_get_username(char* uri, char* buffer, int buffersize);
+static int osp_get_uriuser(char* uri, char* buffer, int buffersize);
+static int osp_get_urihost(char* uri, char* buffer, int buffersize);
 static OSPE_DEST_PROTOCOL osp_parse_protocol(osp_mapping_t* mapping, char* protocol);
 static OSPE_TERM_CAUSE osp_get_causetype(osp_mapping_t* mapping, OSPE_DEST_PROTOCOL protocol);
 static time_t osp_format_time(char* timestr, osp_timestr_t format);
@@ -873,7 +882,7 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
                     _val[0] = '\0'; \
                 } \
             } else if (_uri) { \
-                if (osp_get_username(_buf, _val, sizeof(_val)) < 0) { \
+                if (osp_get_uriuser(_buf, _val, sizeof(_val)) < 0) { \
                     /* Do not have to check string NULL */ \
                     if (_lev == OSP_DEF_MUST) { \
                         radlog(L_ERR, "rlm_osp: Failed to get '%s' from URI '%s'.", _name,  _buf); \
@@ -904,6 +913,74 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
     } else { \
         DEBUG("rlm_osp: do not parse '%s'.", _name); \
         _val[0] = '\0'; \
+    } \
+    /* Do not have to check string NULL */ \
+    DEBUG("rlm_osp: '%s' = '%s'", _name, _val); \
+}
+
+/*
+ * Get URI hostport
+ *
+ * param _req FreeRADIUS request
+ * param _flag Parse flag
+ * param _name Item name
+ * param _lev Must or may be defined
+ * param _map Item mapping string
+ * param _ip Default IP address
+ * param _port Default prot
+ * param _buf Buffer
+ * param _val Item value
+ */
+#define OSP_GET_URIHOST(_req, _flag, _name, _lev, _map, _ip, _port, _buf, _val) { \
+    if (_flag) { \
+        if (OSP_CHECK_STRING(_map)) { \
+            radius_xlat(_val, sizeof(_val), _map, _req, NULL); \
+            if (_val[0] == '\0') { \
+                /* Has checked string NULL */ \
+                if (_lev == OSP_DEF_MUST) { \
+                    radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    return -1; \
+                } else { \
+                    radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    osp_create_device(_ip, _port, _val, sizeof(_val)); \
+                } \
+            } else { \
+                if (osp_get_urihost(_val, _buf, sizeof(_buf)) < 0) { \
+                    /* Do not have to check string NULL */ \
+                    if (_lev == OSP_DEF_MUST) { \
+                        radlog(L_ERR, "rlm_osp: Failed to get '%s' from URI '%s'.", _name,  _buf); \
+                        return -1; \
+                    } else { \
+                        radlog(L_INFO, "rlm_osp: Failed to get '%s' from URI '%s'.", _name,  _buf); \
+                        osp_create_device(_ip, _port, _val, sizeof(_val)); \
+                    } \
+                } else  { \
+                    if (OSP_CHECK_STRING(_buf)) { \
+                        osp_format_device(_buf, _val, sizeof(_val)); \
+                    } else { \
+                        if (_lev == OSP_DEF_MUST) { \
+                            /* Hostport must be reported */ \
+                            radlog(L_ERR, "rlm_osp: Empty hostport."); \
+                            return -1; \
+                        } else { \
+                            DEBUG("rlm_osp: Empty hostport."); \
+                            osp_create_device(_ip, _port, _val, sizeof(_val)); \
+                        } \
+                    } \
+                } \
+            } \
+        } else { \
+            if (_lev == OSP_DEF_MUST) { \
+                radlog(L_ERR, "rlm_osp: '%s' mapping undefined.", _name); \
+                return -1; \
+            } else { \
+                DEBUG("rlm_osp: '%s' mapping undefined.", _name); \
+                osp_create_device(_ip, _port, _val, sizeof(_val)); \
+            } \
+        } \
+    } else { \
+        DEBUG("rlm_osp: do not parse '%s'.", _name); \
+        osp_create_device(_ip, _port, _val, sizeof(_val)); \
     } \
     /* Do not have to check string NULL */ \
     DEBUG("rlm_osp: '%s' = '%s'", _name, _val); \
@@ -1451,6 +1528,12 @@ static int osp_check_mapping(
 
     /* If destination network ID is incorrect, then fail. */
     OSP_CHECK_ITEMMAP("destinationnetworkid", OSP_DEF_MAY, mapping->dnid);
+
+    /* If diversion user is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP("diversionuser", OSP_DEF_MAY, mapping->divuser);
+
+    /* If diversion host is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP("diversionhost", OSP_DEF_MAY, mapping->divhost);
 
     /* If time string format is wrong, then fail. */
     OSP_CHECK_RANGE("timestringformat", mapping->timeformat, OSP_TIMESTR_MIN, OSP_TIMESTR_MAX);
@@ -2030,6 +2113,12 @@ static int osp_accounting(
         transaction,
         usage.dnid);
 
+    /* Report diversion */
+    OSPPTransactionSetDiversion(
+        transaction,
+        usage.divuser,
+        usage.divhost);
+
     /* Report asserted ID */
     OSPPTransactionSetAssertedId(
         transaction,        /* Transaction handle */
@@ -2376,6 +2465,12 @@ static int osp_get_usageinfo(
 
     /* Get destination network ID */
     OSP_GET_STRING(request, TRUE, "destinationnetworkid", OSP_DEF_MAY, mapping->dnid, usage->dnid);
+
+    /* Get diversion user */
+    OSP_GET_NUMBER(request, TRUE, "diversionuser", OSP_DEF_MAY, mapping->divuser, TRUE, buffer, size, usage->divuser);
+
+    /* Get diversion host */
+    OSP_GET_URIHOST(request, TRUE, "diversionhost", OSP_DEF_MAY, mapping->divhost, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->divhost);
 
     /* Get call start time */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
@@ -2799,18 +2894,18 @@ static void osp_format_device(
 }
 
 /*
- * Get username from uri
+ * Get userinfo from uri
  *
- * SIP-URI = "sip:" [ userinfo ] hostport
- *           uri-parameters [ headers ]
+ * SIP-URI = "sip:" [ userinfo ] hostport uri-parameters [ headers ]
  * userinfo = ( user / telephone-subscriber ) [ ":" password ] "@"
+ * hostport	= host [ ":" port ] 
  *
  * param uri Caller/callee URI
- * param buffer Username buffer
- * param buffersize Username buffer size
+ * param buffer Userinfo buffer
+ * param buffersize Userinfo buffer size
  * return 0 success, -1 failure
  */
-static int osp_get_username(
+static int osp_get_uriuser(
     char* uri,
     char* buffer,
     int buffersize)
@@ -2820,7 +2915,7 @@ static int osp_get_username(
     char* tmp;
     int size;
 
-    DEBUG("rlm_osp: osp_get_username start");
+    DEBUG("rlm_osp: osp_get_uriuser start");
 
     if ((start = strstr(uri, "sip:")) == NULL) {
         if (OSP_CHECK_STRING(uri)) {
@@ -2828,7 +2923,7 @@ static int osp_get_username(
                 "rlm_osp: URI '%s' format incorrect, without 'sip:'.",
                 uri);
         } else {
-            radlog(L_ERR, "rlm_osp: URI format incorrect");
+            radlog(L_ERR, "rlm_osp: URI format incorrect.");
         }
         return -1;
     } else {
@@ -2857,9 +2952,69 @@ static int osp_get_username(
         buffer[size] = '\0';
     }
     /* Do not have to check string NULL */
-    DEBUG("rlm_osp: URI username = '%s'", buffer);
+    DEBUG("rlm_osp: URI userinfo = '%s'", buffer);
 
-    DEBUG("rlm_osp: osp_get_username success");
+    DEBUG("rlm_osp: osp_get_uriuser success");
+
+    return 0;
+}
+
+/*
+ * Get hostport from uri
+ *
+ * SIP-URI = "sip:" [ userinfo ] hostport uri-parameters [ headers ]
+ * userinfo = ( user / telephone-subscriber ) [ ":" password ] "@"
+ * hostport	= host [ ":" port ] 
+ *
+ * param uri Caller/callee URI
+ * param buffer Hostport buffer
+ * param buffersize Hostport buffer size
+ * return 0 success, -1 failure
+ */
+static int osp_get_urihost(
+    char* uri,
+    char* buffer,
+    int buffersize)
+{
+    char* start;
+    char* end;
+    char* tmp;
+    int size;
+
+    DEBUG("rlm_osp: osp_get_urihost start");
+
+    if ((start = strstr(uri, "sip:")) == NULL) {
+        if (OSP_CHECK_STRING(uri)) {
+            radlog(L_ERR,
+                "rlm_osp: URI '%s' format incorrect, without 'sip:'.",
+                uri);
+        } else {
+            radlog(L_ERR, "rlm_osp: URI format incorrect.");
+        }
+        return -1;
+    } else {
+        start += 4;
+
+        if (((tmp = strchr(start, '@')) != NULL) && (start < tmp)) {
+            start = tmp;
+        }
+    }
+
+    if ((end = strpbrk(start, ";?>")) == NULL) {
+        *buffer = '\0';
+    } else {
+        size = end - start;
+        if (buffersize <= size) {
+            size = buffersize - 1;
+        }
+
+        memcpy(buffer, start, size);
+        buffer[size] = '\0';
+    }
+    /* Do not have to check string NULL */
+    DEBUG("rlm_osp: URI hostport = '%s'", buffer);
+
+    DEBUG("rlm_osp: osp_get_urihost success");
 
     return 0;
 }
