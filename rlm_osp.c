@@ -2877,7 +2877,7 @@ static void osp_format_device(
     }
 
     size = buffersize - 1;
-    if (inet_pton(AF_INET, tmpbuf, &inp) != 1) {
+    if (inet_pton(AF_INET, tmpbuf, &inp) == 1) {
         if (tmpptr != NULL) {
             snprintf(buffer, size, "[%s]:%s", tmpbuf, tmpptr);
         } else {
@@ -2996,7 +2996,7 @@ static int osp_get_urihost(
         start += 4;
 
         if (((tmp = strchr(start, '@')) != NULL) && (start < tmp)) {
-            start = tmp;
+            start = tmp + 1;
         }
     }
 
