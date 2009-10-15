@@ -149,7 +149,7 @@ typedef enum {
 typedef enum {
     OSP_CLIENT_MIN = 0,
     OSP_CLIENT_UNDEF = OSP_CLIENT_MIN,  /* Undefined */
-    OSP_CLIENT_ACME,                    /* ACME */
+    OSP_CLIENT_ACME,                    /* Acme */
     OSP_CLIENT_NEXTONE,                 /* NexTone */
     OSP_CLIENT_MAX = OSP_CLIENT_NEXTONE,
     OSP_CLIENT_NUMBER
@@ -208,7 +208,7 @@ typedef enum {
     OSP_TIMESTR_MIN = 0,
     OSP_TIMESTR_T = OSP_TIMESTR_MIN,    /* time_t, integer string */
     OSP_TIMESTR_C,                      /* ctime, WWW MMM DD HH:MM:SS YYYY */
-    OSP_TIMESTR_ACME,                   /* ACME, HH:MM:SS.MMM ZON MMM DD YYYY */
+    OSP_TIMESTR_ACME,                   /* Acme, HH:MM:SS.MMM ZON MMM DD YYYY */
     OSP_TIMESTR_NTP ,                   /* NTP, HH:MM:SS.MMM ZON WWW MMM DD YYYY */
     OSP_TIMESTR_MAX = OSP_TIMESTR_NTP,
     OSP_TIMESTR_NUMBER
