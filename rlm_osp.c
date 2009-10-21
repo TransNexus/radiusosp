@@ -89,14 +89,16 @@ RCSID("$Id$")
 /*
  * Default RADIUS OSP mapping
  */
+#define OSP_MAP_REPORTSTART     "yes"                       /* Report RADIUS Start records */
+#define OSP_MAP_REPORTINTERIM   "yes"                       /* Report RADIUS Interim-Update records */
+#define OSP_MAP_REPORTSTOP      "yes"                       /* Report RADIUS Stop records */
 #define OSP_MAP_CLIENTTYPE      "0"                         /* RADIUS client type, undefined */
 #define OSP_MAP_NETLIST         NULL                        /* Subnet list */
 #define OSP_MAP_ORIGIN          NULL                        /* Call origin */
 #define OSP_MAP_TRANSID         NULL                        /* Transaction ID */
 #define OSP_MAP_CALLID          "%{Acct-Session-Id}"        /* Call-ID, RFC 2866 */
-#define OSP_MAP_ISCALLINGURI    "yes"                       /* Calling number type, uri */
+#define OSP_MAP_NUMFORMAT       "0"                         /* Calling/called number format, E.164 */
 #define OSP_MAP_CALLING         "%{Calling-Station-Id}"     /* Calling number, RFC 2865 */
-#define OSP_MAP_ISCALLEDURI     "yes"                       /* Called number type, uri */
 #define OSP_MAP_CALLED          "%{Called-Station-Id}"      /* Called number, RFC 2865 */
 #define OSP_MAP_ASSERTEDID      NULL                        /* P-Asserted-Identity */
 #define OSP_MAP_SOURCE          "%{NAS-IP-Address}"         /* Source, RFC 2865 */
@@ -144,18 +146,6 @@ typedef enum {
 } osp_deflevel_t;
 
 /*
- * RADIUS client types
- */
-typedef enum {
-    OSP_CLIENT_MIN = 0,
-    OSP_CLIENT_UNDEF = OSP_CLIENT_MIN,  /* Undefined */
-    OSP_CLIENT_ACME,                    /* Acme */
-    OSP_CLIENT_NEXTONE,                 /* NexTone */
-    OSP_CLIENT_MAX = OSP_CLIENT_NEXTONE,
-    OSP_CLIENT_NUMBER
-} osp_client_t;
-
-/*
  * Subnet
  */
 typedef struct {
@@ -170,6 +160,19 @@ typedef struct {
     int number;                             /* Number of subnets */
     osp_subnet_t subnet[OSP_SUBNET_MAX];    /* Subnets */
 } osp_netlist_t;
+
+/*
+ * RADIUS client types
+ */
+typedef enum {
+    OSP_CLIENT_MIN = 0,
+    OSP_CLIENT_UNDEF = OSP_CLIENT_MIN,  /* Undefined */
+    OSP_CLIENT_ACME,                    /* Acme */
+    OSP_CLIENT_NEXTONE,                 /* NexTone */
+    OSP_CLIENT_CISCO,                   /* Cisco */
+    OSP_CLIENT_MAX = OSP_CLIENT_CISCO,
+    OSP_CLIENT_NUMBER
+} osp_client_t;
 
 /*
  * Cisco h323-call-origin value strings
@@ -191,6 +194,18 @@ typedef enum {
 typedef char    osp_string_t[OSP_STRBUF_SIZE];
 
 /*
+ * Calling/called number format types
+ */
+typedef enum {
+    OSP_CALLNUM_MIN = 0,
+    OSP_CALLNUM_E164 = OSP_CALLNUM_MIN, /* E.164 */
+    OSP_CALLNUM_URI,                    /* URI */
+    OSP_CALLNUM_CISCO,                  /* Cisco, ton:0~7,npi:0~15,pi:0~3,si:0~3,#:E.164 */
+    OSP_CALLNUM_MAX = OSP_CALLNUM_CISCO,
+    OSP_CALLNUM_NUMBER
+} osp_callnum_t;
+
+/*
  * Integer string format types
  */
 typedef enum {
@@ -210,7 +225,8 @@ typedef enum {
     OSP_TIMESTR_C,                      /* ctime, WWW MMM DD HH:MM:SS YYYY */
     OSP_TIMESTR_ACME,                   /* Acme, HH:MM:SS.MMM ZON MMM DD YYYY */
     OSP_TIMESTR_NTP ,                   /* NTP, HH:MM:SS.MMM ZON WWW MMM DD YYYY */
-    OSP_TIMESTR_MAX = OSP_TIMESTR_NTP,
+    OSP_TIMESTR_CISCO ,                 /* NTP, {'*'|'.'}HH:MM:SS.MMM ZON WWW MMM DD YYYY */
+    OSP_TIMESTR_MAX = OSP_TIMESTR_CISCO,
     OSP_TIMESTR_NUMBER
 } osp_timestr_t;
 
@@ -383,7 +399,7 @@ typedef struct {
 } osp_statsgroup_t;
 
 typedef struct {
-    int reportstats;                                                /* If report statistics */
+    int reportstats;                                                /* If to report statistics */
     int rfactorscale;                                               /* R-Factor scale index */
     int mosscale;                                                   /* MOS scale index */
     osp_packmap_t slost;                                            /* Lost send mapping */
@@ -432,15 +448,18 @@ typedef struct {
  * OSP module mapping parameter structure.
  */
 typedef struct {
+    int reportstart;                    /* If to report RADIUS Start records */
+    int reportstop;                     /* If to report RADIUS Stop records */
+    int reportinterim;                  /* If to report RADIUS Interim-Update records */
     int clienttype;                     /* RADIUS client type */
     char* ignoreddeststr;               /* Ignored destination subnet list string */
     osp_netlist_t ignoreddestlist;      /* Ignored destination subnet list */
     char* origin;                       /* Call origin */
     char* transid;                      /* Transaction ID */
     char* callid;                       /* Call-ID */
-    int iscallinguri;                   /* If calling number uri */
+    int callingformat;                  /* Calling number format */
     char* calling;                      /* Calling number */
-    int iscalleduri;                    /* If called number uri */
+    int calledformat;                   /* Called number format */
     char* called;                       /* Called number */
     char* assertedid;                   /* P-Asserted-Identity */
     char* source;                       /* Source */
@@ -581,14 +600,17 @@ static const CONF_PARSER mapping_config[] = {
      *
      *   All custom info must be listed to allow config parser to read them.
      */
+    { "reportstart", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportstart), NULL, OSP_MAP_REPORTSTART },
+    { "reportstop", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportstop), NULL, OSP_MAP_REPORTSTOP },
+    { "reportinterim", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportinterim), NULL, OSP_MAP_REPORTINTERIM },
     { "radiusclienttype", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.clienttype), NULL, OSP_MAP_CLIENTTYPE },
     { "ignoreddestinationlist", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.ignoreddeststr), NULL, OSP_MAP_NETLIST },
     { "callorigin", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.origin), NULL, OSP_MAP_ORIGIN },
     { "transactionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transid), NULL, OSP_MAP_TRANSID },
     { "callid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.callid), NULL, OSP_MAP_CALLID },
-    { "iscallinguri", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.iscallinguri), NULL, OSP_MAP_ISCALLINGURI },
+    { "callingnumberformat", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.callingformat), NULL, OSP_MAP_NUMFORMAT },
     { "callingnumber", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.calling), NULL, OSP_MAP_CALLING },
-    { "iscalleduri", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.iscalleduri), NULL, OSP_MAP_ISCALLEDURI },
+    { "callednumberformat", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.calledformat), NULL, OSP_MAP_NUMFORMAT },
     { "callednumber", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.called), NULL, OSP_MAP_CALLED },
     { "assertedid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.assertedid), NULL, OSP_MAP_ASSERTEDID },
     { "source", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.source), NULL, OSP_MAP_SOURCE },
@@ -741,7 +763,7 @@ static int osp_get_uriuser(char* uri, char* buffer, int buffersize);
 static int osp_get_urihost(char* uri, char* buffer, int buffersize);
 static OSPE_DEST_PROTOCOL osp_parse_protocol(osp_mapping_t* mapping, char* protocol);
 static OSPE_TERM_CAUSE osp_get_causetype(osp_mapping_t* mapping, OSPE_DEST_PROTOCOL protocol);
-static time_t osp_format_time(char* timestr, osp_timestr_t format);
+static time_t osp_format_time(char* timestamp, osp_timestr_t format);
 static int osp_cal_timeoffset(char* tzone, long int* toffset);
 static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
 
@@ -863,12 +885,13 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
  * param _name Item name
  * param _lev Must or may be defined
  * param _map Item mapping string
- * param _uri If an URI
+ * param _type Calling/called number format
  * param _buf Buffer
+ * param _ptr Temporary pointer
  * param _size Size
  * param _val Item value
  */
-#define OSP_GET_NUMBER(_req, _flag, _name, _lev, _map, _uri, _buf, _size, _val) { \
+#define OSP_GET_CALLNUM(_req, _flag, _name, _lev, _map, _type, _buf, _ptr, _size, _val) { \
     if (_flag) { \
         if (OSP_CHECK_STRING(_map)) { \
             radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
@@ -881,25 +904,38 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
                     radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
                     _val[0] = '\0'; \
                 } \
-            } else if (_uri) { \
-                if (osp_get_uriuser(_buf, _val, sizeof(_val)) < 0) { \
-                    /* Do not have to check string NULL */ \
-                    if (_lev == OSP_DEF_MUST) { \
-                        radlog(L_ERR, "rlm_osp: Failed to get '%s' from URI '%s'.", _name,  _buf); \
+            } else  { \
+                _ptr = _buf; \
+                switch (_type) { \
+                case OSP_CALLNUM_URI: \
+                    if (osp_get_uriuser(_buf, _val, sizeof(_val)) < 0) { \
+                        /* Do not have to check string NULL */ \
+                        if (_lev == OSP_DEF_MUST) { \
+                            radlog(L_ERR, "rlm_osp: Failed to get '%s' from URI '%s'.", _name,  _buf); \
+                            return -1; \
+                        } else { \
+                            radlog(L_INFO, "rlm_osp: Failed to get '%s' from URI '%s'.", _name,  _buf); \
+                            _val[0] = '\0'; \
+                        } \
+                    } else if ((_lev == OSP_DEF_MUST) && !OSP_CHECK_STRING(_val)) { \
+                        /* Number must be reported */ \
+                        radlog(L_ERR, "rlm_osp: Empty number."); \
                         return -1; \
-                    } else { \
-                        radlog(L_INFO, "rlm_osp: Failed to get '%s' from URI '%s'.", _name,  _buf); \
-                        _val[0] = '\0'; \
                     } \
-                } else if ((_lev == OSP_DEF_MUST) && !OSP_CHECK_STRING(_val)) { \
-                    /* Number must be reported */ \
-                    radlog(L_ERR, "rlm_osp: Empty number."); \
-                    return -1; \
+                    break; \
+                case OSP_CALLNUM_CISCO: \
+                    if ((_ptr = strstr(_buf, "#:")) != NULL) { \
+                        _ptr += 2; \
+                    } else { \
+                        _ptr = _buf; \
+                    } \
+                case OSP_CALLNUM_E164: \
+                default: \
+                    _size = sizeof(_val) - 1; \
+                    snprintf(_val, _size, "%s", _ptr); \
+                    _val[_size] = '\0'; \
+                    break; \
                 } \
-            } else { \
-                _size = sizeof(_val) - 1; \
-                snprintf(_val, _size, "%s", _buf); \
-                _val[_size] = '\0'; \
             } \
         } else { \
             if (_lev == OSP_DEF_MUST) { \
@@ -1456,8 +1492,14 @@ static int osp_check_mapping(
 
     DEBUG("rlm_osp: osp_check_mapping start");
 
-    /* If RADIUS client type is wrong, then fail. */
-    OSP_CHECK_RANGE("radiusclienttype", mapping->clienttype, OSP_CLIENT_MIN, OSP_CLIENT_MAX);
+    /* Nothing to check for reportstart */
+    DEBUG("rlm_osp: 'reportstart' = '%d'", mapping->reportstart);
+
+    /* Nothing to check for reportstop */
+    DEBUG("rlm_osp: 'reportstop' = '%d'", mapping->reportstop);
+
+    /* Nothing to check for reportinterim */
+    DEBUG("rlm_osp: 'reportinterim' = '%d'", mapping->reportinterim);
 
     /* If ignored destination subnet list string is incorrect, then fail. */
     DEBUG("rlm_osp: parse 'ignoreddestinationlist'"); \
@@ -1465,9 +1507,13 @@ static int osp_check_mapping(
         return -1;
     }
 
-    /* If call origin is undefined for NexTone, then fail. */
+    /* If RADIUS client type is wrong, then fail. */
+    OSP_CHECK_RANGE("radiusclienttype", mapping->clienttype, OSP_CLIENT_MIN, OSP_CLIENT_MAX);
+
+    /* If call origin is undefined for NexTone and Cisco, then fail. */
     switch (mapping->clienttype) {
     case OSP_CLIENT_NEXTONE:
+    case OSP_CLIENT_CISCO:
         OSP_CHECK_ITEMMAP("callorigin", OSP_DEF_MUST, mapping->origin);
         break;
     case OSP_CLIENT_UNDEF:
@@ -1482,14 +1528,14 @@ static int osp_check_mapping(
     /* If Call-ID is undefined, then fail. */
     OSP_CHECK_ITEMMAP("callid", OSP_DEF_MUST, mapping->callid);
 
-    /* Nothing to check for iscallinguri */
-    DEBUG("rlm_osp: 'iscallinguri' = '%d'", mapping->iscallinguri);
+    /* If calling number format is incorrect, then fail. */
+    OSP_CHECK_RANGE("callingnumberformat", mapping->callingformat, OSP_CALLNUM_MIN, OSP_CALLNUM_MAX);
 
     /* If calling number is incorrect, then fail. */
     OSP_CHECK_ITEMMAP("callingnumber", OSP_DEF_MAY, mapping->calling);
 
-    /* Nothing to check for iscallieduri */
-    DEBUG("rlm_osp: 'iscalleduri' = '%d'", mapping->iscalleduri);
+    /* If called number format is incorrect, then fail. */
+    OSP_CHECK_RANGE("callednumberformat", mapping->calledformat, OSP_CALLNUM_MIN, OSP_CALLNUM_MAX);
 
     /* If called number is undefined, then fail. */
     OSP_CHECK_ITEMMAP("callednumber", OSP_DEF_MUST, mapping->called);
@@ -1503,6 +1549,7 @@ static int osp_check_mapping(
     /* If proxy is undefined for NexTone, then fail. */
     switch (mapping->clienttype) {
     case OSP_CLIENT_NEXTONE:
+    case OSP_CLIENT_CISCO:
         OSP_CHECK_ITEMMAP("proxy", OSP_DEF_MUST, mapping->proxy);
         break;
     case OSP_CLIENT_UNDEF:
@@ -2012,14 +2059,29 @@ static int osp_accounting(
 
     switch (vp->vp_integer) {
     case PW_STATUS_START:
-        role = OSPC_ROLE_RADSRCSTART;
-        break;
+        if (mapping->reportstart) {
+            role = OSPC_ROLE_RADSRCSTART;
+            break;
+        } else {
+            DEBUG("rlm_osp: Nothing to do for Start request.");
+            return RLM_MODULE_NOOP;
+        }
     case PW_STATUS_STOP:
-        role = OSPC_ROLE_RADSRCSTOP;
-        break;
+        if (mapping->reportstop) {
+            role = OSPC_ROLE_RADSRCSTOP;
+            break;
+        } else {
+            DEBUG("rlm_osp: Nothing to do for Stop request.");
+            return RLM_MODULE_NOOP;
+        }
     case PW_STATUS_ALIVE:   /* Interim-Update */
-        role = OSPC_ROLE_RADSRCINTERIM;
-        break;
+        if (mapping->reportinterim) {
+            role = OSPC_ROLE_RADSRCINTERIM;
+            break;
+        } else {
+            DEBUG("rlm_osp: Nothing to do for Interim-Update request.");
+            return RLM_MODULE_NOOP;
+        }
     default:
         DEBUG("rlm_osp: Nothing to do for request type '%d'.", vp->vp_integer);
         return RLM_MODULE_NOOP;
@@ -2376,6 +2438,7 @@ static int osp_get_usageinfo(
     osp_provider_t* provider = &data->provider;
     osp_mapping_t* mapping = &data->mapping;
     char buffer[OSP_STRBUF_SIZE];
+    char* ptr;
     int parse, size, i;
     osp_intstr_t format;
     int release;
@@ -2386,6 +2449,7 @@ static int osp_get_usageinfo(
     /* Get call origin */
     switch (mapping->clienttype) {
     case OSP_CLIENT_NEXTONE:
+    case OSP_CLIENT_CISCO:
         OSP_GET_STRING(request, TRUE, "callorigin", OSP_DEF_MUST, mapping->origin, buffer);
         if (!strcmp(buffer, OSP_CISCOCALL_INIT)) {
             usage->origin = OSP_ORIGIN_INIT;
@@ -2407,10 +2471,10 @@ static int osp_get_usageinfo(
     OSP_GET_STRING(request, TRUE, "callid", OSP_DEF_MUST, mapping->callid, usage->callid);
 
     /* Get calling number */
-    OSP_GET_NUMBER(request, TRUE, "callingnumber", OSP_DEF_MAY, mapping->calling, mapping->iscallinguri, buffer, size, usage->calling);
+    OSP_GET_CALLNUM(request, TRUE, "callingnumber", OSP_DEF_MAY, mapping->calling, mapping->callingformat, buffer, ptr, size, usage->calling);
 
     /* Get called number */
-    OSP_GET_NUMBER(request, TRUE, "callednumber", OSP_DEF_MUST, mapping->called, mapping->iscalleduri, buffer, size, usage->called);
+    OSP_GET_CALLNUM(request, TRUE, "callednumber", OSP_DEF_MUST, mapping->called, mapping->calledformat, buffer, ptr, size, usage->called);
 
     /* Get asserted ID */
     OSP_GET_STRING(request, TRUE, "assertedid", OSP_DEF_MAY, mapping->assertedid, usage->assertedid);
@@ -2420,6 +2484,7 @@ static int osp_get_usageinfo(
 
     switch (mapping->clienttype) {
     case OSP_CLIENT_NEXTONE:
+    case OSP_CLIENT_CISCO:
         if (usage->origin == OSP_ORIGIN_INIT) {
             /* Get proxy/source device */
             OSP_GET_IP(request, TRUE, "proxy", OSP_DEF_MUST, mapping->proxy, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev);
@@ -2467,7 +2532,7 @@ static int osp_get_usageinfo(
     OSP_GET_STRING(request, TRUE, "destinationnetworkid", OSP_DEF_MAY, mapping->dnid, usage->dnid);
 
     /* Get diversion user */
-    OSP_GET_NUMBER(request, TRUE, "diversionuser", OSP_DEF_MAY, mapping->divuser, TRUE, buffer, size, usage->divuser);
+    OSP_GET_CALLNUM(request, TRUE, "diversionuser", OSP_DEF_MAY, mapping->divuser, TRUE, buffer, ptr, size, usage->divuser);
 
     /* Get diversion host */
     OSP_GET_URIHOST(request, TRUE, "diversionhost", OSP_DEF_MAY, mapping->divhost, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->divhost);
@@ -2533,6 +2598,7 @@ static int osp_get_usageinfo(
                 release = atoi(buffer);
                 switch (mapping->clienttype) {
                 case OSP_CLIENT_NEXTONE:
+                case OSP_CLIENT_CISCO:
                     switch (release) {
                     case OSP_CISCOREL_CALLEDPSTN:
                     case OSP_CISCOREL_CALLEDVOIP:
@@ -2586,6 +2652,7 @@ static int osp_get_usageinfo(
     parse = ((type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     switch (mapping->clienttype) {
     case OSP_CLIENT_NEXTONE:
+    case OSP_CLIENT_CISCO:
         format = OSP_INTSTR_HEX;
         break;
     case OSP_CLIENT_UNDEF:
@@ -2608,12 +2675,25 @@ static int osp_get_usageinfo(
 
     /* Get inbound session ID */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_CISCO:
+        if (usage->origin == OSP_ORIGIN_INIT) {
+            parse = FALSE;
+        }
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_NEXTONE:
+    default:
+        break;
+    }
     OSP_GET_STRING(request, parse, "inboundsessionid", OSP_DEF_MAY, mapping->insessionid, usage->insessionid);
 
     /* Get outbound session ID */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     switch (mapping->clienttype) {
     case OSP_CLIENT_NEXTONE:
+    case OSP_CLIENT_CISCO:
         if (usage->origin == OSP_ORIGIN_TERM) {
             parse = FALSE;
         }
@@ -3079,6 +3159,7 @@ static OSPE_TERM_CAUSE osp_get_causetype(
 
     switch (mapping->clienttype) {
     case OSP_CLIENT_NEXTONE:
+    case OSP_CLIENT_CISCO:
         type = OSPC_TCAUSE_H323;
         break;
     case OSP_CLIENT_UNDEF:
@@ -3116,10 +3197,11 @@ static OSPE_TERM_CAUSE osp_get_causetype(
  * return Time value
  */
 static time_t osp_format_time(
-    char* timestr,
+    char* timestamp,
     osp_timestr_t format)
 {
     struct tm dt;
+    char* timestr = timestamp;
     char buffer[OSP_STRBUF_SIZE];
     int size;
     char* tzone;
@@ -3133,51 +3215,67 @@ static time_t osp_format_time(
         tvalue = atol(timestr);
         break;
     case OSP_TIMESTR_C:
-        /* WWW MMM DD hh:mm:ss YYYY, assume UTC */
-        tzone = NULL;
-        if (osp_cal_timeoffset(tzone, &toffset) == 0) {
-            strptime(timestr, "%a %b %d %T %Y", &dt);
-            osp_cal_elapsed(&dt, toffset, &tvalue);
+        /* WWW MMM DD hh:mm:ss YYYY, assume UTC, length 24 bytes */
+        if (strlen(timestr) == 24) {
+            tzone = NULL;
+            if (osp_cal_timeoffset(tzone, &toffset) == 0) {
+                strptime(timestr, "%a %b %d %T %Y", &dt);
+                osp_cal_elapsed(&dt, toffset, &tvalue);
+            }
         }
         break;
     case OSP_TIMESTR_ACME:
-        /* hh:mm:ss.kkk ZON MMM DD YYYY */
-        size = sizeof(buffer) - 1;
-        snprintf(buffer, size, "%s", timestr + 13);
-        buffer[3] = '\0';
-
-        if (osp_cal_timeoffset(buffer, &toffset) == 0) {
+        /* hh:mm:ss.kkk ZON MMM DD YYYY, length 28 bytes */
+        if (strlen(timestr) == 28) {
             size = sizeof(buffer) - 1;
-            snprintf(buffer, size, "%s", timestr);
-            buffer[size] = '\0';
+            snprintf(buffer, size, "%s", timestr + 13);
+            buffer[3] = '\0';
 
-            size = sizeof(buffer) - 1 - 8;
-            snprintf(buffer + 8, size, "%s", timestr + 16);
-            buffer[size + 8] = '\0';
+            if (osp_cal_timeoffset(buffer, &toffset) == 0) {
+                size = sizeof(buffer) - 1;
+                snprintf(buffer, size, "%s", timestr);
+                buffer[size] = '\0';
 
-            strptime(buffer, "%T %b %d %Y", &dt);
+                size = sizeof(buffer) - 1 - 8;
+                snprintf(buffer + 8, size, "%s", timestr + 16);
+                buffer[size + 8] = '\0';
 
-            osp_cal_elapsed(&dt, toffset, &tvalue);
+                strptime(buffer, "%T %b %d %Y", &dt);
+
+                osp_cal_elapsed(&dt, toffset, &tvalue);
+            }
         }
         break;
+    case OSP_TIMESTR_CISCO:
+        if (timestr[0] == '*' || timestr[0] == '.') {
+            /* A timestamp that is preceded by an asterisk (*) or a
+               dot (.) might not be accurate. An asterisk (*) means
+               that after a gateway reboot, the gateway clock was not
+               manually set and the gateway has not synchronized with
+               an NTP server yet. A dot (.) means the gateway NTP has
+               lost synchronization with an NTP server. */ 
+            timestr++;
+        }
     case OSP_TIMESTR_NTP:
-        /* hh:mm:ss.kkk ZON WWW MMM DD YYYY */
-        size = sizeof(buffer) - 1;
-        snprintf(buffer, size, "%s", timestr + 13);
-        buffer[3] = '\0';
-
-        if (osp_cal_timeoffset(buffer, &toffset) == 0) {
+        /* hh:mm:ss.kkk ZON WWW MMM DD YYYY, length 32 bytes */
+        if (strlen(timestr) == 32) {
             size = sizeof(buffer) - 1;
-            snprintf(buffer, size, "%s", timestr);
-            buffer[size] = '\0';
+            snprintf(buffer, size, "%s", timestr + 13);
+            buffer[3] = '\0';
 
-            size = sizeof(buffer) - 1 - 8;
-            snprintf(buffer + 8, size, "%s", timestr + 16);
-            buffer[size + 8] = '\0';
+            if (osp_cal_timeoffset(buffer, &toffset) == 0) {
+                size = sizeof(buffer) - 1;
+                snprintf(buffer, size, "%s", timestr);
+                buffer[size] = '\0';
 
-            strptime(buffer, "%T %a %b %d %Y", &dt);
+                size = sizeof(buffer) - 1 - 8;
+                snprintf(buffer + 8, size, "%s", timestr + 16);
+                buffer[size + 8] = '\0';
 
-            osp_cal_elapsed(&dt, toffset, &tvalue);
+                strptime(buffer, "%T %a %b %d %Y", &dt);
+
+                osp_cal_elapsed(&dt, toffset, &tvalue);
+            }
         }
         break;
     default:
