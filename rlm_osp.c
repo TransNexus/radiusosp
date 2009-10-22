@@ -2779,7 +2779,7 @@ static int osp_get_statsinfo(
 {
     osp_statsmap_t* map = &mapping->stats;
     osp_stats_t* stats = &usage->stats;
-    int parse;
+    int parse, parseleg;
     osp_group_t group;
     osp_flow_t flow;
     char name[OSP_STRBUF_SIZE];
@@ -2859,12 +2859,13 @@ static int osp_get_statsinfo(
                 OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mMAP.delay.var, OSP_SCALE_1, OSP_STATSFLOAT_DEF, buffer, mVAR.delay.var);
 
                 /* Get octets */
+                parseleg = parse;
                 switch (mapping->clienttype) {
                 case OSP_CLIENT_CISCO:
                     if (((usage->origin == OSP_ORIGIN_INIT) && (flow == OSP_FLOW_DOWN)) ||
                         ((usage->origin == OSP_ORIGIN_TERM) && (flow == OSP_FLOW_UP)))
                     {
-                        parse = FALSE;
+                        parseleg = FALSE;
                     }
                     break;
                 case OSP_CLIENT_UNDEF:
@@ -2874,15 +2875,16 @@ static int osp_get_statsinfo(
                     break;
                 }
                 mSTR(name, "octets");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.octets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.octets);
+                OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mMAP.octets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.octets);
 
                 /* Get packets */
+                parseleg = parse;
                 switch (mapping->clienttype) {
                 case OSP_CLIENT_CISCO:
                     if (((usage->origin == OSP_ORIGIN_INIT) && (flow == OSP_FLOW_DOWN)) ||
                         ((usage->origin == OSP_ORIGIN_TERM) && (flow == OSP_FLOW_UP)))
                     {
-                        parse = FALSE;
+                        parseleg = FALSE;
                     }
                     break;
                 case OSP_CLIENT_UNDEF:
@@ -2892,7 +2894,7 @@ static int osp_get_statsinfo(
                     break;
                 }
                 mSTR(name, "packets");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.packets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.packets);
+                OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mMAP.packets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.packets);
 
                 /* Get rfactor is */
                 mSTR(name, "rfactor");
