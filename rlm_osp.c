@@ -591,10 +591,6 @@ static const CONF_PARSER provider_config[] = {
 };
 
 static const CONF_PARSER mapping_config[] = {
-
-    #define mSMAP   mapping.stats
-    #define mGMAP   mapping.stats.group
-
     /*
      * RADIUS OSP mapping parameters
      *
@@ -640,6 +636,7 @@ static const CONF_PARSER mapping_config[] = {
     { "reversecodec", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.revcodec), NULL, OSP_MAP_CODEC },
     { "conferenceid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.confid), NULL, OSP_MAP_CONFID },
     /* Statistics mapping */
+#define mSMAP   mapping.stats
     { "reportstatistics", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mSMAP.reportstats), NULL, OSP_MAP_REPORTSTATS },
     { "rfactorscaleindex", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mSMAP.rfactorscale), NULL, OSP_MAP_SCALE },
     { "mosscaleindex", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mSMAP.mosscale), NULL, OSP_MAP_SCALE },
@@ -647,82 +644,85 @@ static const CONF_PARSER mapping_config[] = {
     { "sendlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.slost.fract), NULL, OSP_MAP_STATS },
     { "receivelostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rlost.pack), NULL, OSP_MAP_STATS },
     { "receivelostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rlost.fract), NULL, OSP_MAP_STATS },
+#undef mSMAP
     /* Statistics group mapping start */
+#define mSGMAP  mapping.stats.group
     /* Lost */
-    { "rtpdownstreamlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].lost.pack), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].lost.fract), NULL, OSP_MAP_STATS },
-    { "rtpupstreamlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].lost.pack), NULL, OSP_MAP_STATS },
-    { "rtpupstreamlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].lost.fract), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].lost.pack), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].lost.fract), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].lost.pack), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].lost.fract), NULL, OSP_MAP_STATS },
+    { "rtpdownstreamlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].lost.pack), NULL, OSP_MAP_STATS },
+    { "rtpdownstreamlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].lost.fract), NULL, OSP_MAP_STATS },
+    { "rtpupstreamlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].lost.pack), NULL, OSP_MAP_STATS },
+    { "rtpupstreamlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].lost.fract), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].lost.pack), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].lost.fract), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].lost.pack), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].lost.fract), NULL, OSP_MAP_STATS },
     /* Jitter */
-    { "rtpdownstreamjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].jitter.samp), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].jitter.min), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].jitter.max), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].jitter.mean), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].jitter.var), NULL, OSP_MAP_STATS },
-    { "rtpupstreamjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].jitter.samp), NULL, OSP_MAP_STATS },
-    { "rtpupstreamjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].jitter.min), NULL, OSP_MAP_STATS },
-    { "rtpupstreamjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].jitter.max), NULL, OSP_MAP_STATS },
-    { "rtpupstreamjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].jitter.mean), NULL, OSP_MAP_STATS },
-    { "rtpupstreamjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].jitter.var), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].jitter.samp), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].jitter.min), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].jitter.max), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].jitter.mean), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].jitter.var), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].jitter.samp), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].jitter.min), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].jitter.max), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].jitter.mean), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].jitter.var), NULL, OSP_MAP_STATS },
+    { "rtpdownstreamjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].jitter.samp), NULL, OSP_MAP_STATS },
+    { "rtpdownstreamjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].jitter.min), NULL, OSP_MAP_STATS },
+    { "rtpdownstreamjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].jitter.max), NULL, OSP_MAP_STATS },
+    { "rtpdownstreamjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].jitter.mean), NULL, OSP_MAP_STATS },
+    { "rtpdownstreamjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].jitter.var), NULL, OSP_MAP_STATS },
+    { "rtpupstreamjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].jitter.samp), NULL, OSP_MAP_STATS },
+    { "rtpupstreamjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].jitter.min), NULL, OSP_MAP_STATS },
+    { "rtpupstreamjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].jitter.max), NULL, OSP_MAP_STATS },
+    { "rtpupstreamjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].jitter.mean), NULL, OSP_MAP_STATS },
+    { "rtpupstreamjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].jitter.var), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].jitter.samp), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].jitter.min), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].jitter.max), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].jitter.mean), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].jitter.var), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].jitter.samp), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].jitter.min), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].jitter.max), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].jitter.mean), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].jitter.var), NULL, OSP_MAP_STATS },
     /* Delay */
-    { "rtpdownstreamdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].delay.samp), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].delay.min), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].delay.max), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].delay.mean), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].delay.var), NULL, OSP_MAP_STATS },
-    { "rtpupstreamdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].delay.samp), NULL, OSP_MAP_STATS },
-    { "rtpupstreamdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].delay.min), NULL, OSP_MAP_STATS },
-    { "rtpupstreamdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].delay.max), NULL, OSP_MAP_STATS },
-    { "rtpupstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].delay.mean), NULL, OSP_MAP_STATS },
-    { "rtpupstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].delay.var), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].delay.samp), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].delay.min), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].delay.max), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].delay.mean), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].delay.var), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.samp), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.min), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.max), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.mean), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.var), NULL, OSP_MAP_STATS },
+    { "rtpdownstreamdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].delay.samp), NULL, OSP_MAP_STATS },
+    { "rtpdownstreamdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].delay.min), NULL, OSP_MAP_STATS },
+    { "rtpdownstreamdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].delay.max), NULL, OSP_MAP_STATS },
+    { "rtpdownstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].delay.mean), NULL, OSP_MAP_STATS },
+    { "rtpdownstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].delay.var), NULL, OSP_MAP_STATS },
+    { "rtpupstreamdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].delay.samp), NULL, OSP_MAP_STATS },
+    { "rtpupstreamdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].delay.min), NULL, OSP_MAP_STATS },
+    { "rtpupstreamdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].delay.max), NULL, OSP_MAP_STATS },
+    { "rtpupstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].delay.mean), NULL, OSP_MAP_STATS },
+    { "rtpupstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].delay.var), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].delay.samp), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].delay.min), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].delay.max), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].delay.mean), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].delay.var), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.samp), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.min), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.max), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.mean), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.var), NULL, OSP_MAP_STATS },
     /* Octets */
-    { "rtpdownstreamoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].octets), NULL, OSP_MAP_STATS },
-    { "rtpupstreamoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].octets), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].octets), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].octets), NULL, OSP_MAP_STATS },
+    { "rtpdownstreamoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].octets), NULL, OSP_MAP_STATS },
+    { "rtpupstreamoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].octets), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].octets), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].octets), NULL, OSP_MAP_STATS },
     /* Packets */
-    { "rtpdownstreampackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].packets), NULL, OSP_MAP_STATS },
-    { "rtpupstreampackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].packets), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreampackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].packets), NULL, OSP_MAP_STATS },
-    { "rtcpupstreampackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].packets), NULL, OSP_MAP_STATS },
+    { "rtpdownstreampackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].packets), NULL, OSP_MAP_STATS },
+    { "rtpupstreampackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].packets), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreampackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].packets), NULL, OSP_MAP_STATS },
+    { "rtcpupstreampackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].packets), NULL, OSP_MAP_STATS },
     /* RFactor */
-    { "rtpdownstreamrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].rfactor), NULL, OSP_MAP_STATS },
-    { "rtpupstreamrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].rfactor), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].rfactor), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].rfactor), NULL, OSP_MAP_STATS },
+    { "rtpdownstreamrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].rfactor), NULL, OSP_MAP_STATS },
+    { "rtpupstreamrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].rfactor), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].rfactor), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].rfactor), NULL, OSP_MAP_STATS },
     /* MOS */
-    { "rtpdownstreammoscq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].moscq), NULL, OSP_MAP_STATS },
-    { "rtpupstreammoscq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].moscq), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreammoscq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].moscq), NULL, OSP_MAP_STATS },
-    { "rtcpupstreammoscq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].moscq), NULL, OSP_MAP_STATS },
-    { "rtpdownstreammoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].moslq), NULL, OSP_MAP_STATS },
-    { "rtpupstreammoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].moslq), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreammoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].moslq), NULL, OSP_MAP_STATS },
-    { "rtcpupstreammoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].moslq), NULL, OSP_MAP_STATS },
+    { "rtpdownstreammoscq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].moscq), NULL, OSP_MAP_STATS },
+    { "rtpupstreammoscq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].moscq), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreammoscq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].moscq), NULL, OSP_MAP_STATS },
+    { "rtcpupstreammoscq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].moscq), NULL, OSP_MAP_STATS },
+    { "rtpdownstreammoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].moslq), NULL, OSP_MAP_STATS },
+    { "rtpupstreammoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].moslq), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreammoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].moslq), NULL, OSP_MAP_STATS },
+    { "rtcpupstreammoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].moslq), NULL, OSP_MAP_STATS },
+#undef mSGMAP
     /* Statistics group mapping end */
     { "custominfo1", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[0]), NULL, OSP_MAP_CUSTOMINFO },
     { "custominfo2", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[1]), NULL, OSP_MAP_CUSTOMINFO },
@@ -1741,77 +1741,77 @@ static int osp_check_statsmap(
 
         for (group = OSP_GROUP_RTP; group < OSP_GROUP_NUMBER; group++) {
             for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
-
-                #define mGRP                (stats->group[group][flow])
-                #define mSTR(_name, _var)   snprintf(_name, sizeof(_name), "%s%s%s", group_str[group], flow_str[flow], _var)
-
+#define mGMAP               (stats->group[group][flow])
+#define mGSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s%s", group_str[group], flow_str[flow], _var)
                 /* If packets lost packets is incorrect, then fail. */
-                mSTR(name, "lostpackets");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.lost.pack);
+                mGSTR(name, "lostpackets");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.lost.pack);
 
                 /* If packets lost fraction is incorrect, then fail. */
-                mSTR(name, "lostfraction");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.lost.fract);
+                mGSTR(name, "lostfraction");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.lost.fract);
 
                 /* If jitter samples is incorrect, then fail. */
-                mSTR(name, "jittersamples");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.jitter.samp);
+                mGSTR(name, "jittersamples");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.jitter.samp);
 
                 /* If jitter minimum is incorrect, then fail. */
-                mSTR(name, "jitterminimum");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.jitter.min);
+                mGSTR(name, "jitterminimum");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.jitter.min);
 
                 /* If jitter maximum is incorrect, then fail. */
-                mSTR(name, "jittermaximum");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.jitter.max);
+                mGSTR(name, "jittermaximum");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.jitter.max);
 
                 /* If jitter mean is incorrect, then fail. */
-                mSTR(name, "jittermean");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.jitter.mean);
+                mGSTR(name, "jittermean");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.jitter.mean);
 
                 /* If jitter variance is incorrect, then fail. */
-                mSTR(name, "jittervariance");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.jitter.var);
+                mGSTR(name, "jittervariance");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.jitter.var);
 
                 /* If delay samples is incorrect, then fail. */
-                mSTR(name, "delaysamples");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.delay.samp);
+                mGSTR(name, "delaysamples");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.delay.samp);
 
                 /* If delay minimum is incorrect, then fail. */
-                mSTR(name, "delayminimum");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.delay.min);
+                mGSTR(name, "delayminimum");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.delay.min);
 
                 /* If delay maximum is incorrect, then fail. */
-                mSTR(name, "delaymaximum");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.delay.max);
+                mGSTR(name, "delaymaximum");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.delay.max);
 
                 /* If delay mean is incorrect, then fail. */
-                mSTR(name, "delaymean");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.delay.mean);
+                mGSTR(name, "delaymean");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.delay.mean);
 
                 /* If delay variance is incorrect, then fail. */
-                mSTR(name, "delayvariance");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.delay.var);
+                mGSTR(name, "delayvariance");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.delay.var);
 
                 /* If octets is incorrect, then fail. */
-                mSTR(name, "octets");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.octets);
+                mGSTR(name, "octets");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.octets);
 
                 /* If packets is incorrect, then fail. */
-                mSTR(name, "packets");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.packets);
+                mGSTR(name, "packets");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.packets);
 
                 /* If rfactor is incorrect, then fail. */
-                mSTR(name, "rfactor");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.rfactor);
+                mGSTR(name, "rfactor");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.rfactor);
 
                 /* If moscq is incorrect, then fail. */
-                mSTR(name, "moscq");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.moscq);
+                mGSTR(name, "moscq");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.moscq);
 
                 /* If moslq is incorrect, then fail. */
-                mSTR(name, "moslq");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGRP.moslq);
+                mGSTR(name, "moslq");
+                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.moslq);
+#undef mGMAP
+#undef mGSTR
             }
         }
     }
@@ -2321,98 +2321,98 @@ static void osp_report_statsinfo(
                     direction = OSPC_SFLOW_DOWNSTREAM;
                 }
 
-                #define mVAR    (stats->group[group][flow])
-
+#define mGVAR   (stats->group[group][flow])
                 /* Report packets lost */
-                if ((mVAR.lost.pack != OSP_STATSINT_DEF) || (mVAR.lost.fract != OSP_STATSINT_DEF)) {
+                if ((mGVAR.lost.pack != OSP_STATSINT_DEF) || (mGVAR.lost.fract != OSP_STATSINT_DEF)) {
                     OSPPTransactionSetLost(
                         transaction,        /* Transaction handle */
                         metric,             /* Metric */
                         direction,          /* Flow direction */
-                        mVAR.lost.pack,     /* Packets lost packets */
-                        mVAR.lost.fract);   /* Packets lost fraction */
+                        mGVAR.lost.pack,     /* Packets lost packets */
+                        mGVAR.lost.fract);   /* Packets lost fraction */
                 }
 
                 /* Report jitter */
-                if ((mVAR.jitter.samp != OSP_STATSINT_DEF) ||
-                    (mVAR.jitter.min != OSP_STATSINT_DEF) ||
-                    (mVAR.jitter.max != OSP_STATSINT_DEF) ||
-                    (mVAR.jitter.mean != OSP_STATSINT_DEF) ||
-                    (mVAR.jitter.var != OSP_STATSFLOAT_DEF))
+                if ((mGVAR.jitter.samp != OSP_STATSINT_DEF) ||
+                    (mGVAR.jitter.min != OSP_STATSINT_DEF) ||
+                    (mGVAR.jitter.max != OSP_STATSINT_DEF) ||
+                    (mGVAR.jitter.mean != OSP_STATSINT_DEF) ||
+                    (mGVAR.jitter.var != OSP_STATSFLOAT_DEF))
                 {
                     OSPPTransactionSetJitter(
                         transaction,        /* Transaction handle */
                         metric,             /* Metric */
                         direction,          /* Flow direction */
-                        mVAR.jitter.samp,   /* Jitter samples */
-                        mVAR.jitter.min,    /* Jitter minimum */
-                        mVAR.jitter.max,    /* Jitter maximum */
-                        mVAR.jitter.mean,   /* Jitter mean */
-                        mVAR.jitter.var);   /* Jitter variance */
+                        mGVAR.jitter.samp,   /* Jitter samples */
+                        mGVAR.jitter.min,    /* Jitter minimum */
+                        mGVAR.jitter.max,    /* Jitter maximum */
+                        mGVAR.jitter.mean,   /* Jitter mean */
+                        mGVAR.jitter.var);   /* Jitter variance */
                 }
 
                 /* Report delay */
-                if ((mVAR.delay.samp != OSP_STATSINT_DEF) ||
-                    (mVAR.delay.min != OSP_STATSINT_DEF) ||
-                    (mVAR.delay.max != OSP_STATSINT_DEF) ||
-                    (mVAR.delay.mean != OSP_STATSINT_DEF) ||
-                    (mVAR.delay.var != OSP_STATSFLOAT_DEF))
+                if ((mGVAR.delay.samp != OSP_STATSINT_DEF) ||
+                    (mGVAR.delay.min != OSP_STATSINT_DEF) ||
+                    (mGVAR.delay.max != OSP_STATSINT_DEF) ||
+                    (mGVAR.delay.mean != OSP_STATSINT_DEF) ||
+                    (mGVAR.delay.var != OSP_STATSFLOAT_DEF))
                 {
                     OSPPTransactionSetDelay(
                         transaction,        /* Transaction handle */
                         metric,             /* Metric */
                         direction,          /* Flow direction */
-                        mVAR.delay.samp,    /* Delay samples */
-                        mVAR.delay.min,     /* Delay minimum */
-                        mVAR.delay.max,     /* Delay maximum */
-                        mVAR.delay.mean,    /* Delay mean */
-                        mVAR.delay.var);    /* Delay variance */
+                        mGVAR.delay.samp,    /* Delay samples */
+                        mGVAR.delay.min,     /* Delay minimum */
+                        mGVAR.delay.max,     /* Delay maximum */
+                        mGVAR.delay.mean,    /* Delay mean */
+                        mGVAR.delay.var);    /* Delay variance */
                 }
 
                 /* Report octets */
-                if (mVAR.octets != OSP_STATSINT_DEF) {
+                if (mGVAR.octets != OSP_STATSINT_DEF) {
                     OSPPTransactionSetOctets(
                         transaction,    /* Transaction handle */
                         metric,         /* Metric */
                         direction,      /* Flow direction */
-                        mVAR.octets);   /* Octets */
+                        mGVAR.octets);   /* Octets */
                 }
 
                 /* Report packets */
-                if (mVAR.packets != OSP_STATSINT_DEF) {
+                if (mGVAR.packets != OSP_STATSINT_DEF) {
                     OSPPTransactionSetPackets(
                         transaction,    /* Transaction handle */
                         metric,         /* Metric */
                         direction,      /* Flow direction */
-                        mVAR.packets);  /* Packets */
+                        mGVAR.packets);  /* Packets */
                 }
 
                 /* Report rfactor */
-                if (mVAR.rfactor != OSP_STATSFLOAT_DEF) {
+                if (mGVAR.rfactor != OSP_STATSFLOAT_DEF) {
                     OSPPTransactionSetRFactor(
                         transaction,    /* Transaction handle */
                         metric,         /* Metric */
                         direction,      /* Flow direction */
-                        mVAR.rfactor);  /* R-Factor */
+                        mGVAR.rfactor);  /* R-Factor */
                 }
 
                 /* Report moscq */
-                if (mVAR.moscq != OSP_STATSFLOAT_DEF) {
+                if (mGVAR.moscq != OSP_STATSFLOAT_DEF) {
                     OSPPTransactionSetMOSCQ(
                         transaction,    /* Transaction handle */
                         metric,         /* Metric */
                         direction,      /* Flow direction */
-                        mVAR.moscq);    /* MOS-CQ */
+                        mGVAR.moscq);    /* MOS-CQ */
                 }
 
                 /* Report moslq */
-                if (mVAR.moslq != OSP_STATSFLOAT_DEF) {
+                if (mGVAR.moslq != OSP_STATSFLOAT_DEF) {
                     OSPPTransactionSetMOSLQ(
                         transaction,    /* Transaction handle */
                         metric,         /* Metric */
                         direction,      /* Flow direction */
-                        mVAR.moslq);    /* MOS-LQ */
+                        mGVAR.moslq);    /* MOS-LQ */
                 }
+#undef mGVAR
             }
         }
     }
@@ -2778,7 +2778,7 @@ static int osp_get_statsinfo(
     osp_usage_t* usage)
 {
     osp_statsmap_t* map = &mapping->stats;
-    osp_stats_t* stats = &usage->stats;
+    osp_stats_t* var = &usage->stats;
     int parse, parseleg;
     osp_group_t group;
     osp_flow_t flow;
@@ -2792,76 +2792,74 @@ static int osp_get_statsinfo(
         parse = (type == PW_STATUS_STOP);
 
         /* Get lost send packets */
-        OSP_GET_INTEGER(request, parse, "sendlostpackets", OSP_DEF_MAY, map->slost.pack, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, stats->slost.pack);
+        OSP_GET_INTEGER(request, parse, "sendlostpackets", OSP_DEF_MAY, map->slost.pack, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->slost.pack);
 
         /* Get lost send packet fraction */
-        OSP_GET_INTEGER(request, parse, "sendlostfraction", OSP_DEF_MAY, map->slost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, stats->slost.fract);
+        OSP_GET_INTEGER(request, parse, "sendlostfraction", OSP_DEF_MAY, map->slost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->slost.fract);
 
         /* Get lost receive packets */
-        OSP_GET_INTEGER(request, parse, "receivelostpackets", OSP_DEF_MAY, map->rlost.pack, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, stats->rlost.pack);
+        OSP_GET_INTEGER(request, parse, "receivelostpackets", OSP_DEF_MAY, map->rlost.pack, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rlost.pack);
 
         /* Get lost receive packet fraction */
-        OSP_GET_INTEGER(request, parse, "receivelostfraction", OSP_DEF_MAY, map->rlost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, stats->rlost.fract);
+        OSP_GET_INTEGER(request, parse, "receivelostfraction", OSP_DEF_MAY, map->rlost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rlost.fract);
 
         for (group = OSP_GROUP_RTP; group < OSP_GROUP_NUMBER; group++) {
             for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
-
-                #define mMAP                (map->group[group][flow])
-                #define mVAR                (stats->group[group][flow])
-                #define mSTR(_name, _var)   snprintf(_name, sizeof(_name), "%s%s%s", group_str[group], flow_str[flow], _var)
-
+#define mGMAP               (map->group[group][flow])
+#define mGVAR               (var->group[group][flow])
+#define mGSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s%s", group_str[group], flow_str[flow], _var)
                 /* Get packets lost packets */
-                mSTR(name, "lostpackets");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.lost.pack, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.lost.pack);
+                mGSTR(name, "lostpackets");
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.lost.pack, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.lost.pack);
 
                 /* Get packets lost fraction */
-                mSTR(name, "lostfraction");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.lost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.lost.fract);
+                mGSTR(name, "lostfraction");
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.lost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.lost.fract);
 
                 /* Get jitter samples */
-                mSTR(name, "jittersamples");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.jitter.samp, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.jitter.samp);
+                mGSTR(name, "jittersamples");
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.jitter.samp, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.jitter.samp);
 
                 /* Get jitter minimim */
-                mSTR(name, "jitterminimum");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.jitter.min, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.jitter.min);
+                mGSTR(name, "jitterminimum");
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.jitter.min, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.jitter.min);
 
                 /* Get jitter maximum */
-                mSTR(name, "jittermaximum");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.jitter.max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.jitter.max);
+                mGSTR(name, "jittermaximum");
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.jitter.max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.jitter.max);
 
                 /* Get jitter mean */
-                mSTR(name, "jittermean");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.jitter.mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.jitter.mean);
+                mGSTR(name, "jittermean");
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.jitter.mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.jitter.mean);
 
                 /* Get jitter variance */
-                mSTR(name, "jittervariance");
-                OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mMAP.jitter.var, OSP_SCALE_1, OSP_STATSFLOAT_DEF, buffer, mVAR.jitter.var);
+                mGSTR(name, "jittervariance");
+                OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mGMAP.jitter.var, OSP_SCALE_1, OSP_STATSFLOAT_DEF, buffer, mGVAR.jitter.var);
 
                 /* Get delay samples */
-                mSTR(name, "delaysamples");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.delay.samp, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.delay.samp);
+                mGSTR(name, "delaysamples");
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.delay.samp, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.delay.samp);
 
                 /* Get delay minimim */
-                mSTR(name, "delayminimum");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.delay.min, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.delay.min);
+                mGSTR(name, "delayminimum");
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.delay.min, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.delay.min);
 
                 /* Get delay maximum */
-                mSTR(name, "delaymaximum");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.delay.max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.delay.max);
+                mGSTR(name, "delaymaximum");
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.delay.max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.delay.max);
 
                 /* Get delay mean */
-                mSTR(name, "delaymean");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mMAP.delay.mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.delay.mean);
+                mGSTR(name, "delaymean");
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.delay.mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.delay.mean);
 
                 /* Get delay variance */
-                mSTR(name, "delayvariance");
-                OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mMAP.delay.var, OSP_SCALE_1, OSP_STATSFLOAT_DEF, buffer, mVAR.delay.var);
+                mGSTR(name, "delayvariance");
+                OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mGMAP.delay.var, OSP_SCALE_1, OSP_STATSFLOAT_DEF, buffer, mGVAR.delay.var);
 
                 parseleg = parse;
                 switch (mapping->clienttype) {
                 case OSP_CLIENT_CISCO:
-                    if ((group = OSP_GROUP_RTP) &&
+                    if ((group == OSP_GROUP_RTP) &&
                         (((usage->origin == OSP_ORIGIN_INIT) && (flow == OSP_FLOW_DOWN)) ||
                         ((usage->origin == OSP_ORIGIN_TERM) && (flow == OSP_FLOW_UP))))
                     {
@@ -2876,32 +2874,35 @@ static int osp_get_statsinfo(
                 }
 
                 /* Get octets */
-                mSTR(name, "octets");
-                OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mMAP.octets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.octets);
+                mGSTR(name, "octets");
+                OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mGMAP.octets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.octets);
 
                 /* Get packets */
-                mSTR(name, "packets");
-                OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mMAP.packets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mVAR.packets);
+                mGSTR(name, "packets");
+                OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mGMAP.packets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.packets);
 
                 /* Get rfactor is */
-                mSTR(name, "rfactor");
-                OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mMAP.rfactor, map->rfactorscale, OSP_STATSFLOAT_DEF, buffer, mVAR.rfactor);
+                mGSTR(name, "rfactor");
+                OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mGMAP.rfactor, map->rfactorscale, OSP_STATSFLOAT_DEF, buffer, mGVAR.rfactor);
 
                 /* Get moscq */
-                mSTR(name, "moscq");
-                OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mMAP.moscq, map->mosscale, OSP_STATSFLOAT_DEF, buffer, mVAR.moscq);
+                mGSTR(name, "moscq");
+                OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mGMAP.moscq, map->mosscale, OSP_STATSFLOAT_DEF, buffer, mGVAR.moscq);
 
                 /* Get moslq */
-                mSTR(name, "moslq");
-                OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mMAP.moslq, map->mosscale, OSP_STATSFLOAT_DEF, buffer, mVAR.moslq);
+                mGSTR(name, "moslq");
+                OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mGMAP.moslq, map->mosscale, OSP_STATSFLOAT_DEF, buffer, mGVAR.moslq);
+#undef mGMAP
+#undef mGVAR
+#undef mGSTR
             }
         }
     } else {
         /* Do not report statistics. slost and rlost must be set to default. */
-        stats->slost.pack = OSP_STATSINT_DEF;
-        stats->slost.fract = OSP_STATSINT_DEF;
-        stats->rlost.pack = OSP_STATSINT_DEF;
-        stats->rlost.fract = OSP_STATSINT_DEF;
+        var->slost.pack = OSP_STATSINT_DEF;
+        var->slost.fract = OSP_STATSINT_DEF;
+        var->rlost.pack = OSP_STATSINT_DEF;
+        var->rlost.fract = OSP_STATSINT_DEF;
     }
 
     DEBUG("rlm_osp: osp_get_statsinfo success");
