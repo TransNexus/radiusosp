@@ -660,6 +660,8 @@ static const CONF_PARSER mapping_config[] = {
 #undef mSMAP
     /* Statistics flow mapping start */
 #define mSFMAP  mapping.stats.flow
+    { "downstreamicpif", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSFMAP[OSP_FLOW_DOWN].icpif), NULL, OSP_MAP_STATS },
+    { "upstreamicpif", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSFMAP[OSP_FLOW_UP].icpif), NULL, OSP_MAP_STATS },
 #undef mSFMAP
     /* Statistics flow mapping end */
     /* Statistics group mapping start */
@@ -1016,7 +1018,7 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
                             radlog(L_ERR, "rlm_osp: Empty hostport."); \
                             return -1; \
                         } else { \
-                            DEBUG("rlm_osp: Empty hostport."); \
+                            DEBUG("rlm_osp: empty hostport."); \
                             osp_create_device(_ip, _port, _val, sizeof(_val)); \
                         } \
                     } \
@@ -1537,7 +1539,7 @@ static int osp_check_mapping(
         DEBUG("rlm_osp: 'ignoreanswer' = '%d'", mapping->ignoreterm);
 
         /* Nothing to check for ignore originate */
-        DEBUG("rlm_osp: 'ignoreinit' = '%d'", mapping->ignoreinit);
+        DEBUG("rlm_osp: 'ignoreoriginate' = '%d'", mapping->ignoreinit);
 
         break;
     case OSP_CLIENT_UNDEF:
@@ -1766,6 +1768,9 @@ static int osp_check_statsmap(
         for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
 #define mFMAP               (stats->flow[flow])
 #define mFSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s", flow_str[flow], _var)
+            /* If icpif is incorrect, then fail. */
+            mFSTR(name, "icpif");
+            OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mFMAP.icpif);
 #undef mFMAP
 #undef mFSTR
         }
@@ -2084,7 +2089,7 @@ static int osp_accounting(
     int i, error;
 
     if ((vp = pairfind(request->packet->vps, PW_ACCT_STATUS_TYPE)) == NULL) {
-        DEBUG("rlm_osp: Failed to get accounting status type.");
+        DEBUG("rlm_osp: failed to get accounting status type.");
         return RLM_MODULE_NOOP;
     }
 
@@ -2094,7 +2099,7 @@ static int osp_accounting(
             role = OSPC_ROLE_RADSRCSTART;
             break;
         } else {
-            DEBUG("rlm_osp: Nothing to do for Start request.");
+            DEBUG("rlm_osp: nothing to do for Start request.");
             return RLM_MODULE_NOOP;
         }
     case PW_STATUS_STOP:
@@ -2102,7 +2107,7 @@ static int osp_accounting(
             role = OSPC_ROLE_RADSRCSTOP;
             break;
         } else {
-            DEBUG("rlm_osp: Nothing to do for Stop request.");
+            DEBUG("rlm_osp: nothing to do for Stop request.");
             return RLM_MODULE_NOOP;
         }
     case PW_STATUS_ALIVE:   /* Interim-Update */
@@ -2110,11 +2115,11 @@ static int osp_accounting(
             role = OSPC_ROLE_RADSRCINTERIM;
             break;
         } else {
-            DEBUG("rlm_osp: Nothing to do for Interim-Update request.");
+            DEBUG("rlm_osp: nothing to do for Interim-Update request.");
             return RLM_MODULE_NOOP;
         }
     default:
-        DEBUG("rlm_osp: Nothing to do for request type '%d'.", vp->vp_integer);
+        DEBUG("rlm_osp: nothing to do for request type '%d'.", vp->vp_integer);
         return RLM_MODULE_NOOP;
     }
 
@@ -2139,7 +2144,7 @@ static int osp_accounting(
     } else if (error == 1) {
         switch (running->loglevel) {
         case OSP_LOG_SHORT:
-            radlog(L_INFO, "rlm_osp: ignore record.");
+            radlog(L_INFO, "rlm_osp: Inore record.");
             break;
         case OSP_LOG_LONG:
         default:
@@ -2346,6 +2351,15 @@ static void osp_report_statsinfo(
             }
 
 #define mFVAR   (stats->flow[flow])
+            /* Report icpif */
+            if (mFVAR.icpif != OSP_STATSINT_DEF) {
+#if 0
+                OSPPTransactionSetICPIF(
+                    transaction,    /* Transaction handle */
+                    direction,      /* Flow direction */
+                    mFVAR.icpif);   /* ICPIF */
+#endif
+            }
 #undef mFVAR
         }
 
@@ -2498,7 +2512,7 @@ static int osp_get_usageinfo(
         } else {
             usage->origin = OSP_ORIGIN_INIT;
         }
-        DEBUG("rlm_osp: Call origin type = '%d'", usage->origin);
+        DEBUG("rlm_osp: call origin type = '%d'", usage->origin);
 
         if (((usage->origin == OSP_ORIGIN_TERM) && (mapping->ignoreterm)) || ((usage->origin == OSP_ORIGIN_INIT) && (mapping->ignoreinit))) {
             DEBUG("rlm_osp: ignore '%s' record.", buffer);
@@ -2630,7 +2644,7 @@ static int osp_get_usageinfo(
     if (usage->pdd != OSP_STATSINT_DEF) {
         usage->pdd /= OSP_TIMEUNIT_SCALE[mapping->pddunit];
     }
-    DEBUG("rlm_osp: Post dial delay = '%d'", usage->pdd);
+    DEBUG("rlm_osp: post dial delay = '%d'", usage->pdd);
 
     /* Get release source */
     if (type == PW_STATUS_STOP) {
@@ -2715,11 +2729,11 @@ static int osp_get_usageinfo(
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     OSP_GET_STRING(request, parse, "destinationprotocol", OSP_DEF_MAY, mapping->destprot, buffer);
     usage->destprot = osp_parse_protocol(mapping, buffer);
-    DEBUG("rlm_osp: Destination protocol type = '%d'", usage->destprot);
+    DEBUG("rlm_osp: destination protocol type = '%d'", usage->destprot);
 
     /* Get release reason type */
     usage->causetype = osp_get_causetype(mapping, usage->destprot);
-    DEBUG("rlm_osp: Termination cause type = '%d'", usage->causetype);
+    DEBUG("rlm_osp: termination cause type = '%d'", usage->causetype);
 
     /* Get inbound session ID */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
@@ -2855,6 +2869,26 @@ static int osp_get_statsinfo(
 #define mFMAP               (map->flow[flow])
 #define mFVAR               (var->flow[flow])
 #define mFSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s", flow_str[flow], _var)
+            parseleg = parse;
+            switch (mapping->clienttype) {
+            case OSP_CLIENT_CISCO:
+                if ((group == OSP_GROUP_RTP) &&
+                    (((usage->origin == OSP_ORIGIN_TERM) && (flow == OSP_FLOW_UP)) ||
+                    ((usage->origin == OSP_ORIGIN_INIT) && (flow == OSP_FLOW_DOWN))))
+                {
+                    parseleg = FALSE;
+                }
+                break;
+            case OSP_CLIENT_UNDEF:
+            case OSP_CLIENT_ACME:
+            case OSP_CLIENT_NEXTONE:
+            default:
+                break;
+            }
+
+            /* Get icpif */
+            mFSTR(name, "icpif");
+            OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mFMAP.icpif, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mFVAR.icpif);
 #undef mFMAP
 #undef mFVAR
 #undef mFSTR
@@ -2999,7 +3033,7 @@ static void osp_create_device(
             snprintf(buffer, buffersize, "[%s]:%d", tmpbuf, port);
         }
     }
-    DEBUG("rlm_osp: Device = '%s'", buffer);
+    DEBUG("rlm_osp: device = '%s'", buffer);
 
     DEBUG("rlm_osp: osp_create_device success");
 }
@@ -3045,7 +3079,7 @@ static void osp_format_device(
     }
     buffer[size] = '\0';
 
-    DEBUG("rlm_osp: Device = '%s'", buffer);
+    DEBUG("rlm_osp: device = '%s'", buffer);
 
     DEBUG("rlm_osp: osp_format_device success");
 }
@@ -3109,7 +3143,7 @@ static int osp_get_uriuser(
         buffer[size] = '\0';
     }
     /* Do not have to check string NULL */
-    DEBUG("rlm_osp: URI userinfo = '%s'", buffer);
+    DEBUG("rlm_osp: uri userinfo = '%s'", buffer);
 
     DEBUG("rlm_osp: osp_get_uriuser success");
 
@@ -3169,7 +3203,7 @@ static int osp_get_urihost(
         buffer[size] = '\0';
     }
     /* Do not have to check string NULL */
-    DEBUG("rlm_osp: URI hostport = '%s'", buffer);
+    DEBUG("rlm_osp: uri hostport = '%s'", buffer);
 
     DEBUG("rlm_osp: osp_get_urihost success");
 
@@ -3213,7 +3247,7 @@ static OSPE_DEST_PROTOCOL osp_parse_protocol(
             }
         }
     }
-    DEBUG("rlm_osp: Protocol type = '%d'", type);
+    DEBUG("rlm_osp: protocol type = '%d'", type);
 
     DEBUG("rlm_osp: osp_parse_protocol success");
 
@@ -3260,7 +3294,7 @@ static OSPE_TERM_CAUSE osp_get_causetype(
         }
         break;
     }
-    DEBUG("rlm_osp: Cause type = '%d'", type);
+    DEBUG("rlm_osp: cause type = '%d'", type);
 
     DEBUG("rlm_osp: osp_get_causetype success");
 
@@ -3359,7 +3393,7 @@ static time_t osp_format_time(
     default:
         break;
     }
-    DEBUG("rlm_osp: Time = '%lu'", tvalue);
+    DEBUG("rlm_osp: time = '%lu'", tvalue);
 
     DEBUG("rlm_osp: osp_format_time success");
 
@@ -3417,7 +3451,7 @@ static int osp_cal_timeoffset(
         *toffset = OSP_TOFF_UTC;
         ret = -1;
     }
-    DEBUG("rlm_osp: Time offset = '%ld'", *toffset);
+    DEBUG("rlm_osp: time offset = '%ld'", *toffset);
 
     DEBUG("rlm_osp: osp_get_timeoffset success");
 
