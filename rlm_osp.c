@@ -89,12 +89,11 @@ RCSID("$Id$")
 /*
  * Default RADIUS OSP mapping
  */
-#define OSP_MAP_REPORTSTART     "yes"                       /* Report RADIUS Start records */
-#define OSP_MAP_REPORTINTERIM   "yes"                       /* Report RADIUS Interim-Update records */
-#define OSP_MAP_REPORTSTOP      "yes"                       /* Report RADIUS Stop records */
+#define OSP_MAP_REPORTRAD       "yes"                       /* Report Stop, Start or Interim-Update RADIUS records */
 #define OSP_MAP_CLIENTTYPE      "0"                         /* RADIUS client type, undefined */
 #define OSP_MAP_NETLIST         NULL                        /* Subnet list */
 #define OSP_MAP_ORIGIN          NULL                        /* Call origin */
+#define OSP_MAP_IGNORERAD       "no"                        /* Ingore answer or originate RADIUS records */
 #define OSP_MAP_TRANSID         NULL                        /* Transaction ID */
 #define OSP_MAP_CALLID          "%{Acct-Session-Id}"        /* Call-ID, RFC 2866 */
 #define OSP_MAP_NUMFORMAT       "0"                         /* Calling/called number format, E.164 */
@@ -177,15 +176,15 @@ typedef enum {
 /*
  * Cisco h323-call-origin value strings
  */
-#define OSP_CISCOCALL_INIT  "originate" /* Call originate, outbound */
 #define OSP_CISCOCALL_TERM  "answer"    /* Call answer, inbound */
+#define OSP_CISCOCALL_INIT  "originate" /* Call originate, outbound */
 
 /*
  * Call origin types
  */
 typedef enum {
-    OSP_ORIGIN_INIT = 0,    /* Initiating, outbound */
-    OSP_ORIGIN_TERM         /* Terminating, inbound */
+    OSP_ORIGIN_TERM = 0,    /* Terminating, inbound */
+    OSP_ORIGIN_INIT,        /* Initiating, outbound */
 } osp_origin_t;
 
 /*
@@ -335,6 +334,14 @@ float OSP_SCALE_TABLE[OSP_SCALE_NUMBER] = { 0.0001, 0.001, 0.01, 0.1, 1, 10, 100
  * Statistics related types
  */
 typedef enum {
+    OSP_FLOW_MIN = 0,
+    OSP_FLOW_DOWN = OSP_FLOW_MIN,   /* Statistics for downstream. */
+    OSP_FLOW_UP,                    /* Statistics for upstream. */
+    OSP_FLOW_MAX = OSP_FLOW_UP,
+    OSP_FLOW_NUMBER
+} osp_flow_t;
+
+typedef enum {
     OSP_GROUP_MIN = 0,
     OSP_GROUP_RTP = OSP_GROUP_MIN,  /* Statistics for media stream to proxy. Normally, RTP */
     OSP_GROUP_RTCP,                 /* Statistics for media stream to calling/called party. Normally, RTCP */
@@ -342,13 +349,13 @@ typedef enum {
     OSP_GROUP_NUMBER
 } osp_group_t;
 
-typedef enum {
-    OSP_FLOW_MIN = 0,
-    OSP_FLOW_DOWN = OSP_FLOW_MIN,   /* Statistics for downstream. */
-    OSP_FLOW_UP,                    /* Statistics for upstream. */
-    OSP_FLOW_MAX = OSP_FLOW_UP,
-    OSP_FLOW_NUMBER
-} osp_flow_t;
+typedef struct {
+    char* icpif;/* ICPIF mapping */
+} osp_statsflowmap_t;
+
+typedef struct {
+    int icpif;  /* ICPIF */
+} osp_statsflow_t;
 
 typedef struct {
     char* pack; /* Packets lost in packets mapping */
@@ -404,12 +411,14 @@ typedef struct {
     int mosscale;                                                   /* MOS scale index */
     osp_packmap_t slost;                                            /* Lost send mapping */
     osp_packmap_t rlost;                                            /* Lost receive mapping */
+    osp_statsflowmap_t flow[OSP_FLOW_NUMBER];                       /* Statistics flow mapping */
     osp_statsgroupmap_t group[OSP_GROUP_NUMBER][OSP_FLOW_NUMBER];   /* Statistics group mapping */
 } osp_statsmap_t;
 
 typedef struct {
     osp_pack_t slost;                                           /* Packets lost */
     osp_pack_t rlost;                                           /* Packets lost */
+    osp_statsflow_t flow[OSP_FLOW_NUMBER];                      /* Statistics flow */
     osp_statsgroup_t group[OSP_GROUP_NUMBER][OSP_FLOW_NUMBER];  /* Statistics group */
 } osp_stats_t;
 
@@ -455,6 +464,8 @@ typedef struct {
     char* ignoreddeststr;               /* Ignored destination subnet list string */
     osp_netlist_t ignoreddestlist;      /* Ignored destination subnet list */
     char* origin;                       /* Call origin */
+    int ignoreterm;                     /* Ignore answer records */
+    int ignoreinit;                     /* Ignore originate records */
     char* transid;                      /* Transaction ID */
     char* callid;                       /* Call-ID */
     int callingformat;                  /* Calling number format */
@@ -596,12 +607,14 @@ static const CONF_PARSER mapping_config[] = {
      *
      *   All custom info must be listed to allow config parser to read them.
      */
-    { "reportstart", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportstart), NULL, OSP_MAP_REPORTSTART },
-    { "reportstop", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportstop), NULL, OSP_MAP_REPORTSTOP },
-    { "reportinterim", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportinterim), NULL, OSP_MAP_REPORTINTERIM },
+    { "reportstart", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportstart), NULL, OSP_MAP_REPORTRAD },
+    { "reportstop", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportstop), NULL, OSP_MAP_REPORTRAD },
+    { "reportinterim", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportinterim), NULL, OSP_MAP_REPORTRAD },
     { "radiusclienttype", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.clienttype), NULL, OSP_MAP_CLIENTTYPE },
     { "ignoreddestinationlist", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.ignoreddeststr), NULL, OSP_MAP_NETLIST },
     { "callorigin", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.origin), NULL, OSP_MAP_ORIGIN },
+    { "ignoreanswer", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.ignoreterm), NULL, OSP_MAP_IGNORERAD },
+    { "ignoreoriginate", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.ignoreinit), NULL, OSP_MAP_IGNORERAD },
     { "transactionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transid), NULL, OSP_MAP_TRANSID },
     { "callid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.callid), NULL, OSP_MAP_CALLID },
     { "callingnumberformat", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.callingformat), NULL, OSP_MAP_NUMFORMAT },
@@ -645,6 +658,10 @@ static const CONF_PARSER mapping_config[] = {
     { "receivelostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rlost.pack), NULL, OSP_MAP_STATS },
     { "receivelostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rlost.fract), NULL, OSP_MAP_STATS },
 #undef mSMAP
+    /* Statistics flow mapping start */
+#define mSFMAP  mapping.stats.flow
+#undef mSFMAP
+    /* Statistics flow mapping end */
     /* Statistics group mapping start */
 #define mSGMAP  mapping.stats.group
     /* Lost */
@@ -1515,6 +1532,13 @@ static int osp_check_mapping(
     case OSP_CLIENT_NEXTONE:
     case OSP_CLIENT_CISCO:
         OSP_CHECK_ITEMMAP("callorigin", OSP_DEF_MUST, mapping->origin);
+
+        /* Nothing to check for ignore answer */
+        DEBUG("rlm_osp: 'ignoreanswer' = '%d'", mapping->ignoreterm);
+
+        /* Nothing to check for ignore originate */
+        DEBUG("rlm_osp: 'ignoreinit' = '%d'", mapping->ignoreinit);
+
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
@@ -1738,6 +1762,13 @@ static int osp_check_statsmap(
 
         /* If lost receive packet fraction is incorrect, then fail. */
         OSP_CHECK_ITEMMAP("receivelostfraction", OSP_DEF_MAY, stats->rlost.fract);
+
+        for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
+#define mFMAP               (stats->flow[flow])
+#define mFSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s", flow_str[flow], _var)
+#undef mFMAP
+#undef mFSTR
+        }
 
         for (group = OSP_GROUP_RTP; group < OSP_GROUP_NUMBER; group++) {
             for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
@@ -2108,14 +2139,14 @@ static int osp_accounting(
     } else if (error == 1) {
         switch (running->loglevel) {
         case OSP_LOG_SHORT:
-            radlog(L_INFO, "rlm_osp: ignore record for destination.");
+            radlog(L_INFO, "rlm_osp: ignore record.");
             break;
         case OSP_LOG_LONG:
         default:
             radius_xlat(buffer, sizeof(buffer), "%Z", request, NULL);
             /* Do not have to check string NULL */
             radlog(L_INFO,
-                "rlm_osp: ignore record '%s' for destination.",
+                "rlm_osp: ignore record '%s'.",
                 buffer);
             break;
         }
@@ -2307,6 +2338,17 @@ static void osp_report_statsinfo(
     DEBUG("rlm_osp: osp_report_statsinfo start");
 
     if (mapping->reportstats) {
+        for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
+            if (flow == OSP_FLOW_UP) {
+                direction = OSPC_SFLOW_UPSTREAM;
+            } else {
+                direction = OSPC_SFLOW_DOWNSTREAM;
+            }
+
+#define mFVAR   (stats->flow[flow])
+#undef mFVAR
+        }
+
         for (group = OSP_GROUP_RTP; group < OSP_GROUP_NUMBER; group++) {
             if (group == OSP_GROUP_RTCP) {
                 metric = OSPC_SMETRIC_RTCP;
@@ -2427,7 +2469,7 @@ static void osp_report_statsinfo(
  * param request Accounting request
  * param type RADIUS record type
  * param usage OSP usage info
- * return 0 success, 1 ignore for destination, -1 failure
+ * return 0 success, 1 ignore record, -1 failure
  */
 static int osp_get_usageinfo(
     rlm_osp_t* data,
@@ -2451,13 +2493,19 @@ static int osp_get_usageinfo(
     case OSP_CLIENT_NEXTONE:
     case OSP_CLIENT_CISCO:
         OSP_GET_STRING(request, TRUE, "callorigin", OSP_DEF_MUST, mapping->origin, buffer);
-        if (!strcmp(buffer, OSP_CISCOCALL_INIT)) {
-            usage->origin = OSP_ORIGIN_INIT;
-        } else {
+        if (!strcmp(buffer, OSP_CISCOCALL_TERM)) {
             usage->origin = OSP_ORIGIN_TERM;
+        } else {
+            usage->origin = OSP_ORIGIN_INIT;
         }
         DEBUG("rlm_osp: Call origin type = '%d'", usage->origin);
-        break;
+
+        if (((usage->origin == OSP_ORIGIN_TERM) && (mapping->ignoreterm)) || ((usage->origin == OSP_ORIGIN_INIT) && (mapping->ignoreinit))) {
+            DEBUG("rlm_osp: ignore '%s' record.", buffer);
+            return 1;
+        } else {
+            break;
+        }
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
     default:
@@ -2485,18 +2533,18 @@ static int osp_get_usageinfo(
     switch (mapping->clienttype) {
     case OSP_CLIENT_NEXTONE:
     case OSP_CLIENT_CISCO:
-        if (usage->origin == OSP_ORIGIN_INIT) {
-            /* Get proxy/source device */
-            OSP_GET_IP(request, TRUE, "proxy", OSP_DEF_MUST, mapping->proxy, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev);
-
-            /* Get destination */
-            OSP_GET_IP(request, TRUE, "destination", OSP_DEF_MUST, mapping->destination, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination);
-        } else {
+        if (usage->origin == OSP_ORIGIN_TERM) {
             /* Get source device */
             OSP_GET_IP(request, TRUE, "sourcedevice", OSP_DEF_MUST, mapping->srcdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev);
 
             /* Get proxy/destination */
             OSP_GET_IP(request, TRUE, "proxy", OSP_DEF_MUST, mapping->proxy, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination);
+        } else {
+            /* Get proxy/source device */
+            OSP_GET_IP(request, TRUE, "proxy", OSP_DEF_MUST, mapping->proxy, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev);
+
+            /* Get destination */
+            OSP_GET_IP(request, TRUE, "destination", OSP_DEF_MUST, mapping->destination, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination);
         }
         break;
     case OSP_CLIENT_UNDEF:
@@ -2803,6 +2851,15 @@ static int osp_get_statsinfo(
         /* Get lost receive packet fraction */
         OSP_GET_INTEGER(request, parse, "receivelostfraction", OSP_DEF_MAY, map->rlost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rlost.fract);
 
+        for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
+#define mFMAP               (map->flow[flow])
+#define mFVAR               (var->flow[flow])
+#define mFSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s", flow_str[flow], _var)
+#undef mFMAP
+#undef mFVAR
+#undef mFSTR
+        }
+
         for (group = OSP_GROUP_RTP; group < OSP_GROUP_NUMBER; group++) {
             for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
 #define mGMAP               (map->group[group][flow])
@@ -2860,8 +2917,8 @@ static int osp_get_statsinfo(
                 switch (mapping->clienttype) {
                 case OSP_CLIENT_CISCO:
                     if ((group == OSP_GROUP_RTP) &&
-                        (((usage->origin == OSP_ORIGIN_INIT) && (flow == OSP_FLOW_DOWN)) ||
-                        ((usage->origin == OSP_ORIGIN_TERM) && (flow == OSP_FLOW_UP))))
+                        (((usage->origin == OSP_ORIGIN_TERM) && (flow == OSP_FLOW_UP)) ||
+                        ((usage->origin == OSP_ORIGIN_INIT) && (flow == OSP_FLOW_DOWN))))
                     {
                         parseleg = FALSE;
                     }
