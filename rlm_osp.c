@@ -125,6 +125,7 @@ RCSID("$Id$")
 #define OSP_MAP_CONFID          NULL                        /* Conference ID */
 #define OSP_MAP_REPORTSTATS     "yes"                       /* Report statistics */
 #define OSP_MAP_STATS           NULL                        /* Statistics */
+#define OSP_MAP_CROSSOVER       "no"                        /* Crossover flag */
 #define OSP_MAP_SCALE           "4"                         /* Scale, 1 */
 #define OSP_MAP_CUSTOMINFO      NULL                        /* User-defined info */
 
@@ -406,6 +407,11 @@ typedef struct {
 } osp_statsgroup_t;
 
 typedef struct {
+    int rtpoctets;          /* RTP octets crossover flag */
+    int rtppackets;         /* RTP packets crossover flag */
+} osp_crossover_t;
+
+typedef struct {
     int reportstats;                                                /* If to report statistics */
     int rfactorscale;                                               /* R-Factor scale index */
     int mosscale;                                                   /* MOS scale index */
@@ -413,6 +419,7 @@ typedef struct {
     osp_packmap_t rlost;                                            /* Lost receive mapping */
     osp_statsflowmap_t flow[OSP_FLOW_NUMBER];                       /* Statistics flow mapping */
     osp_statsgroupmap_t group[OSP_GROUP_NUMBER][OSP_FLOW_NUMBER];   /* Statistics group mapping */
+    osp_crossover_t cross;                                          /* Crossover flags */
 } osp_statsmap_t;
 
 typedef struct {
@@ -657,15 +664,14 @@ static const CONF_PARSER mapping_config[] = {
     { "sendlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.slost.fract), NULL, OSP_MAP_STATS },
     { "receivelostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rlost.pack), NULL, OSP_MAP_STATS },
     { "receivelostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rlost.fract), NULL, OSP_MAP_STATS },
-#undef mSMAP
     /* Statistics flow mapping start */
-#define mSFMAP  mapping.stats.flow
+#define mSFMAP  mSMAP.flow
     { "downstreamicpif", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSFMAP[OSP_FLOW_DOWN].icpif), NULL, OSP_MAP_STATS },
     { "upstreamicpif", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSFMAP[OSP_FLOW_UP].icpif), NULL, OSP_MAP_STATS },
 #undef mSFMAP
     /* Statistics flow mapping end */
     /* Statistics group mapping start */
-#define mSGMAP  mapping.stats.group
+#define mSGMAP  mSMAP.group
     /* Lost */
     { "rtpdownstreamlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].lost.pack), NULL, OSP_MAP_STATS },
     { "rtpdownstreamlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].lost.fract), NULL, OSP_MAP_STATS },
@@ -718,11 +724,13 @@ static const CONF_PARSER mapping_config[] = {
     { "rtcpupstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.mean), NULL, OSP_MAP_STATS },
     { "rtcpupstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.var), NULL, OSP_MAP_STATS },
     /* Octets */
+    { "rtpoctetscrossover", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mSMAP.cross.rtpoctets), NULL, OSP_MAP_CROSSOVER },
     { "rtpdownstreamoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].octets), NULL, OSP_MAP_STATS },
     { "rtpupstreamoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].octets), NULL, OSP_MAP_STATS },
     { "rtcpdownstreamoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].octets), NULL, OSP_MAP_STATS },
     { "rtcpupstreamoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].octets), NULL, OSP_MAP_STATS },
     /* Packets */
+    { "rtppacketscrossover", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mSMAP.cross.rtppackets), NULL, OSP_MAP_CROSSOVER },
     { "rtpdownstreampackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].packets), NULL, OSP_MAP_STATS },
     { "rtpupstreampackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].packets), NULL, OSP_MAP_STATS },
     { "rtcpdownstreampackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].packets), NULL, OSP_MAP_STATS },
@@ -742,6 +750,7 @@ static const CONF_PARSER mapping_config[] = {
     { "rtcpdownstreammoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].moslq), NULL, OSP_MAP_STATS },
     { "rtcpupstreammoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].moslq), NULL, OSP_MAP_STATS },
 #undef mSGMAP
+#undef mSMAP
     /* Statistics group mapping end */
     { "custominfo1", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[0]), NULL, OSP_MAP_CUSTOMINFO },
     { "custominfo2", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[1]), NULL, OSP_MAP_CUSTOMINFO },
@@ -1850,6 +1859,12 @@ static int osp_check_statsmap(
 #undef mGSTR
             }
         }
+
+        /* Nothing to check for rtpoctets */
+        DEBUG("rlm_osp: 'rtpoctetscrossover' = '%d'", stats->cross.rtpoctets);
+
+        /* Nothing to check for rtppackets */
+        DEBUG("rlm_osp: 'rtppacketscrossover' = '%d'", stats->cross.rtppackets);
     }
 
     DEBUG("rlm_osp: osp_check_statsmap success");
@@ -2514,7 +2529,9 @@ static int osp_get_usageinfo(
         }
         DEBUG("rlm_osp: call origin type = '%d'", usage->origin);
 
-        if (((usage->origin == OSP_ORIGIN_TERM) && (mapping->ignoreterm)) || ((usage->origin == OSP_ORIGIN_INIT) && (mapping->ignoreinit))) {
+        if (((usage->origin == OSP_ORIGIN_TERM) && (mapping->ignoreterm)) ||
+            ((usage->origin == OSP_ORIGIN_INIT) && (mapping->ignoreinit)))
+        {
             DEBUG("rlm_osp: ignore '%s' record.", buffer);
             return 1;
         } else {
@@ -2846,6 +2863,7 @@ static int osp_get_statsinfo(
     osp_flow_t flow;
     char name[OSP_STRBUF_SIZE];
     char buffer[OSP_STRBUF_SIZE];
+    char* vsa;
 
     DEBUG("rlm_osp: osp_get_statsinfo start");
 
@@ -2869,12 +2887,12 @@ static int osp_get_statsinfo(
 #define mFMAP               (map->flow[flow])
 #define mFVAR               (var->flow[flow])
 #define mFSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s", flow_str[flow], _var)
+            /* Get icpif */
             parseleg = parse;
             switch (mapping->clienttype) {
             case OSP_CLIENT_CISCO:
-                if ((group == OSP_GROUP_RTP) &&
-                    (((usage->origin == OSP_ORIGIN_TERM) && (flow == OSP_FLOW_UP)) ||
-                    ((usage->origin == OSP_ORIGIN_INIT) && (flow == OSP_FLOW_DOWN))))
+                if (((usage->origin == OSP_ORIGIN_TERM) && (flow == OSP_FLOW_UP)) ||
+                    ((usage->origin == OSP_ORIGIN_INIT) && (flow == OSP_FLOW_DOWN)))
                 {
                     parseleg = FALSE;
                 }
@@ -2885,8 +2903,6 @@ static int osp_get_statsinfo(
             default:
                 break;
             }
-
-            /* Get icpif */
             mFSTR(name, "icpif");
             OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mFMAP.icpif, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mFVAR.icpif);
 #undef mFMAP
@@ -2947,14 +2963,16 @@ static int osp_get_statsinfo(
                 mGSTR(name, "delayvariance");
                 OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mGMAP.delay.var, OSP_SCALE_1, OSP_STATSFLOAT_DEF, buffer, mGVAR.delay.var);
 
-                parseleg = parse;
+                /* Get octets */
+                vsa = mGMAP.octets;
                 switch (mapping->clienttype) {
                 case OSP_CLIENT_CISCO:
-                    if ((group == OSP_GROUP_RTP) &&
-                        (((usage->origin == OSP_ORIGIN_TERM) && (flow == OSP_FLOW_UP)) ||
-                        ((usage->origin == OSP_ORIGIN_INIT) && (flow == OSP_FLOW_DOWN))))
-                    {
-                        parseleg = FALSE;
+                    if (usage->origin == OSP_ORIGIN_INIT) {
+                        if (flow == OSP_FLOW_DOWN) {
+                            vsa = map->group[group][OSP_FLOW_UP].octets;
+                        } else {
+                            vsa = map->group[group][OSP_FLOW_DOWN].octets;
+                        }
                     }
                     break;
                 case OSP_CLIENT_UNDEF:
@@ -2963,14 +2981,29 @@ static int osp_get_statsinfo(
                 default:
                     break;
                 }
-
-                /* Get octets */
                 mGSTR(name, "octets");
-                OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mGMAP.octets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.octets);
+                OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, vsa, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.octets);
 
                 /* Get packets */
+                vsa = mGMAP.packets;
+                switch (mapping->clienttype) {
+                case OSP_CLIENT_CISCO:
+                    if (usage->origin == OSP_ORIGIN_INIT) {
+                        if (flow == OSP_FLOW_DOWN) {
+                            vsa = map->group[group][OSP_FLOW_UP].packets;
+                        } else {
+                            vsa = map->group[group][OSP_FLOW_DOWN].packets;
+                        }
+                    }
+                    break;
+                case OSP_CLIENT_UNDEF:
+                case OSP_CLIENT_ACME:
+                case OSP_CLIENT_NEXTONE:
+                default:
+                    break;
+                }
                 mGSTR(name, "packets");
-                OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mGMAP.packets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.packets);
+                OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, vsa, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.packets);
 
                 /* Get rfactor is */
                 mGSTR(name, "rfactor");
