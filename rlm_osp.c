@@ -862,6 +862,38 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
 }
 
 /*
+ * Crossover mapping
+ *
+ * param _cli Client type
+ * param _ori Call origin
+ * param _grp Statistic group
+ * param _flow Statistic flow
+ * param _map VSA default mapping
+ * param _down VSA downstream mapping
+ * param _up VSA upstream mapping
+ * param _vsa Used VSA mapping
+ */
+#define OSP_CROSSOVER_MAPS(_cli, _ori, _grp, _flow, _map, _down, _up, _vsa) { \
+    _vsa = _map; \
+    switch (_cli) { \
+    case OSP_CLIENT_CISCO: \
+        if ((_ori == OSP_ORIGIN_INIT) && (_grp == OSP_GROUP_RTP)) { \
+            if (_flow == OSP_FLOW_DOWN) { \
+                _vsa = _up; \
+            } else { \
+               _vsa = _down; \
+            } \
+        } \
+        break; \
+    case OSP_CLIENT_UNDEF: \
+    case OSP_CLIENT_ACME: \
+    case OSP_CLIENT_NEXTONE: \
+    default: \
+        break; \
+    } \
+}
+
+/*
  * Get long long
  *
  * param _req FreeRADIUS request
@@ -2864,6 +2896,8 @@ static int osp_get_statsinfo(
     char name[OSP_STRBUF_SIZE];
     char buffer[OSP_STRBUF_SIZE];
     char* vsa;
+    char* uvsa;
+    char* dvsa;
 
     DEBUG("rlm_osp: osp_get_statsinfo start");
 
@@ -2887,7 +2921,6 @@ static int osp_get_statsinfo(
 #define mFMAP               (map->flow[flow])
 #define mFVAR               (var->flow[flow])
 #define mFSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s", flow_str[flow], _var)
-            /* Get icpif */
             parseleg = parse;
             switch (mapping->clienttype) {
             case OSP_CLIENT_CISCO:
@@ -2903,6 +2936,8 @@ static int osp_get_statsinfo(
             default:
                 break;
             }
+
+            /* Get icpif */
             mFSTR(name, "icpif");
             OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mFMAP.icpif, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mFVAR.icpif);
 #undef mFMAP
@@ -2915,9 +2950,25 @@ static int osp_get_statsinfo(
 #define mGMAP               (map->group[group][flow])
 #define mGVAR               (var->group[group][flow])
 #define mGSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s%s", group_str[group], flow_str[flow], _var)
+                parseleg = parse;
+                switch (mapping->clienttype) {
+                case OSP_CLIENT_CISCO:
+                    if (((usage->origin == OSP_ORIGIN_TERM) && (group == OSP_GROUP_RTP) && (flow == OSP_FLOW_UP)) ||
+                        ((usage->origin == OSP_ORIGIN_INIT) && (group == OSP_GROUP_RTP) && (flow == OSP_FLOW_DOWN)))
+                    {
+                        parseleg = FALSE;
+                    }
+                    break;
+                case OSP_CLIENT_UNDEF:
+                case OSP_CLIENT_ACME:
+                case OSP_CLIENT_NEXTONE:
+                default:
+                    break;
+                }
+
                 /* Get packets lost packets */
                 mGSTR(name, "lostpackets");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.lost.pack, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.lost.pack);
+                OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mGMAP.lost.pack, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.lost.pack);
 
                 /* Get packets lost fraction */
                 mGSTR(name, "lostfraction");
@@ -2957,53 +3008,25 @@ static int osp_get_statsinfo(
 
                 /* Get delay mean */
                 mGSTR(name, "delaymean");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.delay.mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.delay.mean);
+                OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mGMAP.delay.mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.delay.mean);
 
                 /* Get delay variance */
                 mGSTR(name, "delayvariance");
                 OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mGMAP.delay.var, OSP_SCALE_1, OSP_STATSFLOAT_DEF, buffer, mGVAR.delay.var);
 
                 /* Get octets */
-                vsa = mGMAP.octets;
-                switch (mapping->clienttype) {
-                case OSP_CLIENT_CISCO:
-                    if (usage->origin == OSP_ORIGIN_INIT) {
-                        if (flow == OSP_FLOW_DOWN) {
-                            vsa = map->group[group][OSP_FLOW_UP].octets;
-                        } else {
-                            vsa = map->group[group][OSP_FLOW_DOWN].octets;
-                        }
-                    }
-                    break;
-                case OSP_CLIENT_UNDEF:
-                case OSP_CLIENT_ACME:
-                case OSP_CLIENT_NEXTONE:
-                default:
-                    break;
-                }
                 mGSTR(name, "octets");
-                OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, vsa, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.octets);
+                dvsa = map->group[OSP_GROUP_RTP][OSP_FLOW_DOWN].octets;
+                uvsa = map->group[OSP_GROUP_RTP][OSP_FLOW_UP].octets;
+                OSP_CROSSOVER_MAPS(mapping->clienttype, usage->origin, group, flow, mGMAP.octets, dvsa, uvsa, vsa);
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, vsa, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.octets);
 
                 /* Get packets */
-                vsa = mGMAP.packets;
-                switch (mapping->clienttype) {
-                case OSP_CLIENT_CISCO:
-                    if (usage->origin == OSP_ORIGIN_INIT) {
-                        if (flow == OSP_FLOW_DOWN) {
-                            vsa = map->group[group][OSP_FLOW_UP].packets;
-                        } else {
-                            vsa = map->group[group][OSP_FLOW_DOWN].packets;
-                        }
-                    }
-                    break;
-                case OSP_CLIENT_UNDEF:
-                case OSP_CLIENT_ACME:
-                case OSP_CLIENT_NEXTONE:
-                default:
-                    break;
-                }
                 mGSTR(name, "packets");
-                OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, vsa, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.packets);
+                dvsa = map->group[OSP_GROUP_RTP][OSP_FLOW_DOWN].packets;
+                uvsa = map->group[OSP_GROUP_RTP][OSP_FLOW_UP].packets;
+                OSP_CROSSOVER_MAPS(mapping->clienttype, usage->origin, group, flow, mGMAP.packets, dvsa, uvsa, vsa);
+                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, vsa, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.packets);
 
                 /* Get rfactor is */
                 mGSTR(name, "rfactor");
