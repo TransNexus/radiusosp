@@ -868,16 +868,17 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
  * param _ori Call origin
  * param _grp Statistic group
  * param _flow Statistic flow
+ * param _flag Crossover flag
  * param _map VSA default mapping
  * param _down VSA downstream mapping
  * param _up VSA upstream mapping
  * param _vsa Used VSA mapping
  */
-#define OSP_CROSSOVER_MAPS(_cli, _ori, _grp, _flow, _map, _down, _up, _vsa) { \
+#define OSP_CROSSOVER_MAPS(_cli, _ori, _grp, _flow, _flag, _map, _down, _up, _vsa) { \
     _vsa = _map; \
     switch (_cli) { \
     case OSP_CLIENT_CISCO: \
-        if ((_ori == OSP_ORIGIN_INIT) && (_grp == OSP_GROUP_RTP)) { \
+        if ((_ori == OSP_ORIGIN_INIT) && (_grp == OSP_GROUP_RTP) && (_flag)) { \
             if (_flow == OSP_FLOW_DOWN) { \
                 _vsa = _up; \
             } else { \
@@ -3014,19 +3015,21 @@ static int osp_get_statsinfo(
                 mGSTR(name, "delayvariance");
                 OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mGMAP.delay.var, OSP_SCALE_1, OSP_STATSFLOAT_DEF, buffer, mGVAR.delay.var);
 
+#define mCRO    (map->cross)
                 /* Get octets */
                 mGSTR(name, "octets");
                 dvsa = map->group[OSP_GROUP_RTP][OSP_FLOW_DOWN].octets;
                 uvsa = map->group[OSP_GROUP_RTP][OSP_FLOW_UP].octets;
-                OSP_CROSSOVER_MAPS(mapping->clienttype, usage->origin, group, flow, mGMAP.octets, dvsa, uvsa, vsa);
+                OSP_CROSSOVER_MAPS(mapping->clienttype, usage->origin, group, flow, mCRO.rtpoctets, mGMAP.octets, dvsa, uvsa, vsa);
                 OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, vsa, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.octets);
 
                 /* Get packets */
                 mGSTR(name, "packets");
                 dvsa = map->group[OSP_GROUP_RTP][OSP_FLOW_DOWN].packets;
                 uvsa = map->group[OSP_GROUP_RTP][OSP_FLOW_UP].packets;
-                OSP_CROSSOVER_MAPS(mapping->clienttype, usage->origin, group, flow, mGMAP.packets, dvsa, uvsa, vsa);
+                OSP_CROSSOVER_MAPS(mapping->clienttype, usage->origin, group, flow, mCRO.rtppackets, mGMAP.packets, dvsa, uvsa, vsa);
                 OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, vsa, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.packets);
+#undef mCRO
 
                 /* Get rfactor is */
                 mGSTR(name, "rfactor");
