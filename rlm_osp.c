@@ -3386,35 +3386,31 @@ static time_t osp_format_time(
         tvalue = atol(timestr);
         break;
     case OSP_TIMESTR_C:
-        /* WWW MMM DD hh:mm:ss YYYY, assume UTC, length 24 bytes */
-        if (strlen(timestr) == 24) {
-            tzone = NULL;
-            if (osp_cal_timeoffset(tzone, &toffset) == 0) {
-                strptime(timestr, "%a %b %d %T %Y", &dt);
-                osp_cal_elapsed(&dt, toffset, &tvalue);
-            }
+        /* WWW MMM DD hh:mm:ss YYYY, assume UTC */
+        tzone = NULL;
+        if (osp_cal_timeoffset(tzone, &toffset) == 0) {
+            strptime(timestr, "%a %b %d %T %Y", &dt);
+            osp_cal_elapsed(&dt, toffset, &tvalue);
         }
         break;
     case OSP_TIMESTR_ACME:
-        /* hh:mm:ss.kkk ZON MMM DD YYYY, length 28 bytes */
-        if (strlen(timestr) == 28) {
+        /* hh:mm:ss.kkk ZON MMM DD YYYY */
+        size = sizeof(buffer) - 1;
+        snprintf(buffer, size, "%s", timestr + 13);
+        buffer[3] = '\0';
+
+        if (osp_cal_timeoffset(buffer, &toffset) == 0) {
             size = sizeof(buffer) - 1;
-            snprintf(buffer, size, "%s", timestr + 13);
-            buffer[3] = '\0';
+            snprintf(buffer, size, "%s", timestr);
+            buffer[size] = '\0';
 
-            if (osp_cal_timeoffset(buffer, &toffset) == 0) {
-                size = sizeof(buffer) - 1;
-                snprintf(buffer, size, "%s", timestr);
-                buffer[size] = '\0';
+            size = sizeof(buffer) - 1 - 8;
+            snprintf(buffer + 8, size, "%s", timestr + 16);
+            buffer[size + 8] = '\0';
 
-                size = sizeof(buffer) - 1 - 8;
-                snprintf(buffer + 8, size, "%s", timestr + 16);
-                buffer[size + 8] = '\0';
+            strptime(buffer, "%T %b %d %Y", &dt);
 
-                strptime(buffer, "%T %b %d %Y", &dt);
-
-                osp_cal_elapsed(&dt, toffset, &tvalue);
-            }
+            osp_cal_elapsed(&dt, toffset, &tvalue);
         }
         break;
     case OSP_TIMESTR_CISCO:
@@ -3428,25 +3424,23 @@ static time_t osp_format_time(
             timestr++;
         }
     case OSP_TIMESTR_NTP:
-        /* hh:mm:ss.kkk ZON WWW MMM DD YYYY, length 32 bytes */
-        if (strlen(timestr) == 32) {
+        /* hh:mm:ss.kkk ZON WWW MMM DD YYYY */
+        size = sizeof(buffer) - 1;
+        snprintf(buffer, size, "%s", timestr + 13);
+        buffer[3] = '\0';
+
+        if (osp_cal_timeoffset(buffer, &toffset) == 0) {
             size = sizeof(buffer) - 1;
-            snprintf(buffer, size, "%s", timestr + 13);
-            buffer[3] = '\0';
+            snprintf(buffer, size, "%s", timestr);
+            buffer[size] = '\0';
 
-            if (osp_cal_timeoffset(buffer, &toffset) == 0) {
-                size = sizeof(buffer) - 1;
-                snprintf(buffer, size, "%s", timestr);
-                buffer[size] = '\0';
+            size = sizeof(buffer) - 1 - 8;
+            snprintf(buffer + 8, size, "%s", timestr + 16);
+            buffer[size + 8] = '\0';
 
-                size = sizeof(buffer) - 1 - 8;
-                snprintf(buffer + 8, size, "%s", timestr + 16);
-                buffer[size + 8] = '\0';
+            strptime(buffer, "%T %a %b %d %Y", &dt);
 
-                strptime(buffer, "%T %a %b %d %Y", &dt);
-
-                osp_cal_elapsed(&dt, toffset, &tvalue);
-            }
+            osp_cal_elapsed(&dt, toffset, &tvalue);
         }
         break;
     default:
