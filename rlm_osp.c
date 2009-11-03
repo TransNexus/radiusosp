@@ -417,6 +417,7 @@ typedef struct {
     int mosscale;                                                   /* MOS scale index */
     osp_packmap_t slost;                                            /* Lost send mapping */
     osp_packmap_t rlost;                                            /* Lost receive mapping */
+    osp_metricsmap_t roundtrip;                                     /* Round trip delay */
     osp_statsflowmap_t flow[OSP_FLOW_NUMBER];                       /* Statistics flow mapping */
     osp_statsgroupmap_t group[OSP_GROUP_NUMBER][OSP_FLOW_NUMBER];   /* Statistics group mapping */
     osp_crossover_t cross;                                          /* Crossover flags */
@@ -425,6 +426,7 @@ typedef struct {
 typedef struct {
     osp_pack_t slost;                                           /* Packets lost */
     osp_pack_t rlost;                                           /* Packets lost */
+    osp_metrics_t roundtrip;                                    /* Round trip delay */
     osp_statsflow_t flow[OSP_FLOW_NUMBER];                      /* Statistics flow */
     osp_statsgroup_t group[OSP_GROUP_NUMBER][OSP_FLOW_NUMBER];  /* Statistics group */
 } osp_stats_t;
@@ -664,6 +666,11 @@ static const CONF_PARSER mapping_config[] = {
     { "sendlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.slost.fract), NULL, OSP_MAP_STATS },
     { "receivelostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rlost.pack), NULL, OSP_MAP_STATS },
     { "receivelostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rlost.fract), NULL, OSP_MAP_STATS },
+    { "roundtripdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.roundtrip.samp), NULL, OSP_MAP_STATS },
+    { "roundtripdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.roundtrip.min), NULL, OSP_MAP_STATS },
+    { "roundtripdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.roundtrip.max), NULL, OSP_MAP_STATS },
+    { "roundtripdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.roundtrip.mean), NULL, OSP_MAP_STATS },
+    { "roundtripdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.roundtrip.var), NULL, OSP_MAP_STATS },
     /* Statistics flow mapping start */
 #define mSFMAP  mSMAP.flow
     { "downstreamicpif", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSFMAP[OSP_FLOW_DOWN].icpif), NULL, OSP_MAP_STATS },
@@ -1807,6 +1814,21 @@ static int osp_check_statsmap(
         /* If lost receive packet fraction is incorrect, then fail. */
         OSP_CHECK_ITEMMAP("receivelostfraction", OSP_DEF_MAY, stats->rlost.fract);
 
+        /* If round trip delay samples is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP("roundtripdelaysamples", OSP_DEF_MAY, stats->roundtrip.samp);
+
+        /* If round trip delay minimum is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP("roundtripdelayminimum", OSP_DEF_MAY, stats->roundtrip.min);
+
+        /* If round trip delay maximum is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP("roundtripdelaymaximum", OSP_DEF_MAY, stats->roundtrip.max);
+
+        /* If round trip delay mean is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP("roundtripdelaymean", OSP_DEF_MAY, stats->roundtrip.mean);
+
+        /* If round trip delay variance is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP("roundtripdelayvariance", OSP_DEF_MAY, stats->roundtrip.var);
+
         for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
 #define mFMAP               (stats->flow[flow])
 #define mFSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s", flow_str[flow], _var)
@@ -2391,6 +2413,17 @@ static void osp_report_statsinfo(
     DEBUG("rlm_osp: osp_report_statsinfo start");
 
     if (mapping->reportstats) {
+        /* Report round trip delay */
+#if 0
+        OSPPTransactionSetRoundTripDelay(
+            transaction,            /* Transaction handle */
+            stats->roundtrip.samp,  /* Round trip delay samples */
+            stats->roundtrip.min,   /* Round trip delay minimum */
+            stats->roundtrip.max,   /* Round trip delay maximum */
+            stats->roundtrip.mean,  /* Round trip delay mean */
+            stats->roundtrip.var);  /* Round trip delay variance */
+#endif
+
         for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
             if (flow == OSP_FLOW_UP) {
                 direction = OSPC_SFLOW_UPSTREAM;
@@ -2917,6 +2950,25 @@ static int osp_get_statsinfo(
 
         /* Get lost receive packet fraction */
         OSP_GET_INTEGER(request, parse, "receivelostfraction", OSP_DEF_MAY, map->rlost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rlost.fract);
+
+#define mRMAP   (map->roundtrip)
+#define mRVAR   (var->roundtrip)
+        /* Get round trip delay samples */
+        OSP_GET_INTEGER(request, parse, "roundtripdelaysamples", OSP_DEF_MAY, mRMAP.samp, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mRVAR.samp);
+
+        /* Get round trip delay minimim */
+        OSP_GET_INTEGER(request, parse, "roundtripdelayminimum", OSP_DEF_MAY, mRMAP.min, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mRVAR.min);
+
+        /* Get round trip delay maximum */
+        OSP_GET_INTEGER(request, parse, "roundtripdelaymaximum", OSP_DEF_MAY, mRMAP.max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mRVAR.max);
+
+        /* Get round trip delay mean */
+        OSP_GET_INTEGER(request, parse, "roundtripdelaymean", OSP_DEF_MAY, mRMAP.mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mRVAR.mean);
+
+        /* Get round trip delay variance */
+        OSP_GET_FLOAT(request, parse, "roundtripdelayvariance", OSP_DEF_MAY, mRMAP.var, OSP_SCALE_1, OSP_STATSFLOAT_DEF, buffer, mRVAR.var);
+#undef mRMAP
+#undef mRVAR
 
         for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
 #define mFMAP               (map->flow[flow])
