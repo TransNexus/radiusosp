@@ -84,7 +84,7 @@ RCSID("$Id$")
 #define OSP_NETMASK_DEF     0xFFFFFFFF                  /* OSP default subnet mask */
 #define OSP_NET_DELIMITER   "/"                         /* OSP delimiter string for subnet (ip/mask) */
 #define OSP_LIST_DELIMITER  ",; "                       /* OSP delimiter string for subnet list */
-#define OSP_CUSTOMINFO_MAX  4                           /* OSP max number of custom info */
+#define OSP_CUSTOMINFO_MAX  8                           /* OSP max number of custom info */
 
 /*
  * Default RADIUS OSP mapping
@@ -763,6 +763,10 @@ static const CONF_PARSER mapping_config[] = {
     { "custominfo2", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[1]), NULL, OSP_MAP_CUSTOMINFO },
     { "custominfo3", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[2]), NULL, OSP_MAP_CUSTOMINFO },
     { "custominfo4", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[3]), NULL, OSP_MAP_CUSTOMINFO },
+    { "custominfo5", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[4]), NULL, OSP_MAP_CUSTOMINFO },
+    { "custominfo6", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[5]), NULL, OSP_MAP_CUSTOMINFO },
+    { "custominfo7", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[6]), NULL, OSP_MAP_CUSTOMINFO },
+    { "custominfo8", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[7]), NULL, OSP_MAP_CUSTOMINFO },
     /* End */
     { NULL, -1, 0, NULL, NULL }     /* end the list */
 };
