@@ -5,6 +5,8 @@
 # All log rotation and detail file cleanup scripts should be stored
 # under "$RADIUS_UTILS" by default.  $RADIUS_UTILS must be set.
 #
+## Check FreeRADIUS
+* * * * * . ./.bash_profile ; . $RADIUS_UTILS/restart_FreeRADIUS.sh
 ## Log rotation for Linux
 0 0 * * * . ./.bash_profile ; . $RADIUS_UTILS/logrotate_FreeRADIUS.sh
 ## Log rotation for Solaris

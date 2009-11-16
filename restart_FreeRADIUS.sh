@@ -12,8 +12,9 @@
 if pgrep radiusd >/dev/null 2>&1
     then
     # Do nothing, the radius server is running
+    echo "FreeRADIUS is running."
 else
-    echo "!!!FreeRADIUS is not running!!!"
+    echo "FreeRADIUS is not running!"
     echo "The application will be restarted"
     $RADIUS_PATH/sbin/radiusd -fx &
 fi
