@@ -1,0 +1,14 @@
+#
+# Cron file of the user runs FreeRADIUS to trigger FreeRADIUS log
+# rotation and detail file cleanup scripts.
+#
+# All log rotation and detail file cleanup scripts should be stored
+# under "$RADIUS_UTILS" by default.  $RADIUS_UTILS must be set.
+#
+## Log rotation for Linux
+0 0 * * * . ./.bash_profile ; . $RADIUS_UTILS/logrotate_FreeRADIUS.sh
+## Log rotation for Solaris
+# 0 0 * * * . ./.bash_profile ; . $RADIUS_UTILS/logadm_FreeRADIUS.sh
+## Detail clean up
+0 0 * * * . ./.bash_profile ; . $RADIUS_UTILS/detailcleanup_FreeRADIUS.sh
+
