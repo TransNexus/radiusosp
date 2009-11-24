@@ -1,19 +1,47 @@
 #!/bin/sh
-#
 # logrotate_FreeRADIUS.sh
 #
-# This logrotate script for Linux is used to rotate FreeRADIUS
-# radius.log file.  It should be triggered by cron of the user runs
-# FreeRADIUS daily.
 #
-# The FreeRADIUS log directory should be "$RADIUS_PATH/var/log/radius"
-# For standard installation, $RADIUS_PATH=/usr/local
+# This logrotate script is used to rotate FreeRADIUS radius.log file.  It should
+# be triggered by cron of ossadmin daily when installed in SINGLE_PACKAGE mode.
 #
-# logrotate_FreeRADIUS.sh       logrotate script file
-# logrotate_FreeRADIUS.cfg      logrotate configuration file
-# logrotate_FreeRADIUS.status   logrotate outupt status file
+# This logrotate script is used to rotate FreeRADIUS radius.log file.  It should
+# be triggered by cron of root daily if installed in FreeRADIUS only mode.
 #
-# All files should be under $RADIUS_UTILS, which must be defined.
+# The Radius log file, radius.log, grows continuously and can become
+# too large to view after several months of normal operation.  This
+# script, when run periodically, solves this operational problem by 
+# renaming and saving the current log file and allowing Radius
+# server to start a new radius.log file.
 #
-/usr/sbin/logrotate -s $RADIUS_UTILS/logrotate_FreeRADIUS.status $RADIUS_UTILS/logrotate_FreeRADIUS.cfg
+# When this file is run, the current radius.log file is renamed and then
+# gzipped.  The file name for the backup is radius.log-YYYYMMDD-HH:MM.gz.
+# Where YYYYMMDD-HH:MM stands for the year, month, day, hour and minute 
+# when the log file was backed up.  When the radius.log file is renamed 
+# and backed up, a new radius.log file is automatically written in the 
+# $RADIUS_HOME/freeradius/var/log/radius directory.
+#
+# This script must be run by user ossadmin.
 
+BACKUP_LOG_FILE_NAME=radius.log-`date '+%Y%m%d-%H:%M'`
+
+if [ ! "$RADIUS_HOME" ]
+then
+        echo "The RADIUS_HOME variable is not set."
+        exit 1
+fi
+
+if [ ! -d $RADIUS_HOME/utils ]
+then
+        echo "Directory $RADIUS_HOME/utils does not exist"
+        echo "Make sure that RADIUS_HOME variable is correctly set."
+        exit 1
+fi
+ 
+cd $RADIUS_HOME/utils
+ 
+cd ../var/log/radius
+ 
+mv radius.log $BACKUP_LOG_FILE_NAME
+ 
+gzip $BACKUP_LOG_FILE_NAME
