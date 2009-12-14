@@ -1,16 +1,40 @@
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## Cron schedule for FreeRADIUS only mode / owned by root  ##
+0-59 * * * * . ./.bash_profile ; /home/ospadmin/RADIUS/radius/utils/restart_FreeRADIUS.sh
+0 0 * * * . ./.bash_profile ; /home/ospadmin/RADIUS/radius/utils/logrotate_FreeRADIUS.sh
+0 0 * * * . ./.bash_profile ; /home/ospadmin/RADIUS/radius/utils/delete_archived_radius_log_files.sh
+0 0 * * * . ./.bash_profile ; /home/ospadmin/RADIUS/radius/utils/detailcleanup_FreeRADIUS.sh
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## Con schedule for SINGLE_PACKAGE mode / owned by ossadmin  ##
+0-59 * * * * . ./.bash_profile ; $RADIUS_HOME/RADIUS/radius/utils/restart_FreeRADIUS.sh
+0 0 * * * . ./.bash_profile ; $RADIUS_HOME/RADIUS/radius/utils/logrotate_FreeRADIUS.sh
+0 0 * * * . ./.bash_profile ; $RADIUS_HOME/RADIUS/radius/utils/delete_archived_radius_log_files.sh
+0 0 * * * . ./.bash_profile ; $RADIUS_HOME/RADIUS/radius/utils/detailcleanup_FreeRADIUS.sh
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+restart_FreeRADIUS.sh 
+
+#!/bin/bash
+# restart_FreeRADIUS.sh
 #
-# Cron file of the user runs FreeRADIUS to trigger FreeRADIUS log
-# rotation and detail file cleanup scripts.
+# This script checks if FreeRADIUS is running.
+# If the application is not running, it restarts it.
 #
-# All log rotation and detail file cleanup scripts should be stored
-# under "$RADIUS_UTILS" by default.  $RADIUS_UTILS must be set.
+# This script must be run by a user root
+
+
 #
-## Check FreeRADIUS
-* * * * * . ./.bash_profile ; . $RADIUS_UTILS/restart_FreeRADIUS.sh
-## Log rotation for Linux
-0 0 * * * . ./.bash_profile ; . $RADIUS_UTILS/logrotate_FreeRADIUS.sh
-## Log rotation for Solaris
-# 0 0 * * * . ./.bash_profile ; . $RADIUS_UTILS/logadm_FreeRADIUS.sh
-## Detail clean up
-0 0 * * * . ./.bash_profile ; . $RADIUS_UTILS/detailcleanup_FreeRADIUS.sh
+if pgrep radiusd >/dev/null 2>&1
+        then
+                # Do nothing, the radius server is running
+        exit 1
+fi
+        echo "!!!FreeRADIUS is not running!!!"
+        echo "The application will be restarted"
+
+/usr/local/sbin/radiusd -fx &
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 

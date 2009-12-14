@@ -2,7 +2,7 @@
 # delete_archived_radius_log_files.sh
 #
 # This script automates the process of deleting archived files from the
-# $RADIUS_HOME/var/log/radius directory that have a .gz extension and have been 
+# radius directory that have a .gz extension and have been 
 # unchanged for more days than the number of days defined by the 
 # DELETE_FILES_OLDER_THAN_DAYS variable.  The default value for 
 # this variable is 45 days.
@@ -11,12 +11,18 @@
 # all .gz files that have not been changed, compressed, renamed, etc. for
 # more than 45 days will be deleted.
 #
-# This script can be run by user ossadmin.  This script uses the 
+# This script can be run by user ossadmin for the SINGLE_PACKAGE mode.
+# This script can be run by user root for the FreeRADIUS only mode.  This script uses the 
 # IsFileOldEnough.pl script which must also be located in the 
 # $RADIUS_HOME/utils directory.
  
 DELETE_FILES_OLDER_THAN_DAYS=7
-FILE_MASK=../var/log/radius/*.gz*
+
+## Uncomment the next line if using the SINGLE_PACKAGE
+#FILE_MASK=../var/log/radius/*.gz*
+
+## Uncomment the next line if using the stand alone Radius
+FILE_MASK=/usr/local/var/log/radius/*.gz*
 
 if [ ! "$RADIUS_HOME" ]
 then
