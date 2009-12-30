@@ -2291,10 +2291,12 @@ static int osp_accounting(
         usage.divuser,
         usage.divhost);
 
+#if 0
     /* Report asserted ID */
     OSPPTransactionSetAssertedId(
         transaction,        /* Transaction handle */
         usage.assertedid);  /* Asserted ID */
+#endif
 
     /* Report user-defined info */
     for (i = 0; i < OSP_CUSTOMINFO_MAX; i++) {
