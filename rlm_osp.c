@@ -1447,6 +1447,14 @@ static int osp_check_provider(
 
     DEBUG("rlm_osp: osp_check_provider start");
 
+    /* Nothing to check for accelerate */
+    if (instance_count == 0) {
+        DEBUG("rlm_osp: 'accelerate' = '%d'", provider->accelerate);
+    }
+
+    /* Nothing to check for security */
+    DEBUG("rlm_osp: 'security' = '%d'", provider->security);
+
     /* Calculate number of service points */
     provider->sps = 0;
     for (i = 0; i < OSP_SPS_MAX; i++) {
@@ -2116,15 +2124,14 @@ static int osp_create_provider(
             radlog(L_ERR,
                 "rlm_osp: Failed to create provider, error '%d'.",
                 error);
-            if (instance_count == 0) {
-                OSPPCleanup();
-            }
         } else {
             DEBUG("rlm_osp: osp_create_provider success");
             instance_count++;
             result = 0;
         }
-    } else {
+    }
+
+    if (error != OSPC_ERR_NO_ERROR) {
         if (instance_count == 0) {
             OSPPCleanup();
         }
