@@ -8,4 +8,8 @@ Version 1.0.0 - 2009-12-30
 *Made parsing answer/originate records optional
 *Added reporting ICPIF
 *Added Cisco SBC type
----------------------------------------------------------------------------
+----------------------------------------------------------------------
+
+Version 1.0.1 - 2010-01-26
+*Fixed OSP init issue for multiple instances.
+----------------------------------------------------------------------
