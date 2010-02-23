@@ -19,10 +19,10 @@
 DELETE_FILES_OLDER_THAN_DAYS=7
 
 ## Uncomment the next line if using the SINGLE_PACKAGE
-#FILE_MASK=../var/log/radius/*.gz*
+FILE_MASK=../var/log/radius/*.gz*
 
 ## Uncomment the next line if using the stand alone Radius
-FILE_MASK=/usr/local/var/log/radius/*.gz*
+# FILE_MASK=/usr/local/var/log/radius/*.gz*
 
 if [ ! "$RADIUS_HOME" ]
 then

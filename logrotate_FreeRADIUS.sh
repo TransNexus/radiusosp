@@ -40,12 +40,12 @@ fi
 cd $RADIUS_HOME/utils
 
 ## Uncomment the next line if using the SINGLE_PACKAGE 
-#cd ../var/log/radius
+cd ../var/log/radius
 
 ## Uncomment the next line if using the SINGLE_PACKAGE 
-#mv ../var/log/radius/radius.log $BACKUP_LOG_FILE_NAME
+mv ../var/log/radius/radius.log $BACKUP_LOG_FILE_NAME
 
 ## Uncomment the next line if using stand alone Radius
-mv /usr/local/var/log/radius/radius.log $BACKUP_LOG_FILE_NAME
+# mv /usr/local/var/log/radius/radius.log $BACKUP_LOG_FILE_NAME
  
 gzip $BACKUP_LOG_FILE_NAME
