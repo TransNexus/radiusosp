@@ -796,6 +796,7 @@ static void osp_report_statsinfo(OSPTTRANHANDLE transaction, osp_statsmap_t* map
 static int osp_get_usageinfo(rlm_osp_t* data, REQUEST* request, int type, osp_usage_t* usage);
 static int osp_match_subnet(osp_netlist_t* list, uint32_t ip);
 static int osp_get_statsinfo(osp_mapping_t* mapping, REQUEST* request, int type, osp_usage_t* usage);
+static void osp_get_iphost(char* ip, char* buffer, int buffersize);
 static void osp_create_device(uint32_t ip, int prot, char* buffer, int buffersize);
 static void osp_format_device(char* device, char* buffer, int buffersize);
 static int osp_get_uriuser(char* uri, char* buffer, int buffersize);
@@ -1106,8 +1107,9 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
  * param _port Default prot
  * param _buf Buffer
  * param _val Item value
+ * param _host Host of IP
  */
-#define OSP_GET_IP(_req, _flag, _name, _lev, _map, _ip, _port, _buf, _val) { \
+#define OSP_GET_IP(_req, _flag, _name, _lev, _map, _ip, _port, _buf, _val, _host) { \
     if (_flag) { \
         if (OSP_CHECK_STRING(_map)) { \
             radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
@@ -1122,6 +1124,7 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
                 } \
             } else { \
                 osp_format_device(_buf, _val, sizeof(_val)); \
+                osp_get_iphost(_buf, _host, sizeof(_host)); \
             } \
         } else { \
             if (_lev == OSP_DEF_MUST) { \
@@ -2598,6 +2601,8 @@ static int osp_get_usageinfo(
     osp_provider_t* provider = &data->provider;
     osp_mapping_t* mapping = &data->mapping;
     char buffer[OSP_STRBUF_SIZE];
+    char tmphost[OSP_STRBUF_SIZE];
+    char desthost[OSP_STRBUF_SIZE];
     char* ptr;
     int parse, size, i;
     osp_intstr_t format;
@@ -2648,39 +2653,39 @@ static int osp_get_usageinfo(
     OSP_GET_STRING(request, TRUE, "assertedid", OSP_DEF_MAY, mapping->assertedid, usage->assertedid);
 
     /* Get source */
-    OSP_GET_IP(request, TRUE, "source", OSP_DEF_MAY, mapping->source, provider->deviceip, provider->deviceport, buffer, usage->source);
+    OSP_GET_IP(request, TRUE, "source", OSP_DEF_MAY, mapping->source, provider->deviceip, provider->deviceport, buffer, usage->source, tmphost);
 
     switch (mapping->clienttype) {
     case OSP_CLIENT_NEXTONE:
     case OSP_CLIENT_CISCO:
         if (usage->origin == OSP_ORIGIN_TERM) {
             /* Get source device */
-            OSP_GET_IP(request, TRUE, "sourcedevice", OSP_DEF_MUST, mapping->srcdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev);
+            OSP_GET_IP(request, TRUE, "sourcedevice", OSP_DEF_MUST, mapping->srcdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev, tmphost);
 
             /* Get proxy/destination */
-            OSP_GET_IP(request, TRUE, "proxy", OSP_DEF_MUST, mapping->proxy, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination);
+            OSP_GET_IP(request, TRUE, "proxy", OSP_DEF_MUST, mapping->proxy, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination, desthost);
         } else {
             /* Get proxy/source device */
-            OSP_GET_IP(request, TRUE, "proxy", OSP_DEF_MUST, mapping->proxy, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev);
+            OSP_GET_IP(request, TRUE, "proxy", OSP_DEF_MUST, mapping->proxy, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev, tmphost);
 
             /* Get destination */
-            OSP_GET_IP(request, TRUE, "destination", OSP_DEF_MUST, mapping->destination, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination);
+            OSP_GET_IP(request, TRUE, "destination", OSP_DEF_MUST, mapping->destination, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination, desthost);
         }
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
     default:
         /* Get source device */
-        OSP_GET_IP(request, TRUE, "sourcedevice", OSP_DEF_MUST, mapping->srcdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev);
+        OSP_GET_IP(request, TRUE, "sourcedevice", OSP_DEF_MUST, mapping->srcdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev, tmphost);
 
         /* Get destination */
-        OSP_GET_IP(request, TRUE, "destination", OSP_DEF_MUST, mapping->destination, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination);
+        OSP_GET_IP(request, TRUE, "destination", OSP_DEF_MUST, mapping->destination, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination, desthost);
 
         break;
     }
 
     /* Check if the record is for a destination should be ignored */
-    if (inet_pton(AF_INET, usage->destination, &dest) == 1) {
+    if (inet_pton(AF_INET, desthost, &dest) == 1) {
         if (osp_match_subnet(&mapping->ignoreddestlist, dest.s_addr) == 0) {
             DEBUG("rlm_osp: ignore record for destination '%s'.", usage->destination);
             return 1;
@@ -2688,7 +2693,7 @@ static int osp_get_usageinfo(
     }
 
     /* Get destination device */
-    OSP_GET_IP(request, TRUE, "destinationdevice", OSP_DEF_MAY, mapping->destdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destdev);
+    OSP_GET_IP(request, TRUE, "destinationdevice", OSP_DEF_MAY, mapping->destdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destdev, tmphost);
 
     /* Get destination count */
     OSP_GET_INTEGER(request, TRUE, "destinationcount", OSP_DEF_MAY, mapping->destcount, OSP_INTSTR_DEC, OSP_DESTCOUNT_DEF, buffer, usage->destcount);
@@ -3133,6 +3138,37 @@ static int osp_get_statsinfo(
     DEBUG("rlm_osp: osp_get_statsinfo success");
 
     return 0;
+}
+
+/*
+ * Get host of IP
+ *
+ * param ip IP address
+ * param buffer Buffer
+ * param buffersize Size of buffer
+ * return
+ */
+static void osp_get_iphost(
+    char* ip,
+    char* buffer,
+    int buffersize)
+{
+    int size;
+    char* tmpptr;
+
+    DEBUG("rlm_osp: osp_get_iphost start");
+
+    size = buffersize - 1;
+    strncpy(buffer, ip, size);
+    buffer[size] = '\0';
+
+    if((tmpptr = strchr(buffer, ':')) != NULL) {
+        *tmpptr = '\0';
+    }
+
+    DEBUG("rlm_osp: host = '%s'", buffer);
+
+    DEBUG("rlm_osp: osp_get_iphost success");
 }
 
 /*
