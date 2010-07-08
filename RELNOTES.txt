@@ -17,3 +17,6 @@ Version 1.0.1 - 2010-01-26
 Version 1.0.2 - 2010-04-13
 *Fixed bug of matching ignored destinations.
 ----------------------------------------------------------------------
+
+Version 1.0.3 - 
+*Changed OSP TCP port from 1080 to 5045.
