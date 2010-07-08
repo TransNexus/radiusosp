@@ -46,7 +46,7 @@ RCSID("$Id$")
 #define OSP_HWACCE_DEF      "no"                        /* Mapping default hardware accelerate flag */
 #define OSP_SECURITY_DEF    "no"                        /* Mapping default security flag */
 #define OSP_SPS_MAX         4                           /* OSP max number of service points */
-#define OSP_SPURI_DEF       "http://osptestserver.transnexus.com:1080/osp"  /* OSP default service point URI */
+#define OSP_SPURI_DEF       "http://osptestserver.transnexus.com:5045/osp"  /* OSP default service point URI */
 #define OSP_SPWEIGHT_DEF    "1000"                      /* Mapping default service point weight */
 #define OSP_AUDITURL_DEF    "http://localhost:1234"     /* OSP default Audit URL */
 #define OSP_PRIVATEKEY_DEF  "${raddbdir}/pkey.pem"      /* OSP default private key file */
