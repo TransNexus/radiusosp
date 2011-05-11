@@ -62,8 +62,8 @@ if test x$with_[]modname != xno; then
 	AC_RUN_IFELSE(
 		[AC_LANG_SOURCE([[
 			#include <osp/osp.h>
-			#define REQ_VER_MAJOR	3
-			#define REQ_VER_MINOR	6
+			#define REQ_VER_MAJOR	4
+			#define REQ_VER_MINOR	0
 			#define REQ_VER_BUGFIX	0
 			int main(void) {
 				int ver = OSP_CLIENT_TOOLKIT_VERSION_MAJOR * 10000 + OSP_CLIENT_TOOLKIT_VERSION_MINOR * 100 + OSP_CLIENT_TOOLKIT_VERSION_BUGFIX;
