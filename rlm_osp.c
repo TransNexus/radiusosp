@@ -119,7 +119,7 @@ RCSID("$Id$")
 #define OSP_MAP_PDD             NULL                        /* Post dial delay */
 #define OSP_MAP_RELEASE         NULL                        /* Release source */
 #define OSP_MAP_CAUSE           "%{Acct-Terminate-Cause}"   /* Release cause, RFC 2866 */
-#define OSP_MAP_DESTPROTO       NULL                        /* Destination protocol */
+#define OSP_MAP_PROTOCOL        NULL                        /* Signaling protocol */
 #define OSP_MAP_SESSIONID       NULL                        /* Session ID */
 #define OSP_MAP_CODEC           NULL                        /* Codec */
 #define OSP_MAP_CONFID          NULL                        /* Conference ID */
@@ -168,7 +168,7 @@ typedef enum {
     OSP_CLIENT_MIN = 0,
     OSP_CLIENT_UNDEF = OSP_CLIENT_MIN,  /* Undefined */
     OSP_CLIENT_ACME,                    /* Acme */
-    OSP_CLIENT_NEXTONE,                 /* NexTone */
+    OSP_CLIENT_GENBANDS3,               /* GENBAND S3 */
     OSP_CLIENT_CISCO,                   /* Cisco */
     OSP_CLIENT_MAX = OSP_CLIENT_CISCO,
     OSP_CLIENT_NUMBER
@@ -335,12 +335,16 @@ float OSP_SCALE_TABLE[OSP_SCALE_NUMBER] = { 0.0001, 0.001, 0.01, 0.1, 1, 10, 100
  * Statistics related types
  */
 typedef enum {
-    OSP_FLOW_MIN = 0,
-    OSP_FLOW_DOWN = OSP_FLOW_MIN,   /* Statistics for downstream. */
-    OSP_FLOW_UP,                    /* Statistics for upstream. */
-    OSP_FLOW_MAX = OSP_FLOW_UP,
-    OSP_FLOW_NUMBER
-} osp_flow_t;
+    OSP_DIR_MIN = 0,
+    OSP_DIR_SRCREP = OSP_DIR_MIN,   /* Statistics for source-to-reporter. */
+    OSP_DIR_REPSRC,                 /* Statistics for reporter-to-source. */
+    OSP_DIR_DESTREP,                /* Statistics for destination-to-reporter. */
+    OSP_DIR_REPDEST,                /* Statistics for reporter-to-destination. */
+    OSP_DIR_SRCDEST,                /* Statistics for source-to-destination. */
+    OSP_DIR_DESTSRC,                /* Statistics for destination-to-source. */
+    OSP_DIR_MAX = OSP_DIR_DESTSRC,
+    OSP_DIR_NUMBER
+} osp_dir_t;
 
 typedef enum {
     OSP_GROUP_MIN = 0,
@@ -351,12 +355,18 @@ typedef enum {
 } osp_group_t;
 
 typedef struct {
-    char* icpif;/* ICPIF mapping */
-} osp_statsflowmap_t;
+    char* rfactor;  /* RFactor mapping */
+    char* moscq;    /* MOS-CQ mapping */
+    char* moslq;    /* MOS-LQ mapping */
+    char* icpif;    /* ICPIF mapping */
+} osp_statsdirmap_t;
 
 typedef struct {
-    int icpif;  /* ICPIF */
-} osp_statsflow_t;
+    float rfactor;  /* RFactor */
+    float moscq;    /* MOS-CQ */
+    float moslq;    /* MOS-LQ */
+    int icpif;      /* ICPIF */
+} osp_statsdir_t;
 
 typedef struct {
     char* pack; /* Packets lost in packets mapping */
@@ -390,9 +400,6 @@ typedef struct {
     osp_metricsmap_t delay; /* Delay mapping */
     char* octets;           /* Octets received mapping */
     char* packets;          /* Packets received mapping */
-    char* rfactor;          /* RFactor mapping */
-    char* moscq;            /* MOS-CQ mapping */
-    char* moslq;            /* MOS-LQ mapping */
 } osp_statsgroupmap_t;
 
 typedef struct {
@@ -401,9 +408,6 @@ typedef struct {
     osp_metrics_t delay;    /* Delay */
     int octets;             /* Octets recieved */
     int packets;            /* Packets received */
-    float rfactor;          /* RFactor */
-    float moscq;            /* MOS-CQ */
-    float moslq;            /* MOS-LQ */
 } osp_statsgroup_t;
 
 typedef struct {
@@ -418,8 +422,8 @@ typedef struct {
     osp_packmap_t slost;                                            /* Lost send mapping */
     osp_packmap_t rlost;                                            /* Lost receive mapping */
     osp_metricsmap_t roundtrip;                                     /* Round trip delay */
-    osp_statsflowmap_t flow[OSP_FLOW_NUMBER];                       /* Statistics flow mapping */
-    osp_statsgroupmap_t group[OSP_GROUP_NUMBER][OSP_FLOW_NUMBER];   /* Statistics group mapping */
+    osp_statsdirmap_t dir[OSP_DIR_NUMBER];                          /* Statistics direction mapping */
+    osp_statsgroupmap_t group[OSP_GROUP_NUMBER][OSP_DIR_NUMBER];    /* Statistics group mapping */
     osp_crossover_t cross;                                          /* Crossover flags */
 } osp_statsmap_t;
 
@@ -427,8 +431,8 @@ typedef struct {
     osp_pack_t slost;                                           /* Packets lost */
     osp_pack_t rlost;                                           /* Packets lost */
     osp_metrics_t roundtrip;                                    /* Round trip delay */
-    osp_statsflow_t flow[OSP_FLOW_NUMBER];                      /* Statistics flow */
-    osp_statsgroup_t group[OSP_GROUP_NUMBER][OSP_FLOW_NUMBER];  /* Statistics group */
+    osp_statsdir_t dir[OSP_DIR_NUMBER];                         /* Statistics direction */
+    osp_statsgroup_t group[OSP_GROUP_NUMBER][OSP_DIR_NUMBER];   /* Statistics group */
 } osp_stats_t;
 
 /*
@@ -502,11 +506,11 @@ typedef struct {
     char* pdd;                          /* Post dial delay */
     char* release;                      /* Release source */
     char* cause;                        /* Release cause */
-    char* destprot;                     /* Destination protocol */
-    char* insessionid;                  /* Inbound Call-ID */
-    char* outsessionid;                 /* Outbound Call-ID */
-    char* forcodec;                     /* Forward codec */
-    char* revcodec;                     /* Reverse codec */
+    char* protocol;                     /* Signaling protocol */
+    char* srcsessionid;                 /* Source sessionID */
+    char* destsessionid;                /* Destination session ID */
+    char* srccodec;                     /* Source codec */
+    char* destcodec;                    /* Destination codec */
     char* confid;                       /* Conference ID */
     osp_statsmap_t stats;               /* Statistics */
     char* custinfo[OSP_CUSTOMINFO_MAX]; /* Custom info */
@@ -549,11 +553,11 @@ typedef struct {
     int release;                                /* EP that released the call */
     OSPE_TERM_CAUSE causetype;                  /* Release reason type */
     int cause;                                  /* Release reason */
-    OSPE_DEST_PROTOCOL destprot;                /* Destination protocol */
-    osp_string_t insessionid;                   /* Inbound Call-ID */
-    osp_string_t outsessionid;                  /* Outbound Call-ID */
-    osp_string_t forcodec;                      /* Forward codec */
-    osp_string_t revcodec;                      /* Reverse codec */
+    OSPE_PROTOCOL_NAME protocol;                /* Signaling protocol */
+    osp_string_t srcsessionid;                  /* Source session ID */
+    osp_string_t destsessionid;                 /* Destination session ID */
+    osp_string_t srccodec;                      /* Source codec */
+    osp_string_t destcodec;                     /* Destination codec */
     osp_string_t confid;                        /* Conference ID */
     osp_stats_t stats;                          /* Statistics */
     osp_string_t custinfo[OSP_CUSTOMINFO_MAX];  /* Conference ID */
@@ -651,11 +655,11 @@ static const CONF_PARSER mapping_config[] = {
     { "postdialdelay", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.pdd), NULL, OSP_MAP_PDD },
     { "releasesource", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.release), NULL, OSP_MAP_RELEASE },
     { "releasecause", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.cause), NULL, OSP_MAP_CAUSE },
-    { "destinationprotocol", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destprot), NULL, OSP_MAP_DESTPROTO },
-    { "inboundsessionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.insessionid), NULL, OSP_MAP_SESSIONID },
-    { "outboundsessionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.outsessionid), NULL, OSP_MAP_SESSIONID },
-    { "forwardcodec", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.forcodec), NULL, OSP_MAP_CODEC },
-    { "reversecodec", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.revcodec), NULL, OSP_MAP_CODEC },
+    { "signalingprotocol", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.protocol), NULL, OSP_MAP_PROTOCOL },
+    { "sourcesessionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcsessionid), NULL, OSP_MAP_SESSIONID },
+    { "destinationsessionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destsessionid), NULL, OSP_MAP_SESSIONID },
+    { "sourcecodec", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srccodec), NULL, OSP_MAP_CODEC },
+    { "destinationcodec", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destcodec), NULL, OSP_MAP_CODEC },
     { "conferenceid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.confid), NULL, OSP_MAP_CONFID },
     /* Statistics mapping */
 #define mSMAP   mapping.stats
@@ -671,91 +675,90 @@ static const CONF_PARSER mapping_config[] = {
     { "roundtripdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.roundtrip.max), NULL, OSP_MAP_STATS },
     { "roundtripdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.roundtrip.mean), NULL, OSP_MAP_STATS },
     { "roundtripdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.roundtrip.var), NULL, OSP_MAP_STATS },
-    /* Statistics flow mapping start */
-#define mSFMAP  mSMAP.flow
-    { "downstreamicpif", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSFMAP[OSP_FLOW_DOWN].icpif), NULL, OSP_MAP_STATS },
-    { "upstreamicpif", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSFMAP[OSP_FLOW_UP].icpif), NULL, OSP_MAP_STATS },
-#undef mSFMAP
-    /* Statistics flow mapping end */
+    /* Statistics direction mapping start */
+#define mSDMAP  mSMAP.dir
+    /* RFactor */
+    { "sourcetodestinationrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSDMAP[OSP_DIR_SRCDEST].rfactor), NULL, OSP_MAP_STATS },
+    { "destinationtosourcerfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSDMAP[OSP_DIR_DESTSRC].rfactor), NULL, OSP_MAP_STATS },
+    /* MOS */
+    { "sourcetodestinationmoscq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSDMAP[OSP_DIR_SRCDEST].moscq), NULL, OSP_MAP_STATS },
+    { "destinationtosourcemoscq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSDMAP[OSP_DIR_DESTSRC].moscq), NULL, OSP_MAP_STATS },
+    { "sourcetodestinationmoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSDMAP[OSP_DIR_SRCDEST].moslq), NULL, OSP_MAP_STATS },
+    { "destinationtosourcemoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSDMAP[OSP_DIR_DESTSRC].moslq), NULL, OSP_MAP_STATS },
+    /* ICPIF */
+    { "sourcetoreportericpif", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSDMAP[OSP_DIR_SRCREP].icpif), NULL, OSP_MAP_STATS },
+    { "destinationtoreportericpif", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSDMAP[OSP_DIR_DESTREP].icpif), NULL, OSP_MAP_STATS },
+#undef mSDMAP
+    /* Statistics direction mapping end */
     /* Statistics group mapping start */
 #define mSGMAP  mSMAP.group
-    /* Lost */
-    { "rtpdownstreamlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].lost.pack), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].lost.fract), NULL, OSP_MAP_STATS },
-    { "rtpupstreamlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].lost.pack), NULL, OSP_MAP_STATS },
-    { "rtpupstreamlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].lost.fract), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].lost.pack), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].lost.fract), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].lost.pack), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].lost.fract), NULL, OSP_MAP_STATS },
-    /* Jitter */
-    { "rtpdownstreamjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].jitter.samp), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].jitter.min), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].jitter.max), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].jitter.mean), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].jitter.var), NULL, OSP_MAP_STATS },
-    { "rtpupstreamjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].jitter.samp), NULL, OSP_MAP_STATS },
-    { "rtpupstreamjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].jitter.min), NULL, OSP_MAP_STATS },
-    { "rtpupstreamjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].jitter.max), NULL, OSP_MAP_STATS },
-    { "rtpupstreamjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].jitter.mean), NULL, OSP_MAP_STATS },
-    { "rtpupstreamjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].jitter.var), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].jitter.samp), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].jitter.min), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].jitter.max), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].jitter.mean), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].jitter.var), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].jitter.samp), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].jitter.min), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].jitter.max), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].jitter.mean), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].jitter.var), NULL, OSP_MAP_STATS },
-    /* Delay */
-    { "rtpdownstreamdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].delay.samp), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].delay.min), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].delay.max), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].delay.mean), NULL, OSP_MAP_STATS },
-    { "rtpdownstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].delay.var), NULL, OSP_MAP_STATS },
-    { "rtpupstreamdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].delay.samp), NULL, OSP_MAP_STATS },
-    { "rtpupstreamdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].delay.min), NULL, OSP_MAP_STATS },
-    { "rtpupstreamdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].delay.max), NULL, OSP_MAP_STATS },
-    { "rtpupstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].delay.mean), NULL, OSP_MAP_STATS },
-    { "rtpupstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].delay.var), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].delay.samp), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].delay.min), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].delay.max), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].delay.mean), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].delay.var), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.samp), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.min), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.max), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.mean), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].delay.var), NULL, OSP_MAP_STATS },
+    /* Lost RTP */
+    { "rtpsourcetoreporterlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].lost.pack), NULL, OSP_MAP_STATS },
+    { "rtpsourcetoreporterlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].lost.fract), NULL, OSP_MAP_STATS },
+    { "rtpdestinationtoreporterlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].lost.pack), NULL, OSP_MAP_STATS },
+    { "rtpdestinationtoreporterlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].lost.fract), NULL, OSP_MAP_STATS },
+    /* Lost RTCP */
+    { "rtcpdestinationtosourcelostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DESTSRC].lost.pack), NULL, OSP_MAP_STATS },
+    { "rtcpdestinationtosourcelostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DESTSRC].lost.fract), NULL, OSP_MAP_STATS },
+    { "rtcpsourcetodestinationlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_SRCDEST].lost.pack), NULL, OSP_MAP_STATS },
+    { "rtcpsourcetodestinationlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_SRCDEST].lost.fract), NULL, OSP_MAP_STATS },
+    /* Jitter RTP */
+    { "rtpsourcetoreporterjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].jitter.samp), NULL, OSP_MAP_STATS },
+    { "rtpsourcetoreporterjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].jitter.min), NULL, OSP_MAP_STATS },
+    { "rtpsourcetoreporterjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].jitter.max), NULL, OSP_MAP_STATS },
+    { "rtpsourcetoreporterjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].jitter.mean), NULL, OSP_MAP_STATS },
+    { "rtpsourcetoreporterjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].jitter.var), NULL, OSP_MAP_STATS },
+    { "rtpdestinationtoreporterjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].jitter.samp), NULL, OSP_MAP_STATS },
+    { "rtpdestinationtoreporterjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].jitter.min), NULL, OSP_MAP_STATS },
+    { "rtpudestinationtoreporterjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].jitter.max), NULL, OSP_MAP_STATS },
+    { "rtpdestinationtoreporterjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].jitter.mean), NULL, OSP_MAP_STATS },
+    { "rtpdestinationtoreporterjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].jitter.var), NULL, OSP_MAP_STATS },
+    /* Jitter RTCP */
+    { "rtcpdestinationtosourcejittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DESTSRC].jitter.samp), NULL, OSP_MAP_STATS },
+    { "rtcpdestinationtosourcejitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DESTSRC].jitter.min), NULL, OSP_MAP_STATS },
+    { "rtcpdestinationtosourcejittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DESTSRC].jitter.max), NULL, OSP_MAP_STATS },
+    { "rtcpdestinationtosourcejittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DESTSRC].jitter.mean), NULL, OSP_MAP_STATS },
+    { "rtcpdestinationtosourcejittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DESTSRC].jitter.var), NULL, OSP_MAP_STATS },
+    { "rtcpsourcetodestinationjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_SRCDEST].jitter.samp), NULL, OSP_MAP_STATS },
+    { "rtcpusourcetodestinationjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_SRCDEST].jitter.min), NULL, OSP_MAP_STATS },
+    { "rtcpsourcetodestinationjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_SRCDEST].jitter.max), NULL, OSP_MAP_STATS },
+    { "rtcpsourcetodestinationjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_SRCDEST].jitter.mean), NULL, OSP_MAP_STATS },
+    { "rtcpupsourcetodestinationjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_SRCDEST].jitter.var), NULL, OSP_MAP_STATS },
+    /* Delay RTP */
+    { "rtpsourcetoreporterdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.samp), NULL, OSP_MAP_STATS },
+    { "rtpsourcetoreporterdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.min), NULL, OSP_MAP_STATS },
+    { "rtpsourcetoreporterdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.max), NULL, OSP_MAP_STATS },
+    { "rtpsourcetoreporterdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.mean), NULL, OSP_MAP_STATS },
+    { "rtpsourcetoreporterdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.var), NULL, OSP_MAP_STATS },
+    { "rtpdestinationtoreporterdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.samp), NULL, OSP_MAP_STATS },
+    { "rtpdestinationtoreporterdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.min), NULL, OSP_MAP_STATS },
+    { "rtpdestinationtoreporterdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.max), NULL, OSP_MAP_STATS },
+    { "rtpdestinationtoreporterdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.mean), NULL, OSP_MAP_STATS },
+    { "rtpdestinationtoreporterdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.var), NULL, OSP_MAP_STATS },
+#if 0
+    { "rtcpdownstreamdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DOWN].delay.samp), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DOWN].delay.min), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DOWN].delay.max), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DOWN].delay.mean), NULL, OSP_MAP_STATS },
+    { "rtcpdownstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DOWN].delay.var), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_UP].delay.samp), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_UP].delay.min), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_UP].delay.max), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_UP].delay.mean), NULL, OSP_MAP_STATS },
+    { "rtcpupstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_UP].delay.var), NULL, OSP_MAP_STATS },
+#endif
     /* Octets */
     { "rtpoctetscrossover", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mSMAP.cross.rtpoctets), NULL, OSP_MAP_CROSSOVER },
-    { "rtpdownstreamoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].octets), NULL, OSP_MAP_STATS },
-    { "rtpupstreamoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].octets), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].octets), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].octets), NULL, OSP_MAP_STATS },
+    { "rtpsourcetoreporteroctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].octets), NULL, OSP_MAP_STATS },
+    { "rtpdestinationtoreporteroctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].octets), NULL, OSP_MAP_STATS },
+    { "rtcpreportertosourceoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_REPSRC].octets), NULL, OSP_MAP_STATS },
+    { "rtcpreportertodestinationoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_REPDEST].octets), NULL, OSP_MAP_STATS },
     /* Packets */
     { "rtppacketscrossover", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mSMAP.cross.rtppackets), NULL, OSP_MAP_CROSSOVER },
-    { "rtpdownstreampackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].packets), NULL, OSP_MAP_STATS },
-    { "rtpupstreampackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].packets), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreampackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].packets), NULL, OSP_MAP_STATS },
-    { "rtcpupstreampackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].packets), NULL, OSP_MAP_STATS },
-    /* RFactor */
-    { "rtpdownstreamrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].rfactor), NULL, OSP_MAP_STATS },
-    { "rtpupstreamrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].rfactor), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].rfactor), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].rfactor), NULL, OSP_MAP_STATS },
-    /* MOS */
-    { "rtpdownstreammoscq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].moscq), NULL, OSP_MAP_STATS },
-    { "rtpupstreammoscq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].moscq), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreammoscq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].moscq), NULL, OSP_MAP_STATS },
-    { "rtcpupstreammoscq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].moscq), NULL, OSP_MAP_STATS },
-    { "rtpdownstreammoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_DOWN].moslq), NULL, OSP_MAP_STATS },
-    { "rtpupstreammoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_FLOW_UP].moslq), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreammoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_DOWN].moslq), NULL, OSP_MAP_STATS },
-    { "rtcpupstreammoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_FLOW_UP].moslq), NULL, OSP_MAP_STATS },
+    { "rtpsourcetoreporterpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].packets), NULL, OSP_MAP_STATS },
+    { "rtpestinationtoreporterpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].packets), NULL, OSP_MAP_STATS },
+    { "rtcpreportertosourcepackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_REPSRC].packets), NULL, OSP_MAP_STATS },
+    { "rtcpreportertodestinationpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_REPDEST].packets), NULL, OSP_MAP_STATS },
 #undef mSGMAP
 #undef mSMAP
     /* Statistics group mapping end */
@@ -797,12 +800,12 @@ static int osp_get_usageinfo(rlm_osp_t* data, REQUEST* request, int type, osp_us
 static int osp_match_subnet(osp_netlist_t* list, uint32_t ip);
 static int osp_get_statsinfo(osp_mapping_t* mapping, REQUEST* request, int type, osp_usage_t* usage);
 static void osp_get_iphost(char* ip, char* buffer, int buffersize);
-static void osp_create_device(uint32_t ip, int prot, char* buffer, int buffersize);
+static void osp_create_device(uint32_t ip, int port, char* buffer, int buffersize);
 static void osp_format_device(char* device, char* buffer, int buffersize);
 static int osp_get_uriuser(char* uri, char* buffer, int buffersize);
 static int osp_get_urihost(char* uri, char* buffer, int buffersize);
-static OSPE_DEST_PROTOCOL osp_parse_protocol(osp_mapping_t* mapping, char* protocol);
-static OSPE_TERM_CAUSE osp_get_causetype(osp_mapping_t* mapping, OSPE_DEST_PROTOCOL protocol);
+static OSPE_PROTOCOL_NAME osp_parse_protocol(osp_mapping_t* mapping, char* protocol);
+static OSPE_TERM_CAUSE osp_get_causetype(osp_mapping_t* mapping, OSPE_PROTOCOL_NAME protocol);
 static time_t osp_format_time(char* timestamp, osp_timestr_t format);
 static int osp_cal_timeoffset(char* tzone, long int* toffset);
 static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
@@ -820,7 +823,7 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
 /*
  * Check value min
  *
- * param _name Varaible name
+ * param _name Variable name
  * param _val Variable value
  * param _min Min value
  */
@@ -835,7 +838,7 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
 /*
  * Check value range
  *
- * param _name Varaible name
+ * param _name Variable name
  * param _val Variable value
  * param _min Min value
  * param _max Max value
@@ -879,19 +882,19 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
  * param _cli Client type
  * param _ori Call origin
  * param _grp Statistic group
- * param _flow Statistic flow
+ * param _dir Statistic dir
  * param _flag Crossover flag
  * param _map VSA default mapping
  * param _down VSA downstream mapping
  * param _up VSA upstream mapping
  * param _vsa Used VSA mapping
  */
-#define OSP_CROSSOVER_MAPS(_cli, _ori, _grp, _flow, _flag, _map, _down, _up, _vsa) { \
+#define OSP_CROSSOVER_MAPS(_cli, _ori, _grp, _dir, _flag, _map, _down, _up, _vsa) { \
     _vsa = _map; \
     switch (_cli) { \
     case OSP_CLIENT_CISCO: \
         if ((_ori == OSP_ORIGIN_INIT) && (_grp == OSP_GROUP_RTP) && (_flag)) { \
-            if (_flow == OSP_FLOW_DOWN) { \
+            if (_dir == OSP_DIR_SRCREP) { \
                 _vsa = _up; \
             } else { \
                _vsa = _down; \
@@ -900,7 +903,7 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
         break; \
     case OSP_CLIENT_UNDEF: \
     case OSP_CLIENT_ACME: \
-    case OSP_CLIENT_NEXTONE: \
+    case OSP_CLIENT_GENBANDS3: \
     default: \
         break; \
     } \
@@ -1036,7 +1039,7 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
  * param _lev Must or may be defined
  * param _map Item mapping string
  * param _ip Default IP address
- * param _port Default prot
+ * param _port Default port
  * param _buf Buffer
  * param _val Item value
  */
@@ -1104,7 +1107,7 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
  * param _lev Must or may be defined
  * param _map Item mapping string
  * param _ip Default IP address
- * param _port Default prot
+ * param _port Default port
  * param _buf Buffer
  * param _val Item value
  * param _host Host of IP
@@ -1330,8 +1333,15 @@ static const char* B64CACert = "MIIBYDCCAQoCAQEwDQYJKoZIhvcNAQEEBQAwOzElMCMGA1UE
 /* Media stream group strings */
 static const char* group_str[OSP_GROUP_NUMBER] = { "rtp", "rtcp" };
 
-/* Media stream flow stings */
-static const char* flow_str[OSP_FLOW_NUMBER] = { "downstream", "upstream" };
+/* Media stream direction stings */
+static const char* dir_str[OSP_DIR_NUMBER] = {
+    "source-to-reporter",
+    "reporter-to-source",
+    "destination-to-reporter",
+    "reporter-to-destination",
+    "source-to-destination",
+    "destination-to-source"
+};
 
 /* OSP init flag */
 static int instance_count = 0;
@@ -1596,9 +1606,9 @@ static int osp_check_mapping(
     /* If RADIUS client type is wrong, then fail. */
     OSP_CHECK_RANGE("radiusclienttype", mapping->clienttype, OSP_CLIENT_MIN, OSP_CLIENT_MAX);
 
-    /* If call origin is undefined for NexTone and Cisco, then fail. */
+    /* If call origin is undefined for GENBAND S3 and Cisco, then fail. */
     switch (mapping->clienttype) {
-    case OSP_CLIENT_NEXTONE:
+    case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
         OSP_CHECK_ITEMMAP("callorigin", OSP_DEF_MUST, mapping->origin);
 
@@ -1639,9 +1649,9 @@ static int osp_check_mapping(
     /* If source is incorrect, then fail. */
     OSP_CHECK_ITEMMAP("source", OSP_DEF_MAY, mapping->source);
 
-    /* If proxy is undefined for NexTone and Cisco, then fail. */
+    /* If proxy is undefined for GENBAND S3 and Cisco, then fail. */
     switch (mapping->clienttype) {
-    case OSP_CLIENT_NEXTONE:
+    case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
         OSP_CHECK_ITEMMAP("proxy", OSP_DEF_MUST, mapping->proxy);
         break;
@@ -1705,25 +1715,25 @@ static int osp_check_mapping(
     /* If release cause is undefined, then fail. */
     OSP_CHECK_ITEMMAP("releasecause", OSP_DEF_MUST, mapping->cause);
 
-    /* If destination protocol is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("destinationprotocol", OSP_DEF_MAY, mapping->destprot);
+    /* If signaling protocol is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP("signalingprotocol", OSP_DEF_MAY, mapping->protocol);
 
-    /* If inbound session ID is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("inboundsessionid", OSP_DEF_MAY, mapping->insessionid);
+    /* If source session ID is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP("sourcesessionid", OSP_DEF_MAY, mapping->srcsessionid);
 
-    /* If outbound session ID is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("outboundsessionid", OSP_DEF_MAY, mapping->outsessionid);
+    /* If destination session ID is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP("destinationsessionid", OSP_DEF_MAY, mapping->destsessionid);
 
-    /* If forward codec is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("forwardcodec", OSP_DEF_MAY, mapping->forcodec);
+    /* If source codec is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP("sourcecodec", OSP_DEF_MAY, mapping->srccodec);
 
-    /* If reverse codec is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("reversecodec", OSP_DEF_MAY, mapping->revcodec);
+    /* If destination codec is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP("destinationcodec", OSP_DEF_MAY, mapping->destcodec);
 
     /* If conference ID is incorrect, then fail. */
     OSP_CHECK_ITEMMAP("conferenceid", OSP_DEF_MAY, mapping->confid);
 
-    /* If statistcs are incorrect, then fail. */
+    /* If statistics are incorrect, then fail. */
     if (osp_check_statsmap(&mapping->stats) < 0) {
         return -1;
     }
@@ -1805,7 +1815,7 @@ static int osp_check_statsmap(
     osp_statsmap_t* stats)
 {
     osp_group_t group;
-    osp_flow_t flow;
+    osp_dir_t dir;
     char name[OSP_STRBUF_SIZE];
 
     DEBUG("rlm_osp: osp_check_statsmap start");
@@ -1847,20 +1857,32 @@ static int osp_check_statsmap(
         /* If round trip delay variance is incorrect, then fail. */
         OSP_CHECK_ITEMMAP("roundtripdelayvariance", OSP_DEF_MAY, stats->roundtrip.var);
 
-        for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
-#define mFMAP               (stats->flow[flow])
-#define mFSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s", flow_str[flow], _var)
+        for (dir = OSP_DIR_MIN; dir < OSP_DIR_NUMBER; dir++) {
+#define mDMAP               (stats->dir[dir])
+#define mDSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s", dir_str[dir], _var)
+            /* If rfactor is incorrect, then fail. */
+            mDSTR(name, "rfactor");
+            OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mDMAP.rfactor);
+
+            /* If moscq is incorrect, then fail. */
+            mDSTR(name, "moscq");
+            OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mDMAP.moscq);
+
+            /* If moslq is incorrect, then fail. */
+            mDSTR(name, "moslq");
+            OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mDMAP.moslq);
+
             /* If icpif is incorrect, then fail. */
-            mFSTR(name, "icpif");
-            OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mFMAP.icpif);
-#undef mFMAP
-#undef mFSTR
+            mDSTR(name, "icpif");
+            OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mDMAP.icpif);
+#undef mDSTR
+#undef mDMAP
         }
 
         for (group = OSP_GROUP_RTP; group < OSP_GROUP_NUMBER; group++) {
-            for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
-#define mGMAP               (stats->group[group][flow])
-#define mGSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s%s", group_str[group], flow_str[flow], _var)
+            for (dir = OSP_DIR_MIN; dir < OSP_DIR_NUMBER; dir++) {
+#define mGMAP               (stats->group[group][dir])
+#define mGSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s%s", group_str[group], dir_str[dir], _var)
                 /* If packets lost packets is incorrect, then fail. */
                 mGSTR(name, "lostpackets");
                 OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.lost.pack);
@@ -1916,20 +1938,8 @@ static int osp_check_statsmap(
                 /* If packets is incorrect, then fail. */
                 mGSTR(name, "packets");
                 OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.packets);
-
-                /* If rfactor is incorrect, then fail. */
-                mGSTR(name, "rfactor");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.rfactor);
-
-                /* If moscq is incorrect, then fail. */
-                mGSTR(name, "moscq");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.moscq);
-
-                /* If moslq is incorrect, then fail. */
-                mGSTR(name, "moslq");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.moslq);
-#undef mGMAP
 #undef mGSTR
+#undef mGMAP
             }
         }
 
@@ -2190,7 +2200,7 @@ static int osp_accounting(
     switch (vp->vp_integer) {
     case PW_STATUS_START:
         if (mapping->reportstart) {
-            role = OSPC_ROLE_RADSRCSTART;
+            role = OSPC_ROLE_SOURCE;
             break;
         } else {
             DEBUG("rlm_osp: nothing to do for Start request.");
@@ -2198,7 +2208,7 @@ static int osp_accounting(
         }
     case PW_STATUS_STOP:
         if (mapping->reportstop) {
-            role = OSPC_ROLE_RADSRCSTOP;
+            role = OSPC_ROLE_SOURCE;
             break;
         } else {
             DEBUG("rlm_osp: nothing to do for Stop request.");
@@ -2206,7 +2216,7 @@ static int osp_accounting(
         }
     case PW_STATUS_ALIVE:   /* Interim-Update */
         if (mapping->reportinterim) {
-            role = OSPC_ROLE_RADSRCINTERIM;
+            role = OSPC_ROLE_SOURCE;
             break;
         } else {
             DEBUG("rlm_osp: nothing to do for Interim-Update request.");
@@ -2335,44 +2345,47 @@ static int osp_accounting(
         usage.cause,        /* Release reason */
         NULL);              /* Description */
 
-    /* Report destination protocol */
-    OSPPTransactionSetDestProtocol(
+    /* Report signaling protocol */
+    OSPPTransactionSetProtocol(
         transaction,        /* Transaction handle */
-        usage.destprot);    /* Destination protocol */
+        OSPC_PROTTYPE_NA,   /* Protocol type */
+        usage.protocol);    /* Protocol name */
 
-    /* Report inbound session ID */
-    if (usage.insessionid[0] != '\0') {
-        sessionid = OSPPCallIdNew(strlen(usage.insessionid), (const unsigned char *)usage.insessionid);
+    /* Report source session ID */
+    if (usage.srcsessionid[0] != '\0') {
+        sessionid = OSPPCallIdNew(strlen(usage.srcsessionid), (const unsigned char *)usage.srcsessionid);
         if (sessionid != NULL) {
             OSPPTransactionSetSessionId(
-                transaction,        /* Transaction handle */
-                OSPC_CLEG_INBOUND,  /* Inbound */
-                sessionid);         /* Inbound session ID */
+                transaction,            /* Transaction handle */
+                OSPC_SESSIONID_SOURCE,  /* Source */
+                sessionid);             /* Source session ID */
             OSPPCallIdDelete(&sessionid);
         }
     }
 
-    /* Report outbound session ID */
-    if (usage.outsessionid[0] != '\0') {
-        sessionid = OSPPCallIdNew(strlen(usage.outsessionid), (const unsigned char *)usage.outsessionid);
+    /* Report destination session ID */
+    if (usage.destsessionid[0] != '\0') {
+        sessionid = OSPPCallIdNew(strlen(usage.destsessionid), (const unsigned char *)usage.destsessionid);
         if (sessionid != NULL) {
             OSPPTransactionSetSessionId(
-                transaction,        /* Transaction handle */
-                OSPC_CLEG_OUTBOUND, /* Outbound */
-                sessionid);         /* Outbound session ID */
+                transaction,                /* Transaction handle */
+                OSPC_SESSIONID_DESTINATION, /* Destiantion */
+                sessionid);                 /* Destination session ID */
             OSPPCallIdDelete(&sessionid);
         }
     }
 
-    /* Report forward codec */
-    OSPPTransactionSetForwardCodec(
+    /* Report source codec */
+    OSPPTransactionSetCodec(
         transaction,        /* Transaction handle */
-        usage.forcodec);    /* Forward codec */
+        OSPC_CODEC_SOURCE,  /* Source */
+        usage.srccodec);    /* Source codec */
 
-    /* Report reverse codec */
-    OSPPTransactionSetReverseCodec(
-        transaction,        /* Transaction handle */
-        usage.revcodec);    /* Reverse codec */
+    /* Report destination codec */
+    OSPPTransactionSetCodec(
+        transaction,            /* Transaction handle */
+        OSPC_CODEC_DESTINATION, /* Destination */
+        usage.destcodec);       /* Destination codec */
 
     /* Report statistics */
     osp_report_statsinfo(transaction, &mapping->stats, &usage.stats);
@@ -2432,9 +2445,9 @@ static void osp_report_statsinfo(
     osp_stats_t* stats)
 {
     osp_group_t group;
-    osp_flow_t flow;
+    osp_dir_t dir;
     OSPE_STATS_METRIC metric;
-    OSPE_STATS_FLOW direction;
+    OSPE_STATS_DIR direction;
 
     DEBUG("rlm_osp: osp_report_statsinfo start");
 
@@ -2450,24 +2463,63 @@ static void osp_report_statsinfo(
             stats->roundtrip.var);  /* Round trip delay variance */
 #endif
 
-        for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
-            if (flow == OSP_FLOW_UP) {
-                direction = OSPC_SFLOW_UPSTREAM;
-            } else {
-                direction = OSPC_SFLOW_DOWNSTREAM;
+        for (dir = OSP_DIR_MIN; dir < OSP_DIR_NUMBER; dir++) {
+            switch (dir) {
+            case OSP_DIR_SRCREP:
+                direction = OSPC_SDIR_SRCREP;
+                break;
+            case OSP_DIR_REPSRC:
+                direction = OSPC_SDIR_REPSRC;
+                break;
+            case OSP_DIR_DESTREP:
+                direction = OSPC_SDIR_DESTREP;
+                break;
+            case OSP_DIR_REPDEST:
+                direction = OSPC_SDIR_REPDEST;
+                break;
+            case OSP_DIR_SRCDEST:
+                direction = OSPC_SDIR_SRCDEST;
+                break;
+            case OSP_DIR_DESTSRC:
+                direction = OSPC_SDIR_DESTSRC;
+                break;
+            default:
+                break;
             }
 
-#define mFVAR   (stats->flow[flow])
+#define mDVAR   (stats->dir[dir])
+            /* Report rfactor */
+            if (mDVAR.rfactor != OSP_STATSFLOAT_DEF) {
+                OSPPTransactionSetRFactor(
+                    transaction,    /* Transaction handle */
+                    direction,      /* Direction */
+                    mDVAR.rfactor); /* R-Factor */
+            }
+
+            /* Report moscq */
+            if (mDVAR.moscq != OSP_STATSFLOAT_DEF) {
+                OSPPTransactionSetMOSCQ(
+                    transaction,    /* Transaction handle */
+                    direction,      /* Direction */
+                    mDVAR.moscq);   /* MOS-CQ */
+            }
+
+            /* Report moslq */
+            if (mDVAR.moslq != OSP_STATSFLOAT_DEF) {
+                OSPPTransactionSetMOSLQ(
+                    transaction,    /* Transaction handle */
+                    direction,      /* Direction */
+                    mDVAR.moslq);   /* MOS-LQ */
+            }
+
             /* Report icpif */
-            if (mFVAR.icpif != OSP_STATSINT_DEF) {
-#if 0
+            if (mDVAR.icpif != OSP_STATSINT_DEF) {
                 OSPPTransactionSetICPIF(
                     transaction,    /* Transaction handle */
-                    direction,      /* Flow direction */
-                    mFVAR.icpif);   /* ICPIF */
-#endif
+                    direction,      /* Direction */
+                    mDVAR.icpif);   /* ICPIF */
             }
-#undef mFVAR
+#undef mDVAR
         }
 
         for (group = OSP_GROUP_RTP; group < OSP_GROUP_NUMBER; group++) {
@@ -2477,22 +2529,39 @@ static void osp_report_statsinfo(
                 metric = OSPC_SMETRIC_RTP;
             }
 
-            for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
-                if (flow == OSP_FLOW_UP) {
-                    direction = OSPC_SFLOW_UPSTREAM;
-                } else {
-                    direction = OSPC_SFLOW_DOWNSTREAM;
+            for (dir = OSP_DIR_MIN; dir < OSP_DIR_NUMBER; dir++) {
+                switch (dir) {
+                case OSP_DIR_SRCREP:
+                    direction = OSPC_SDIR_SRCREP;
+                    break;
+                case OSP_DIR_REPSRC:
+                    direction = OSPC_SDIR_REPSRC;
+                    break;
+                case OSP_DIR_DESTREP:
+                    direction = OSPC_SDIR_DESTREP;
+                    break;
+                case OSP_DIR_REPDEST:
+                    direction = OSPC_SDIR_REPDEST;
+                    break;
+                case OSP_DIR_SRCDEST:
+                    direction = OSPC_SDIR_SRCDEST;
+                    break;
+                case OSP_DIR_DESTSRC:
+                    direction = OSPC_SDIR_DESTSRC;
+                    break;
+                default:
+                    break;
                 }
 
-#define mGVAR   (stats->group[group][flow])
+#define mGVAR   (stats->group[group][dir])
                 /* Report packets lost */
                 if ((mGVAR.lost.pack != OSP_STATSINT_DEF) || (mGVAR.lost.fract != OSP_STATSINT_DEF)) {
                     OSPPTransactionSetLost(
                         transaction,        /* Transaction handle */
                         metric,             /* Metric */
-                        direction,          /* Flow direction */
-                        mGVAR.lost.pack,     /* Packets lost packets */
-                        mGVAR.lost.fract);   /* Packets lost fraction */
+                        direction,          /* Direction */
+                        mGVAR.lost.pack,    /* Packets lost packets */
+                        mGVAR.lost.fract);  /* Packets lost fraction */
                 }
 
                 /* Report jitter */
@@ -2505,12 +2574,12 @@ static void osp_report_statsinfo(
                     OSPPTransactionSetJitter(
                         transaction,        /* Transaction handle */
                         metric,             /* Metric */
-                        direction,          /* Flow direction */
-                        mGVAR.jitter.samp,   /* Jitter samples */
-                        mGVAR.jitter.min,    /* Jitter minimum */
-                        mGVAR.jitter.max,    /* Jitter maximum */
-                        mGVAR.jitter.mean,   /* Jitter mean */
-                        mGVAR.jitter.var);   /* Jitter variance */
+                        direction,          /* Direction */
+                        mGVAR.jitter.samp,  /* Jitter samples */
+                        mGVAR.jitter.min,   /* Jitter minimum */
+                        mGVAR.jitter.max,   /* Jitter maximum */
+                        mGVAR.jitter.mean,  /* Jitter mean */
+                        mGVAR.jitter.var);  /* Jitter variance */
                 }
 
                 /* Report delay */
@@ -2523,12 +2592,12 @@ static void osp_report_statsinfo(
                     OSPPTransactionSetDelay(
                         transaction,        /* Transaction handle */
                         metric,             /* Metric */
-                        direction,          /* Flow direction */
-                        mGVAR.delay.samp,    /* Delay samples */
-                        mGVAR.delay.min,     /* Delay minimum */
-                        mGVAR.delay.max,     /* Delay maximum */
-                        mGVAR.delay.mean,    /* Delay mean */
-                        mGVAR.delay.var);    /* Delay variance */
+                        direction,          /* Direction */
+                        mGVAR.delay.samp,   /* Delay samples */
+                        mGVAR.delay.min,    /* Delay minimum */
+                        mGVAR.delay.max,    /* Delay maximum */
+                        mGVAR.delay.mean,   /* Delay mean */
+                        mGVAR.delay.var);   /* Delay variance */
                 }
 
                 /* Report octets */
@@ -2536,8 +2605,8 @@ static void osp_report_statsinfo(
                     OSPPTransactionSetOctets(
                         transaction,    /* Transaction handle */
                         metric,         /* Metric */
-                        direction,      /* Flow direction */
-                        mGVAR.octets);   /* Octets */
+                        direction,      /* Direction */
+                        mGVAR.octets);  /* Octets */
                 }
 
                 /* Report packets */
@@ -2545,35 +2614,8 @@ static void osp_report_statsinfo(
                     OSPPTransactionSetPackets(
                         transaction,    /* Transaction handle */
                         metric,         /* Metric */
-                        direction,      /* Flow direction */
-                        mGVAR.packets);  /* Packets */
-                }
-
-                /* Report rfactor */
-                if (mGVAR.rfactor != OSP_STATSFLOAT_DEF) {
-                    OSPPTransactionSetRFactor(
-                        transaction,    /* Transaction handle */
-                        metric,         /* Metric */
-                        direction,      /* Flow direction */
-                        mGVAR.rfactor);  /* R-Factor */
-                }
-
-                /* Report moscq */
-                if (mGVAR.moscq != OSP_STATSFLOAT_DEF) {
-                    OSPPTransactionSetMOSCQ(
-                        transaction,    /* Transaction handle */
-                        metric,         /* Metric */
-                        direction,      /* Flow direction */
-                        mGVAR.moscq);    /* MOS-CQ */
-                }
-
-                /* Report moslq */
-                if (mGVAR.moslq != OSP_STATSFLOAT_DEF) {
-                    OSPPTransactionSetMOSLQ(
-                        transaction,    /* Transaction handle */
-                        metric,         /* Metric */
-                        direction,      /* Flow direction */
-                        mGVAR.moslq);    /* MOS-LQ */
+                        direction,      /* Direction */
+                        mGVAR.packets); /* Packets */
                 }
 #undef mGVAR
             }
@@ -2613,7 +2655,7 @@ static int osp_get_usageinfo(
 
     /* Get call origin */
     switch (mapping->clienttype) {
-    case OSP_CLIENT_NEXTONE:
+    case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
         OSP_GET_STRING(request, TRUE, "callorigin", OSP_DEF_MUST, mapping->origin, buffer);
         if (!strcmp(buffer, OSP_CISCOCALL_TERM)) {
@@ -2656,7 +2698,7 @@ static int osp_get_usageinfo(
     OSP_GET_IP(request, TRUE, "source", OSP_DEF_MAY, mapping->source, provider->deviceip, provider->deviceport, buffer, usage->source, tmphost);
 
     switch (mapping->clienttype) {
-    case OSP_CLIENT_NEXTONE:
+    case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
         if (usage->origin == OSP_ORIGIN_TERM) {
             /* Get source device */
@@ -2770,7 +2812,7 @@ static int osp_get_usageinfo(
             } else {
                 release = atoi(buffer);
                 switch (mapping->clienttype) {
-                case OSP_CLIENT_NEXTONE:
+                case OSP_CLIENT_GENBANDS3:
                 case OSP_CLIENT_CISCO:
                     switch (release) {
                     case OSP_CISCOREL_CALLEDPSTN:
@@ -2824,7 +2866,7 @@ static int osp_get_usageinfo(
     /* Get release cause */
     parse = ((type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     switch (mapping->clienttype) {
-    case OSP_CLIENT_NEXTONE:
+    case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
         format = OSP_INTSTR_HEX;
         break;
@@ -2836,17 +2878,17 @@ static int osp_get_usageinfo(
     }
     OSP_GET_INTEGER(request, parse, "releasecause", OSP_DEF_MUST, mapping->cause, format, OSP_CAUSE_DEF, buffer, usage->cause);
 
-    /* Get destination protocol */
+    /* Get signaling protocol */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
-    OSP_GET_STRING(request, parse, "destinationprotocol", OSP_DEF_MAY, mapping->destprot, buffer);
-    usage->destprot = osp_parse_protocol(mapping, buffer);
-    DEBUG("rlm_osp: destination protocol type = '%d'", usage->destprot);
+    OSP_GET_STRING(request, parse, "signalingprotocol", OSP_DEF_MAY, mapping->protocol, buffer);
+    usage->protocol = osp_parse_protocol(mapping, buffer);
+    DEBUG("rlm_osp: signaling protocol type = '%d'", usage->protocol);
 
     /* Get release reason type */
-    usage->causetype = osp_get_causetype(mapping, usage->destprot);
+    usage->causetype = osp_get_causetype(mapping, usage->protocol);
     DEBUG("rlm_osp: termination cause type = '%d'", usage->causetype);
 
-    /* Get inbound session ID */
+    /* Get source session ID */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     switch (mapping->clienttype) {
     case OSP_CLIENT_CISCO:
@@ -2856,16 +2898,16 @@ static int osp_get_usageinfo(
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
-    case OSP_CLIENT_NEXTONE:
+    case OSP_CLIENT_GENBANDS3:
     default:
         break;
     }
-    OSP_GET_STRING(request, parse, "inboundsessionid", OSP_DEF_MAY, mapping->insessionid, usage->insessionid);
+    OSP_GET_STRING(request, parse, "sourcesessionid", OSP_DEF_MAY, mapping->srcsessionid, usage->srcsessionid);
 
-    /* Get outbound session ID */
+    /* Get destination session ID */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     switch (mapping->clienttype) {
-    case OSP_CLIENT_NEXTONE:
+    case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
         if (usage->origin == OSP_ORIGIN_TERM) {
             parse = FALSE;
@@ -2876,15 +2918,15 @@ static int osp_get_usageinfo(
     default:
         break;
     }
-    OSP_GET_STRING(request, parse, "outboundsessionid", OSP_DEF_MAY, mapping->outsessionid, usage->outsessionid);
+    OSP_GET_STRING(request, parse, "destinationsessionid", OSP_DEF_MAY, mapping->destsessionid, usage->destsessionid);
 
-    /* Get forward codec */
+    /* Get source codec */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
-    OSP_GET_STRING(request, parse, "forwardcodec", OSP_DEF_MAY, mapping->forcodec, usage->forcodec);
+    OSP_GET_STRING(request, parse, "sourcecodec", OSP_DEF_MAY, mapping->srccodec, usage->srccodec);
 
-    /* Get reverse codec */
+    /* Get destination codec */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
-    OSP_GET_STRING(request, parse, "reversecodec", OSP_DEF_MAY, mapping->revcodec, usage->revcodec);
+    OSP_GET_STRING(request, parse, "destinationcodec", OSP_DEF_MAY, mapping->destcodec, usage->destcodec);
 
     /* Get conference ID */
     parse = (type == PW_STATUS_STOP);
@@ -2954,7 +2996,7 @@ static int osp_get_statsinfo(
     osp_stats_t* var = &usage->stats;
     int parse, parseleg;
     osp_group_t group;
-    osp_flow_t flow;
+    osp_dir_t dir;
     char name[OSP_STRBUF_SIZE];
     char buffer[OSP_STRBUF_SIZE];
     char* vsa;
@@ -2995,54 +3037,72 @@ static int osp_get_statsinfo(
 
         /* Get round trip delay variance */
         OSP_GET_FLOAT(request, parse, "roundtripdelayvariance", OSP_DEF_MAY, mRMAP.var, OSP_SCALE_1, OSP_STATSFLOAT_DEF, buffer, mRVAR.var);
-#undef mRMAP
 #undef mRVAR
+#undef mRMAP
 
-        for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
-#define mFMAP               (map->flow[flow])
-#define mFVAR               (var->flow[flow])
-#define mFSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s", flow_str[flow], _var)
+        for (dir = OSP_DIR_MIN; dir < OSP_DIR_NUMBER; dir++) {
+#define mDMAP               (map->dir[dir])
+#define mDVAR               (var->dir[dir])
+#define mDSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s", dir_str[dir], _var)
+            /* Get rfactor */
+            mDSTR(name, "rfactor");
+            OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mDMAP.rfactor, map->rfactorscale, OSP_STATSFLOAT_DEF, buffer, mDVAR.rfactor);
+
+            /* Get moscq */
+            mDSTR(name, "moscq");
+            OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mDMAP.moscq, map->mosscale, OSP_STATSFLOAT_DEF, buffer, mDVAR.moscq);
+
+            /* Get moslq */
+            mDSTR(name, "moslq");
+            OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mDMAP.moslq, map->mosscale, OSP_STATSFLOAT_DEF, buffer, mDVAR.moslq);
+
             parseleg = parse;
             switch (mapping->clienttype) {
             case OSP_CLIENT_CISCO:
-                if (((usage->origin == OSP_ORIGIN_TERM) && (flow == OSP_FLOW_UP)) ||
-                    ((usage->origin == OSP_ORIGIN_INIT) && (flow == OSP_FLOW_DOWN)))
+                // TODO:
+                /*
+                if (((usage->origin == OSP_ORIGIN_TERM) && (dir == OSP_FLOW_UP)) ||
+                    ((usage->origin == OSP_ORIGIN_INIT) && (dir == OSP_FLOW_DOWN)))
                 {
                     parseleg = FALSE;
                 }
+                */
                 break;
             case OSP_CLIENT_UNDEF:
             case OSP_CLIENT_ACME:
-            case OSP_CLIENT_NEXTONE:
+            case OSP_CLIENT_GENBANDS3:
             default:
                 break;
             }
 
             /* Get icpif */
-            mFSTR(name, "icpif");
-            OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mFMAP.icpif, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mFVAR.icpif);
-#undef mFMAP
-#undef mFVAR
-#undef mFSTR
+            mDSTR(name, "icpif");
+            OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mDMAP.icpif, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mDVAR.icpif);
+#undef mDSTR
+#undef mDVAR
+#undef mDMAP
         }
 
         for (group = OSP_GROUP_RTP; group < OSP_GROUP_NUMBER; group++) {
-            for (flow = OSP_FLOW_DOWN; flow < OSP_FLOW_NUMBER; flow++) {
-#define mGMAP               (map->group[group][flow])
-#define mGVAR               (var->group[group][flow])
-#define mGSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s%s", group_str[group], flow_str[flow], _var)
+            for (dir = OSP_DIR_MIN; dir < OSP_DIR_NUMBER; dir++) {
+#define mGMAP               (map->group[group][dir])
+#define mGVAR               (var->group[group][dir])
+#define mGSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s%s", group_str[group], dir_str[dir], _var)
                 parseleg = parse;
                 switch (mapping->clienttype) {
                 case OSP_CLIENT_CISCO:
-                    if (((usage->origin == OSP_ORIGIN_TERM) && (group == OSP_GROUP_RTP) && (flow == OSP_FLOW_UP)) ||
-                        ((usage->origin == OSP_ORIGIN_INIT) && (group == OSP_GROUP_RTP) && (flow == OSP_FLOW_DOWN)))
+                    // TODO:
+                    /*
+                    if (((usage->origin == OSP_ORIGIN_TERM) && (group == OSP_GROUP_RTP) && (dir == OSP_FLOW_UP)) ||
+                        ((usage->origin == OSP_ORIGIN_INIT) && (group == OSP_GROUP_RTP) && (dir == OSP_FLOW_DOWN)))
                     {
                         parseleg = FALSE;
                     }
+                    */
                     break;
                 case OSP_CLIENT_UNDEF:
                 case OSP_CLIENT_ACME:
-                case OSP_CLIENT_NEXTONE:
+                case OSP_CLIENT_GENBANDS3:
                 default:
                     break;
                 }
@@ -3098,33 +3158,21 @@ static int osp_get_statsinfo(
 #define mCRO    (map->cross)
                 /* Get octets */
                 mGSTR(name, "octets");
-                dvsa = map->group[OSP_GROUP_RTP][OSP_FLOW_DOWN].octets;
-                uvsa = map->group[OSP_GROUP_RTP][OSP_FLOW_UP].octets;
-                OSP_CROSSOVER_MAPS(mapping->clienttype, usage->origin, group, flow, mCRO.rtpoctets, mGMAP.octets, dvsa, uvsa, vsa);
+                dvsa = map->group[OSP_GROUP_RTP][OSP_DIR_SRCREP].octets;
+                uvsa = map->group[OSP_GROUP_RTP][OSP_DIR_DESTREP].octets;
+                OSP_CROSSOVER_MAPS(mapping->clienttype, usage->origin, group, dir, mCRO.rtpoctets, mGMAP.octets, dvsa, uvsa, vsa);
                 OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, vsa, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.octets);
 
                 /* Get packets */
                 mGSTR(name, "packets");
-                dvsa = map->group[OSP_GROUP_RTP][OSP_FLOW_DOWN].packets;
-                uvsa = map->group[OSP_GROUP_RTP][OSP_FLOW_UP].packets;
-                OSP_CROSSOVER_MAPS(mapping->clienttype, usage->origin, group, flow, mCRO.rtppackets, mGMAP.packets, dvsa, uvsa, vsa);
+                dvsa = map->group[OSP_GROUP_RTP][OSP_DIR_SRCREP].packets;
+                uvsa = map->group[OSP_GROUP_RTP][OSP_DIR_DESTREP].packets;
+                OSP_CROSSOVER_MAPS(mapping->clienttype, usage->origin, group, dir, mCRO.rtppackets, mGMAP.packets, dvsa, uvsa, vsa);
                 OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, vsa, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.packets);
 #undef mCRO
-
-                /* Get rfactor is */
-                mGSTR(name, "rfactor");
-                OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mGMAP.rfactor, map->rfactorscale, OSP_STATSFLOAT_DEF, buffer, mGVAR.rfactor);
-
-                /* Get moscq */
-                mGSTR(name, "moscq");
-                OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mGMAP.moscq, map->mosscale, OSP_STATSFLOAT_DEF, buffer, mGVAR.moscq);
-
-                /* Get moslq */
-                mGSTR(name, "moslq");
-                OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mGMAP.moslq, map->mosscale, OSP_STATSFLOAT_DEF, buffer, mGVAR.moslq);
-#undef mGMAP
-#undef mGVAR
 #undef mGSTR
+#undef mGVAR
+#undef mGMAP
             }
         }
     } else {
@@ -3384,63 +3432,63 @@ static int osp_get_urihost(
  * Parse protocol from string
  *
  * param mapping Mapping parameters
- * param protocol Protocol string
+ * param protocol Protocol name string
  * return Protocol
  */
-static OSPE_DEST_PROTOCOL osp_parse_protocol(
+static OSPE_PROTOCOL_NAME osp_parse_protocol(
     osp_mapping_t* mapping,
     char* protocol)
 {
-    OSPE_DEST_PROTOCOL type = OSPC_DPROT_UNKNOWN;
+    OSPE_PROTOCOL_NAME name = OSPC_PROTNAME_UNKNOWN;
 
     DEBUG("rlm_osp: osp_parse_protocol start");
 
     if (OSP_CHECK_STRING(protocol)) {
         /* Comparing ignore case, Solaris does not support strcasestr */
         if (strstr(protocol, "SIP") || strstr(protocol, "Sip") || strstr(protocol, "sip")) {
-            type = OSPC_DPROT_SIP;
+            name = OSPC_PROTNAME_SIP;
         } else {
             switch (mapping->clienttype) {
-            case OSP_CLIENT_NEXTONE:
+            case OSP_CLIENT_GENBANDS3:
             case OSP_CLIENT_CISCO:
                 if (strstr(protocol, "CISCO") || strstr(protocol, "Cisco") || strstr(protocol, "cisco")) {
-                    type = OSPC_DPROT_Q931;
+                    name = OSPC_PROTNAME_Q931;
                 }
                 break;
             case OSP_CLIENT_UNDEF:
             case OSP_CLIENT_ACME:
             default:
                 if (strstr(protocol, "H323") || strstr(protocol, "h323")) {
-                    type = OSPC_DPROT_Q931;
+                    name = OSPC_PROTNAME_Q931;
                 }
                 break;
             }
         }
     }
-    DEBUG("rlm_osp: protocol type = '%d'", type);
+    DEBUG("rlm_osp: protocol name = '%d'", name);
 
     DEBUG("rlm_osp: osp_parse_protocol success");
 
-    return type;
+    return name;
 }
 
 /*
- * Get termination cause type from destination protocol
+ * Get termination cause type from signaling protocol
  *
  * param mapping Mapping parameters
- * param protocol Destination protocol
+ * param protocol Signaling protocol
  * return Termination cause type
  */
 static OSPE_TERM_CAUSE osp_get_causetype(
     osp_mapping_t* mapping,
-    OSPE_DEST_PROTOCOL protocol)
+    OSPE_PROTOCOL_NAME protocol)
 {
     OSPE_TERM_CAUSE type;
 
     DEBUG("rlm_osp: osp_get_causetype start");
 
     switch (mapping->clienttype) {
-    case OSP_CLIENT_NEXTONE:
+    case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
         type = OSPC_TCAUSE_H323;
         break;
@@ -3448,14 +3496,14 @@ static OSPE_TERM_CAUSE osp_get_causetype(
     case OSP_CLIENT_ACME:
     default:
         switch (protocol) {
-        case OSPC_DPROT_SIP:
+        case OSPC_PROTNAME_SIP:
             type = OSPC_TCAUSE_SIP;
             break;
-        case OSPC_DPROT_LRQ:
-        case OSPC_DPROT_Q931:
+        case OSPC_PROTNAME_LRQ:
+        case OSPC_PROTNAME_Q931:
             type = OSPC_TCAUSE_H323;
             break;
-        case OSPC_DPROT_XMPP:
+        case OSPC_PROTNAME_XMPP:
             type = OSPC_TCAUSE_XMPP;
             break;
         default:
@@ -3666,7 +3714,7 @@ static int osp_cal_elapsed(
  * Only free memory we allocated.  The strings allocated via
  * cf_section_parse() do not need to be freed.
  *
- * param instance Instace data
+ * param instance Instance data
  * return 0 success
  */
 static int osp_detach(
@@ -3714,7 +3762,7 @@ module_t rlm_osp = {
     {
         NULL,               /* authentication */
         NULL,               /* authorization */
-        NULL,               /* preaccounting */
+        NULL,               /* pre-accounting */
         osp_accounting,     /* accounting */
         NULL,               /* checksimul */
         NULL,               /* pre-proxy */
