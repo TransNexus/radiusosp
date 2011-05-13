@@ -45,20 +45,22 @@ RCSID("$Id$")
 #define OSP_LOGLEVEL_DEF    "1"                         /* Mapping default log level, long */
 #define OSP_HWACCE_DEF      "no"                        /* Mapping default hardware accelerate flag */
 #define OSP_SECURITY_DEF    "no"                        /* Mapping default security flag */
-#define OSP_SPS_MAX         4                           /* OSP max number of service points */
+#define OSP_SPNUM_MAX       4                           /* OSP max number of service points */
 #define OSP_SPURI_DEF       "http://osptestserver.transnexus.com:5045/osp"  /* OSP default service point URI */
 #define OSP_SPWEIGHT_DEF    "1000"                      /* Mapping default service point weight */
 #define OSP_AUDITURL_DEF    "http://localhost:1234"     /* OSP default Audit URL */
 #define OSP_PRIVATEKEY_DEF  "${raddbdir}/pkey.pem"      /* OSP default private key file */
 #define OSP_LOCALCERT_DEF   "${raddbdir}/localcert.pem" /* OSP default localcert file */
-#define OSP_CAS_MAX         4                           /* OSP max number of cacert files */
+#define OSP_CANUM_MAX       4                           /* OSP max number of cacert files */
 #define OSP_CACERT_DEF      "${raddbdir}/cacert_0.pem"  /* OSP default cacert file */
 #define OSP_VALIDATION_DEF  1                           /* OSP default token validation, locally */
 #define OSP_SSLLIFETIME_DEF "300"                       /* Mapping default SSL life time in seconds */
+#define OSP_SSLLIFETIME_MIN 0                           /* OSP min SSL life time */
 #define OSP_MAXCONN_DEF     "20"                        /* Mapping default max number of connections */
 #define OSP_MAXCONN_MIN     1                           /* OSP min max number of connections */
 #define OSP_MAXCONN_MAX     1000                        /* OSP max max number of connections */
-#define OSP_PERSISTENCE_DEF "60000"                     /* Mapping default HTTP persistence in ms*/
+#define OSP_PERSISTENCE_DEF "60000"                     /* Mapping default HTTP persistence in milliseconds */
+#define OSP_PERSISTENCE_MIN 0                           /* OSP min HTTP persistence */
 #define OSP_RETRYDELAY_DEF  "0"                         /* Mapping default retry delay */
 #define OSP_RETRYDELAY_MIN  0                           /* OSP min retry delay */
 #define OSP_RETRYDELAY_MAX  10                          /* OSP max retry delay */
@@ -66,8 +68,8 @@ RCSID("$Id$")
 #define OSP_RETRYLIMIT_MIN  0                           /* OSP min retry times */
 #define OSP_RETRYLIMIT_MAX  100                         /* OSP max retry times */
 #define OSP_TIMEOUT_DEF     "10000"                     /* Mapping default timeout */
-#define OSP_TIMEOUT_MIN     200                         /* OSP min timeout in ms */
-#define OSP_TIMEOUT_MAX     60000                       /* OSP max timeout in ms */
+#define OSP_TIMEOUT_MIN     200                         /* OSP min timeout in milliseconds */
+#define OSP_TIMEOUT_MAX     60000                       /* OSP max timeout in milliseconds */
 #define OSP_DEVICEIP_DEF    "localhost"                 /* Mapping default device IP */
 #define OSP_DEVICEPORT_DEF  "5060"                      /* Mapping default device port */
 #define OSP_CUSTOMERID_DEF  ""                          /* OSP default customer ID */
@@ -75,7 +77,7 @@ RCSID("$Id$")
 /* VSA configurations */
 #define OSP_IP_DEF          0                           /* OSP default IP */
 #define OSP_PORT_DEF        0                           /* OSP default port */
-#define OSP_DESTCOUNT_DEF   0                           /* OSP default destination count, unset */
+#define OSP_DESTCOUNT_DEF   0                           /* OSP default destination count, unknown */
 #define OSP_CAUSE_DEF       0                           /* OSP default termination cause */
 #define OSP_TIME_DEF        0                           /* OSP default time value */
 #define OSP_STATSINT_DEF    ((int)-1)                   /* OSP default statistics, integer */
@@ -89,45 +91,176 @@ RCSID("$Id$")
 /*
  * Default RADIUS OSP mapping
  */
-#define OSP_MAP_REPORTRAD       "yes"                       /* Report Stop, Start or Interim-Update RADIUS records */
-#define OSP_MAP_CLIENTTYPE      "0"                         /* RADIUS client type, undefined */
-#define OSP_MAP_NETLIST         NULL                        /* Subnet list */
-#define OSP_MAP_ORIGIN          NULL                        /* Call origin */
-#define OSP_MAP_IGNORERAD       "no"                        /* Ingore answer or originate RADIUS records */
-#define OSP_MAP_TRANSID         NULL                        /* Transaction ID */
-#define OSP_MAP_CALLID          "%{Acct-Session-Id}"        /* Call-ID, RFC 2866 */
-#define OSP_MAP_NUMFORMAT       "0"                         /* Calling/called number format, E.164 */
-#define OSP_MAP_CALLING         "%{Calling-Station-Id}"     /* Calling number, RFC 2865 */
-#define OSP_MAP_CALLED          "%{Called-Station-Id}"      /* Called number, RFC 2865 */
-#define OSP_MAP_ASSERTEDID      NULL                        /* P-Asserted-Identity */
-#define OSP_MAP_SOURCE          "%{NAS-IP-Address}"         /* Source, RFC 2865 */
-#define OSP_MAP_PROXY           "%{NAS-IP-Address}"         /* Proxy, RFC 2865 */
-#define OSP_MAP_SRCDEV          NULL                        /* Source device */
-#define OSP_MAP_DESTINATION     NULL                        /* Destination */
-#define OSP_MAP_DESTDEV         NULL                        /* Destination device */
-#define OSP_MAP_DESTCOUNT       NULL                        /* Destination count */
-#define OSP_MAP_NETWORKID       NULL                        /* Network ID */
-#define OSP_MAP_DIVUSER         NULL                        /* Diversion user */
-#define OSP_MAP_DIVHOST         NULL                        /* Diversion host */
-#define OSP_MAP_TIMEFORMAT      "0"                         /* Time string format, integer string */
-#define OSP_MAP_START           "%{Acct-Session-Start-Time}"/* Call start time, FreeRADIUS internal */
-#define OSP_MAP_ALERT           NULL                        /* Call alert time */
-#define OSP_MAP_CONNECT         NULL                        /* Call connect time */
-#define OSP_MAP_END             NULL                        /* Call end time */
-#define OSP_MAP_DURATION        "%{Acct-Session-Time}"      /* Call duration, RFC 2866 */
-#define OSP_MAP_PDDUNIT         "0"                         /* PDD unit, second */
-#define OSP_MAP_PDD             NULL                        /* Post dial delay */
-#define OSP_MAP_RELEASE         NULL                        /* Release source */
-#define OSP_MAP_CAUSE           "%{Acct-Terminate-Cause}"   /* Release cause, RFC 2866 */
-#define OSP_MAP_PROTOCOL        NULL                        /* Signaling protocol */
-#define OSP_MAP_SESSIONID       NULL                        /* Session ID */
-#define OSP_MAP_CODEC           NULL                        /* Codec */
-#define OSP_MAP_CONFID          NULL                        /* Conference ID */
-#define OSP_MAP_REPORTSTATS     "yes"                       /* Report statistics */
-#define OSP_MAP_STATS           NULL                        /* Statistics */
-#define OSP_MAP_CROSSOVER       "no"                        /* Crossover flag */
-#define OSP_MAP_SCALE           "4"                         /* Scale, 1 */
-#define OSP_MAP_CUSTOMINFO      NULL                        /* User-defined info */
+#define OSP_MAP_REPORT          "yes"                           /* Report Stop, Start or Interim-Update RADIUS records */
+#define OSP_MAP_CLIENTTYPE      "0"                             /* RADIUS client type, undefined */
+#define OSP_MAP_NETLIST         NULL                            /* Subnet list */
+#define OSP_MAP_ORIGIN          NULL                            /* Call origin */
+#define OSP_MAP_IGNORERAD       "no"                            /* Ingore answer or originate RADIUS records */
+#define OSP_MAP_TRANSID         NULL                            /* Transaction ID */
+#define OSP_MAP_CALLID          "%{Acct-Session-Id}"            /* Call-ID, RFC 2866 */
+#define OSP_MAP_NUMFORMAT       "0"                             /* Calling/called number format, E.164 */
+#define OSP_MAP_CALLING         "%{Calling-Station-Id}"         /* Calling number, RFC 2865 */
+#define OSP_MAP_CALLED          "%{Called-Station-Id}"          /* Called number, RFC 2865 */
+#define OSP_MAP_ASSERTEDID      NULL                            /* P-Asserted-Identity */
+#define OSP_MAP_RPID            NULL                            /* Remote-Party-ID */
+#define OSP_MAP_SOURCE          "%{NAS-IP-Address}"             /* Source, RFC 2865 */
+#define OSP_MAP_PROXY           "%{NAS-IP-Address}"             /* Proxy, RFC 2865 */
+#define OSP_MAP_SRCDEV          NULL                            /* Source device */
+#define OSP_MAP_DESTINATION     NULL                            /* Destination */
+#define OSP_MAP_DESTDEV         NULL                            /* Destination device */
+#define OSP_MAP_DESTCOUNT       NULL                            /* Destination count */
+#define OSP_MAP_NETWORKID       NULL                            /* Network ID */
+#define OSP_MAP_DIVUSER         NULL                            /* Diversion user */
+#define OSP_MAP_DIVHOST         NULL                            /* Diversion host */
+#define OSP_MAP_TIMEFORMAT      "0"                             /* Time string format, integer string */
+#define OSP_MAP_START           "%{Acct-Session-Start-Time}"    /* Call start time, FreeRADIUS internal */
+#define OSP_MAP_ALERT           NULL                            /* Call alert time */
+#define OSP_MAP_CONNECT         NULL                            /* Call connect time */
+#define OSP_MAP_END             NULL                            /* Call end time */
+#define OSP_MAP_DURATION        "%{Acct-Session-Time}"          /* Call duration, RFC 2866 */
+#define OSP_MAP_PDDUNIT         "0"                             /* PDD unit, second */
+#define OSP_MAP_PDD             NULL                            /* Post dial delay */
+#define OSP_MAP_RELEASE         NULL                            /* Release source */
+#define OSP_MAP_PROTOCOL        NULL                            /* Signaling protocol */
+#define OSP_MAP_CAUSE           "%{Acct-Terminate-Cause}"       /* Release cause, RFC 2866 */
+#define OSP_MAP_SESSIONID       NULL                            /* Session ID */
+#define OSP_MAP_CODEC           NULL                            /* Codec */
+#define OSP_MAP_CONFID          NULL                            /* Conference ID */
+#define OSP_MAP_CUSTOMINFO      NULL                            /* User-defined info */
+#define OSP_MAP_REALM           NULL                            /* Realm */
+#define OSP_MAP_STATS           NULL                            /* Statistics */
+#define OSP_MAP_SCALE           "4"                             /* Scale, 1 */
+
+/* OSP module name */
+#define OSP_STR_OSP             "osp"
+
+/* OSP module running parameter names */
+#define OSP_STR_RUNNING         "running"
+#define OSP_STR_LOGLEVEL        "loglevel"
+
+/* OSP provider parameter names */
+#define OSP_STR_PROVIDER        "provider"
+#define OSP_STR_ACCELERATE      "accelerate"
+#define OSP_STR_SECURITY        "security"
+#define OSP_STR_SPNUM           "spnumber"
+#define OSP_STR_SPURI           "spuri"
+#define OSP_STR_SPURI1          "spuri1"
+#define OSP_STR_SPURI2          "spuri2"
+#define OSP_STR_SPURI3          "spuri3"
+#define OSP_STR_SPURI4          "spuri4"
+#define OSP_STR_SPWEIGHT        "spweight"
+#define OSP_STR_SPWEIGHT1       "spweight1"
+#define OSP_STR_SPWEIGHT2       "spweight2"
+#define OSP_STR_SPWEIGHT3       "spweight3"
+#define OSP_STR_SPWEIGHT4       "spweight4"
+#define OSP_STR_PRIVATEKEY      "privatekey"
+#define OSP_STR_LOCALCERT       "localcert"
+#define OSP_STR_CANUM           "canumber"
+#define OSP_STR_CACERT          "cacert"
+#define OSP_STR_CACERT0         "cacert0"
+#define OSP_STR_CACERT1         "cacert1"
+#define OSP_STR_CACERT2         "cacert2"
+#define OSP_STR_CACERT3         "cacert3"
+#define OSP_STR_SSLLIFETIME     "ssllifetime"
+#define OSP_STR_MAXCONN         "maxconnections"
+#define OSP_STR_PERSISTENCE     "persistence"
+#define OSP_STR_RETRYDELAY      "retrydelay"
+#define OSP_STR_RETRYLIMIT      "retrylimit"
+#define OSP_STR_TIMEOUT         "timeout"
+#define OSP_STR_DEVICEIP        "deviceip"
+#define OSP_STR_DEVICEPORT      "deviceport"
+
+/* RADIUS OSP mapping parameter names */
+#define OSP_STR_MAPPING         "mapping"
+#define OSP_STR_REPORTSTART     "reportstart"
+#define OSP_STR_REPORTSTOP      "reportstop"
+#define OSP_STR_REPORTINTERIM   "reportinterim"
+#define OSP_STR_CLIENTTYPE      "radiusclienttype"
+#define OSP_STR_IGNOREDDESTLIST "ignoreddestinationlist"
+#define OSP_STR_CALLORIGIN      "callorigin"
+#define OSP_STR_IGNOREANSWER    "ignoreanswer"
+#define OSP_STR_IGNOREORIGINATE "ignoreoriginate"
+#define OSP_STR_TRANSACTIONID   "transactionid"
+#define OSP_STR_CALLID          "callid"
+#define OSP_STR_CALLINGFORMAT   "callingnumberformat"
+#define OSP_STR_CALLINGNUMBER   "callingnumber"
+#define OSP_STR_CALLEDFORMAT    "callednumberformat"
+#define OSP_STR_CALLEDNUMBER    "callednumber"
+#define OSP_STR_ASSERTEDID      "assertedid"
+#define OSP_STR_RPID            "remotepartyid"
+#define OSP_STR_SOURCE          "source"
+#define OSP_STR_PROXY           "proxy"
+#define OSP_STR_SRCDEVICE       "sourcedevice"
+#define OSP_STR_DESTINATION     "destination"
+#define OSP_STR_DESTDEVICE      "destinationdevice"
+#define OSP_STR_DESTCOUNT       "destinationcount"
+#define OSP_STR_SRCNETWORKID    "sourcenetworkid"
+#define OSP_STR_DESTNETWORKID   "destinationnetworkid"
+#define OSP_STR_DIVERSIONUSER   "diversionuser"
+#define OSP_STR_DIVERSIONHOST   "diversionhost"
+#define OSP_STR_TIMEFORMAT      "timestringformat"
+#define OSP_STR_STARTTIME       "starttime"
+#define OSP_STR_ALERTTIME       "alerttime"
+#define OSP_STR_CONNECTTIME     "connecttime"
+#define OSP_STR_ENDTIME         "endtime"
+#define OSP_STR_DURATION        "duration"
+#define OSP_STR_PDDUNIT         "postdialdelayunit"
+#define OSP_STR_PDD             "postdialdelay"
+#define OSP_STR_RELEASE         "releasesource"
+#define OSP_STR_PROTOCOL        "signalingprotocol"
+#define OSP_STR_SRCPROTOCOL     "sourceprotocol"
+#define OSP_STR_DESTPROTOCOL    "destinationprotocol"
+#define OSP_STR_CAUSE           "releasecause"
+#define OSP_STR_SRCSESSIONID    "sourcesessionid"
+#define OSP_STR_DESTSESSIONID   "destinationsessionid"
+#define OSP_STR_CORRSESSIONID   "correlationsessionid"
+#define OSP_STR_SRCCODEC        "sourcecodec"
+#define OSP_STR_DESTCODEC       "destinationcodec"
+#define OSP_STR_CONFID          "conferenceid"
+#define OSP_STR_CUSTOMINFO      "custominfo"
+#define OSP_STR_CUSTOMINFO1     "custominfo1"
+#define OSP_STR_CUSTOMINFO2     "custominfo2"
+#define OSP_STR_CUSTOMINFO3     "custominfo3"
+#define OSP_STR_CUSTOMINFO4     "custominfo4"
+#define OSP_STR_CUSTOMINFO5     "custominfo5"
+#define OSP_STR_CUSTOMINFO6     "custominfo6"
+#define OSP_STR_CUSTOMINFO7     "custominfo7"
+#define OSP_STR_CUSTOMINFO8     "custominfo8"
+#define OSP_STR_SRCREALM        "sourcerealm"
+#define OSP_STR_DESTREALM       "destinationrealm"
+
+/* Statistics parameter names */
+#define OSP_STR_REPORTSTATS            "reportstatistics"
+#define OSP_STR_SLOSTPACKETS           "sendlostpackets"
+#define OSP_STR_SLOSTFRACTION          "sendlostfraction"
+#define OSP_STR_RLOSTPACKETS           "receivelostpackets"
+#define OSP_STR_RLOSTFRACTION          "receivelostfraction"
+#define OSP_STR_RTPSRCREPOCTETS        "rtpsourcetoreporteroctets"
+#define OSP_STR_RTPDESTREPOCTETS       "rtpdestinationtoreporteroctets"
+#define OSP_STR_RTPSRCREPPACKETS       "rtpsourcetoreporterpackets"
+#define OSP_STR_RTPDESTREPPACKETS      "rtpdestinationtoreporterpackets"
+#define OSP_STR_RTPSRCREPLOST          "rtpsourcetoreporterlost"
+#define OSP_STR_RTPDESTREPLOST         "rtpdestinationtoreporterlost"
+#define OSP_STR_RTPSRCREPJITTERMEAN    "rtpsourcetoreporterjittermean"
+#define OSP_STR_RTPDESTREPJITTERMEAN   "rtpdestinationtoreporterjittermean"
+#define OSP_STR_RTPSRCREPJITTERMAX     "rtpsourcetoreporterjittermax"
+#define OSP_STR_RTPDESTREPJITTERMAX    "rtpdestinationtoreporterjittermax"
+#define OSP_STR_RTCPSRCDESTLOST        "rtcpsourcetodestinationlost"
+#define OSP_STR_RTCPDESTSRCLOST        "rtcpdestinationtosourcelost"
+#define OSP_STR_RTCPSRCDESTJITTERMEAN  "rtcpsourcetodestinationjittermean"
+#define OSP_STR_RTCPDESTSRCJITTERMEAN  "rtcpdestinationtosourcejittermean"
+#define OSP_STR_RTCPSRCDESTJITTERMAX   "rtcpsourcetodestinationjittermax"
+#define OSP_STR_RTCPDESTSRCJITTERMAX   "rtcpdestinationtosourcejittermax"
+#define OSP_STR_RTCPSRCRTDELAYMEAN     "rtcpsourceroundtripdelaymean"
+#define OSP_STR_RTCPDESTRTDELAYMEAN    "rtcpdestinationroundtripdelaymean"
+#define OSP_STR_RTCPSRCRTDELAYMAX      "rtcpsourceroundtripdelaymax"
+#define OSP_STR_RTCPDESTRTDELAYMAX     "rtcpdestinationroundtripdelaymax"
+#define OSP_STR_RFACTORSCALE           "rfactorscaleindex"
+#define OSP_STR_SRCREPRFACTOR          "sourcetoreporterrfactor"
+#define OSP_STR_DESTREPRFACTOR         "destinationtoreporterrfactor"
+#define OSP_STR_MOSSCALE               "mosscaleindex"
+#define OSP_STR_SRCREPMOS              "sourcetoreportermos"
+#define OSP_STR_DESTREPMOS             "destinationtoreportermos"
 
 /*
  * OSP log level
@@ -135,7 +268,7 @@ RCSID("$Id$")
 typedef enum {
     OSP_LOG_SHORT = 0,  /* Log short message */
     OSP_LOG_LONG        /* Log long message */
-} osp_loglevel_t;
+} osp_loglevel_e;
 
 /*
  * OSP mapping define level
@@ -143,23 +276,66 @@ typedef enum {
 typedef enum {
     OSP_DEF_MUST = 0,   /* Mapping must be defined */
     OSP_DEF_MAY         /* Mapping may be defined */
-} osp_deflevel_t;
+} osp_deflevel_e;
 
 /*
- * Subnet
+ * General scale
  */
-typedef struct {
-    uint32_t ip;    /* Subnet IP */
-    uint32_t mask;  /* Subnet mask */
-} osp_subnet_t;
+typedef enum {
+    OSP_SCALE_MIN = 0,
+    OSP_SCALE_00001 = OSP_SCALE_MIN,    /* 0.0001 */
+    OSP_SCALE_0001,                     /* 0.001 */
+    OSP_SCALE_001,                      /* 0.01 */
+    OSP_SCALE_01,                       /* 0.1 */
+    OSP_SCALE_1,                        /* 1 */
+    OSP_SCALE_10,                       /* 10 */
+    OSP_SCALE_100,                      /* 100 */
+    OSP_SCALE_1000,                     /* 1000 */
+    OSP_SCALE_10000,                    /* 10000 */
+    OSP_SCALE_MAX = OSP_SCALE_10000,
+    OSP_SCALE_NUMBER
+} osp_scale_e;
+
+static const float OSP_SCALE_TABLE[OSP_SCALE_NUMBER] = { 0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000 };
 
 /*
- * Subnet list
+ * Time unit
  */
-typedef struct {
-    int number;                             /* Number of subnets */
-    osp_subnet_t subnet[OSP_SUBNET_MAX];    /* Subnets */
-} osp_netlist_t;
+typedef enum {
+    OSP_TIMEUNIT_MIN = 0,
+    OSP_TIMEUNIT_S = OSP_TIMEUNIT_MIN,  /* Second */
+    OSP_TIMEUNIT_MS,                    /* Millisecond */
+    OSP_TIMEUNIT_MAX = OSP_TIMEUNIT_MS,
+    OSP_TIMEUNIT_NUMBER
+} osp_timeunit_e;
+
+static const int OSP_TIMEUNIT_SCALE[OSP_TIMEUNIT_NUMBER] = { 1, 1000 };
+
+/*
+ * Integer string format types
+ */
+typedef enum {
+    OSP_INTSTR_MIN = 0,
+    OSP_INTSTR_DEC = OSP_INTSTR_MIN,    /* Decimal */
+    OSP_INTSTR_HEX,                     /* Hex */
+    OSP_INTSTR_MAX = OSP_INTSTR_HEX,
+    OSP_INTSTR_NUMBER
+} osp_intstr_e;
+
+/*
+ * OSP Toolkit release source
+ */
+#define OSP_TK_RELSRC   0
+#define OSP_TK_RELDST   1
+
+/*
+ * OSP release source
+ */
+typedef enum {
+    OSP_RELEASE_UNDEF = 0,  /* Unknown */
+    OSP_RELEASE_SRC,        /* Source releases the call */
+    OSP_RELEASE_DEST,       /* Destination releases the call */
+} osp_release_e;
 
 /*
  * RADIUS client types
@@ -172,49 +348,7 @@ typedef enum {
     OSP_CLIENT_CISCO,                   /* Cisco */
     OSP_CLIENT_MAX = OSP_CLIENT_CISCO,
     OSP_CLIENT_NUMBER
-} osp_client_t;
-
-/*
- * Cisco h323-call-origin value strings
- */
-#define OSP_CISCOCALL_TERM  "answer"    /* Call answer, inbound */
-#define OSP_CISCOCALL_INIT  "originate" /* Call originate, outbound */
-
-/*
- * Call origin types
- */
-typedef enum {
-    OSP_ORIGIN_TERM = 0,    /* Terminating, inbound */
-    OSP_ORIGIN_INIT,        /* Initiating, outbound */
-} osp_origin_t;
-
-/*
- * Normal string buffer type
- */
-typedef char    osp_string_t[OSP_STRBUF_SIZE];
-
-/*
- * Calling/called number format types
- */
-typedef enum {
-    OSP_CALLNUM_MIN = 0,
-    OSP_CALLNUM_E164 = OSP_CALLNUM_MIN, /* E.164 */
-    OSP_CALLNUM_URI,                    /* URI */
-    OSP_CALLNUM_CISCO,                  /* Cisco, ton:0~7,npi:0~15,pi:0~3,si:0~3,#:E.164 */
-    OSP_CALLNUM_MAX = OSP_CALLNUM_CISCO,
-    OSP_CALLNUM_NUMBER
-} osp_callnum_t;
-
-/*
- * Integer string format types
- */
-typedef enum {
-    OSP_INTSTR_MIN = 0,
-    OSP_INTSTR_DEC = OSP_INTSTR_MIN,    /* Decimal */
-    OSP_INTSTR_HEX,                     /* Hex */
-    OSP_INTSTR_MAX = OSP_INTSTR_HEX,
-    OSP_INTSTR_NUMBER
-} osp_intstr_t;
+} osp_client_e;
 
 /*
  * OSP time string types
@@ -228,7 +362,7 @@ typedef enum {
     OSP_TIMESTR_CISCO ,                 /* NTP, {'*'|'.'}HH:MM:SS.MMM ZON WWW MMM DD YYYY */
     OSP_TIMESTR_MAX = OSP_TIMESTR_CISCO,
     OSP_TIMESTR_NUMBER
-} osp_timestr_t;
+} osp_timestr_e;
 
 /*
  * Time zone strings
@@ -265,32 +399,30 @@ typedef enum {
 #define OSP_TOFF_AKDT (-8*60*60)    /* Alaska Daylight Time */
 
 /*
- * Time unit
+ * Calling/called number format types
  */
 typedef enum {
-    OSP_TIMEUNIT_MIN = 0,
-    OSP_TIMEUNIT_S = OSP_TIMEUNIT_MIN,  /* Second */
-    OSP_TIMEUNIT_MS,                    /* Millisecond */
-    OSP_TIMEUNIT_MAX = OSP_TIMEUNIT_MS,
-    OSP_TIMEUNIT_NUMBER
-} osp_timeunit_t;
-
-int OSP_TIMEUNIT_SCALE[OSP_TIMEUNIT_NUMBER] = { 1, 1000 };
+    OSP_CALLNUM_MIN = 0,
+    OSP_CALLNUM_E164 = OSP_CALLNUM_MIN, /* E.164 */
+    OSP_CALLNUM_URI,                    /* URI */
+    OSP_CALLNUM_CISCO,                  /* Cisco, ton:0~7,npi:0~15,pi:0~3,si:0~3,#:E.164 */
+    OSP_CALLNUM_MAX = OSP_CALLNUM_CISCO,
+    OSP_CALLNUM_NUMBER
+} osp_callnum_e;
 
 /*
- * OSP Toolkit release source
+ * Cisco h323-call-origin value strings
  */
-#define OSP_TK_RELSRC   0
-#define OSP_TK_RELDST   1
+#define OSP_CISCOCALL_TERM  "answer"    /* Call answer, inbound */
+#define OSP_CISCOCALL_INIT  "originate" /* Call originate, outbound */
 
 /*
- * OSP release source
+ * Call origin types
  */
 typedef enum {
-    OSP_RELEASE_UNDEF = 0,  /* Unknown */
-    OSP_RELEASE_SRC,        /* Source releases the call */
-    OSP_RELEASE_DEST,       /* Destination releases the call */
-} osp_release_t;
+    OSP_ORIGIN_TERM = 0,    /* Terminating, inbound */
+    OSP_ORIGIN_INIT,        /* Initiating, outbound */
+} osp_origin_e;
 
 /*
  * Cisco release source
@@ -309,131 +441,12 @@ typedef enum {
     OSP_CISCOREL_EXTRADIUS,
     OSP_CISCOREL_EXTAPPL,
     OSP_CISCOREL_EXTAGENT
-} osp_ciscorelease_t;
+} osp_ciscorelease_e;
 
 /*
- * Gerenal scale
+ * Normal string buffer type
  */
-typedef enum {
-    OSP_SCALE_MIN = 0,
-    OSP_SCALE_00001 = OSP_SCALE_MIN,    /* 0.0001 */
-    OSP_SCALE_0001,                     /* 0.001 */
-    OSP_SCALE_001,                      /* 0.01 */
-    OSP_SCALE_01,                       /* 0.1 */
-    OSP_SCALE_1,                        /* 1 */
-    OSP_SCALE_10,                       /* 10 */
-    OSP_SCALE_100,                      /* 100 */
-    OSP_SCALE_1000,                     /* 1000 */
-    OSP_SCALE_10000,                    /* 10000 */
-    OSP_SCALE_MAX = OSP_SCALE_10000,
-    OSP_SCALE_NUMBER
-} osp_scale_t;
-
-float OSP_SCALE_TABLE[OSP_SCALE_NUMBER] = { 0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000 };
-
-/*
- * Statistics related types
- */
-typedef enum {
-    OSP_DIR_MIN = 0,
-    OSP_DIR_SRCREP = OSP_DIR_MIN,   /* Statistics for source-to-reporter. */
-    OSP_DIR_REPSRC,                 /* Statistics for reporter-to-source. */
-    OSP_DIR_DESTREP,                /* Statistics for destination-to-reporter. */
-    OSP_DIR_REPDEST,                /* Statistics for reporter-to-destination. */
-    OSP_DIR_SRCDEST,                /* Statistics for source-to-destination. */
-    OSP_DIR_DESTSRC,                /* Statistics for destination-to-source. */
-    OSP_DIR_MAX = OSP_DIR_DESTSRC,
-    OSP_DIR_NUMBER
-} osp_dir_t;
-
-typedef enum {
-    OSP_GROUP_MIN = 0,
-    OSP_GROUP_RTP = OSP_GROUP_MIN,  /* Statistics for media stream to proxy. Normally, RTP */
-    OSP_GROUP_RTCP,                 /* Statistics for media stream to calling/called party. Normally, RTCP */
-    OSP_GROUP_MAX = OSP_GROUP_RTCP,
-    OSP_GROUP_NUMBER
-} osp_group_t;
-
-typedef struct {
-    char* rfactor;  /* RFactor mapping */
-    char* moscq;    /* MOS-CQ mapping */
-    char* moslq;    /* MOS-LQ mapping */
-    char* icpif;    /* ICPIF mapping */
-} osp_statsdirmap_t;
-
-typedef struct {
-    float rfactor;  /* RFactor */
-    float moscq;    /* MOS-CQ */
-    float moslq;    /* MOS-LQ */
-    int icpif;      /* ICPIF */
-} osp_statsdir_t;
-
-typedef struct {
-    char* pack; /* Packets lost in packets mapping */
-    char* fract;/* Packets lost in fraction mapping */
-} osp_packmap_t;
-
-typedef struct {
-    int pack;   /* Packets lost in packets */
-    int fract;  /* Packets lost in fraction */
-} osp_pack_t;
-
-typedef struct {
-    char* samp; /* Samples mapping */
-    char* min;  /* Minimum mapping */
-    char* max;  /* Maximum mapping */
-    char* mean; /* Mean mapping */
-    char* var;  /* Variance mapping */
-} osp_metricsmap_t;
-
-typedef struct {
-    int samp;   /* Samples */
-    int min;    /* Minimum */
-    int max;    /* Maximum */
-    int mean;   /* Mean */
-    float var;  /* Variance */
-} osp_metrics_t;
-
-typedef struct {
-    osp_packmap_t lost;     /* Packets lost mapping */
-    osp_metricsmap_t jitter;/* Jitter mapping */
-    osp_metricsmap_t delay; /* Delay mapping */
-    char* octets;           /* Octets received mapping */
-    char* packets;          /* Packets received mapping */
-} osp_statsgroupmap_t;
-
-typedef struct {
-    osp_pack_t lost;        /* Packets lost */
-    osp_metrics_t jitter;   /* Jitter */
-    osp_metrics_t delay;    /* Delay */
-    int octets;             /* Octets recieved */
-    int packets;            /* Packets received */
-} osp_statsgroup_t;
-
-typedef struct {
-    int rtpoctets;          /* RTP octets crossover flag */
-    int rtppackets;         /* RTP packets crossover flag */
-} osp_crossover_t;
-
-typedef struct {
-    int reportstats;                                                /* If to report statistics */
-    int rfactorscale;                                               /* R-Factor scale index */
-    int mosscale;                                                   /* MOS scale index */
-    osp_packmap_t slost;                                            /* Lost send mapping */
-    osp_packmap_t rlost;                                            /* Lost receive mapping */
-    osp_metricsmap_t roundtrip;                                     /* Round trip delay */
-    osp_statsdirmap_t dir[OSP_DIR_NUMBER];                          /* Statistics direction mapping */
-    osp_statsgroupmap_t group[OSP_GROUP_NUMBER][OSP_DIR_NUMBER];    /* Statistics group mapping */
-    osp_crossover_t cross;                                          /* Crossover flags */
-} osp_statsmap_t;
-
-typedef struct {
-    osp_pack_t slost;                                           /* Packets lost */
-    osp_pack_t rlost;                                           /* Packets lost */
-    osp_metrics_t roundtrip;                                    /* Round trip delay */
-    osp_statsdir_t dir[OSP_DIR_NUMBER];                         /* Statistics direction */
-    osp_statsgroup_t group[OSP_GROUP_NUMBER][OSP_DIR_NUMBER];   /* Statistics group */
-} osp_stats_t;
+typedef char    osp_string_t[OSP_STRBUF_SIZE];
 
 /*
  * OSP module running parameter structure
@@ -446,25 +459,78 @@ typedef struct {
  * OSP module provider parameter structure.
  */
 typedef struct {
-    int accelerate;             /* Hardware accelerate flag */
-    int security;               /* Security flag */
-    int sps;                    /* Number of service points */
-    char* spuris[OSP_SPS_MAX];  /* Service point URIs */
-    int spweights[OSP_SPS_MAX]; /* Service point weights */
-    char* privatekey;           /* Private key file name */
-    char* localcert;            /* Local cert file name */
-    int cas;                    /* Number of cacerts */
-    char* cacerts[OSP_CAS_MAX]; /* Cacert file names */
-    int ssllifetime;            /* SSL life time */
-    int maxconn;                /* Max number of HTTP connections */
-    int persistence;            /* Persistence */
-    int retrydelay;             /* Retry delay */
-    int retrylimit;             /* Times of retry */
-    int timeout;                /* Timeout */
-    uint32_t deviceip;          /* OSP reporting IP address */
-    int deviceport;             /* OSP reporting IP port */
-    OSPTPROVHANDLE handle;      /* OSP provider handle */
+    int accelerate;                 /* Hardware accelerate flag */
+    int security;                   /* Security flag */
+    int spnumber;                   /* Number of service points */
+    char* spuris[OSP_SPNUM_MAX];    /* Service point URIs */
+    int spweights[OSP_SPNUM_MAX];   /* Service point weights */
+    char* privatekey;               /* Private key file name */
+    char* localcert;                /* Local cert file name */
+    int canumber;                   /* Number of cacerts */
+    char* cacerts[OSP_CANUM_MAX];   /* Cacert file names */
+    int ssllifetime;                /* SSL life time */
+    int maxconn;                    /* Max number of HTTP connections */
+    int persistence;                /* Persistence */
+    int retrydelay;                 /* Retry delay */
+    int retrylimit;                 /* Times of retry */
+    int timeout;                    /* Timeout */
+    uint32_t deviceip;              /* OSP reporting IP address */
+    int deviceport;                 /* OSP reporting IP port */
+    OSPTPROVHANDLE handle;          /* OSP provider handle */
 } osp_provider_t;
+
+/*
+ * Subnet
+ */
+typedef struct {
+    uint32_t ip;    /* Subnet IP */
+    uint32_t mask;  /* Subnet mask */
+} osp_subnet_t;
+
+/*
+ * Subnet list
+ */
+typedef struct {
+    int number;                             /* Number of subnets */
+    osp_subnet_t subnet[OSP_SUBNET_MAX];    /* Subnets */
+} osp_netlist_t;
+
+typedef struct {
+    char* pack;     /* Packets lost in packets mapping */
+    char* fract;    /* Packets lost in fraction mapping */
+} osp_packmap_t;
+
+typedef struct {
+    int reportstats;                    /* If to report statistics */
+    osp_packmap_t slost;                /* Lost send mapping */
+    osp_packmap_t rlost;                /* Lost receive mapping */
+    char* rtp_src_rep_octets;           /* RTP source-to-reporter octets */
+    char* rtp_dest_rep_octets;          /* RTP destination-to-reporter octets */
+    char* rtp_src_rep_packets;          /* RTP source-to-reporter packets */
+    char* rtp_dest_rep_packets;         /* RTP destination-to-reporter packets */
+    char* rtp_src_rep_lost;             /* RTP source-to-reporter lost packets */
+    char* rtp_dest_rep_lost;            /* RTP destination-to-reporter lost packets */
+    char* rtp_src_rep_jitter_mean;      /* RTP source-to-reporter jitter mean */
+    char* rtp_dest_rep_jitter_mean;     /* RTP destination-to-reporter jitter mean */
+    char* rtp_src_rep_jitter_max;       /* RTP source-to-reporter jitter max */
+    char* rtp_dest_rep_jitter_max;      /* RTP destination-to-reporter jitter max */
+    char* rtcp_src_dest_lost;           /* RTCP source-to-destination lost packets */
+    char* rtcp_dest_src_lost;           /* RTCP destination-to-source lost packets */
+    char* rtcp_src_dest_jitter_mean;    /* RTCP source-to-destination jitter mean */
+    char* rtcp_dest_src_jitter_mean;    /* RTCP destination-to-source jitter mean */
+    char* rtcp_src_dest_jitter_max;     /* RTCP source-to-destination jitter max */
+    char* rtcp_dest_src_jitter_max;     /* RTCP destination-to-source jitter max */
+    char* rtcp_src_rtdelay_mean;        /* RTCP source round trip delay mean */
+    char* rtcp_dest_rtdelay_mean;       /* RTCP destination round trip delay mean */
+    char* rtcp_src_rtdelay_max;         /* RTCP source round trip delay max */
+    char* rtcp_dest_rtdelay_max;        /* RTCP destination round trip delay max */
+    int rfactorscale;                   /* R-Factor scale index */
+    char* src_rep_rfactor;              /* Source-to-reporter R-Factor */
+    char* dest_rep_rfactor;             /* Destination-to-reporter R-Factor */
+    int mosscale;                       /* MOS scale index */
+    char* src_rep_mos;                  /* Source-to-reporter MOS */
+    char* dest_rep_mos;                 /* Destination-to-reporter MOS */
+} osp_statsmap_t;
 
 /*
  * OSP module mapping parameter structure.
@@ -486,14 +552,15 @@ typedef struct {
     int calledformat;                   /* Called number format */
     char* called;                       /* Called number */
     char* assertedid;                   /* P-Asserted-Identity */
+    char* rpid;                         /* Remote-Party-ID */
     char* source;                       /* Source */
     char* proxy;                        /* Proxy, only for call leg type records */
     char* srcdev;                       /* Source device */
     char* destination;                  /* Destination */
     char* destdev;                      /* Destination device */
     char* destcount;                    /* Destination count */
-    char* snid;                         /* Source network ID */
-    char* dnid;                         /* Destination network ID */
+    char* srcnid;                       /* Source network ID */
+    char* destnid;                      /* Destination network ID */
     char* divuser;                      /* Diversion user */
     char* divhost;                      /* Diversion host */
     int timeformat;                     /* Time string format */
@@ -505,15 +572,20 @@ typedef struct {
     int pddunit;                        /* Post dial delay unit */
     char* pdd;                          /* Post dial delay */
     char* release;                      /* Release source */
-    char* cause;                        /* Release cause */
     char* protocol;                     /* Signaling protocol */
+    char* srcprotocol;                  /* Source protocol */
+    char* destprotocol;                 /* Destination protocol */
+    char* cause;                        /* Release cause */
     char* srcsessionid;                 /* Source sessionID */
     char* destsessionid;                /* Destination session ID */
+    char* corrsessionid;                /* Correlation session ID */
     char* srccodec;                     /* Source codec */
     char* destcodec;                    /* Destination codec */
     char* confid;                       /* Conference ID */
-    osp_statsmap_t stats;               /* Statistics */
     char* custinfo[OSP_CUSTOMINFO_MAX]; /* Custom info */
+    char* srcrealm;                     /* Source realm */
+    char* destrealm;                    /* Destination realm */
+    osp_statsmap_t stats;               /* Statistics */
 } osp_mapping_t;
 
 /*
@@ -525,6 +597,40 @@ typedef struct {
     osp_mapping_t mapping;      /* OSP mapping parameters */
 } rlm_osp_t;
 
+typedef struct {
+    int pack;   /* Packets lost in packets */
+    int fract;  /* Packets lost in fraction */
+} osp_pack_t;
+
+typedef struct {
+    osp_pack_t slost;               /* Send packets lost */
+    osp_pack_t rlost;               /* Receive packets lost */
+    int rtp_src_rep_octets;         /* RTP source-to-reporter octets */
+    int rtp_dest_rep_octets;        /* RTP destination-to-reporter octets */
+    int rtp_src_rep_packets;        /* RTP source-to-reporter packets */
+    int rtp_dest_rep_packets;       /* RTP destination-to-reporter packets */
+    int rtp_src_rep_lost;           /* RTP source-to-reporter lost packets */
+    int rtp_dest_rep_lost;          /* RTP destination-to-reporter lost packets */
+    int rtp_src_rep_jitter_mean;    /* RTP source-to-reporter jitter mean */
+    int rtp_dest_rep_jitter_mean;   /* RTP destination-to-reporter jitter mean */
+    int rtp_src_rep_jitter_max;     /* RTP source-to-reporter jitter max */
+    int rtp_dest_rep_jitter_max;    /* RTP destination-to-reporter jitter max */
+    int rtcp_src_dest_lost;         /* RTCP source-to-destination lost packets */
+    int rtcp_dest_src_lost;         /* RTCP destination-to-source lost packets */
+    int rtcp_src_dest_jitter_mean;  /* RTCP source-to-destination jitter mean */
+    int rtcp_dest_src_jitter_mean;  /* RTCP destination-to-source jitter mean */
+    int rtcp_src_dest_jitter_max;   /* RTCP source-to-destination jitter max */
+    int rtcp_dest_src_jitter_max;   /* RTCP destination-to-source jitter max */
+    int rtcp_src_rtdelay_mean;      /* RTCP source round trip delay mean */
+    int rtcp_dest_rtdelay_mean;     /* RTCP destination round trip delay mean */
+    int rtcp_src_rtdelay_max;       /* RTCP source round trip delay max */
+    int rtcp_dest_rtdelay_max;      /* RTCP destination round trip delay max */
+    float src_rep_rfactor;          /* Source-to-reporter R-Factor */
+    float dest_rep_rfactor;         /* Destination-to-reporter R-Factor */
+    float src_rep_mos;              /* Source-to-reporter MOS */
+    float dest_rep_mos;             /* Destination-to-reporter MOS */
+} osp_stats_t;
+
 /*
  * Usage information structure.
  */
@@ -535,13 +641,14 @@ typedef struct {
     osp_string_t calling;                       /* Calling number */
     osp_string_t called;                        /* Called number */
     osp_string_t assertedid;                    /* P-Asserted-Identity */
+    osp_string_t rpid;                          /* Remote-Party-ID */
     osp_string_t source;                        /* Source */
     osp_string_t srcdev;                        /* Source device */
     osp_string_t destination;                   /* Destination */
     osp_string_t destdev;                       /* Destination device */
     int destcount;                              /* Destination count */
-    osp_string_t snid;                          /* Source network ID */
-    osp_string_t dnid;                          /* Destination network ID */
+    osp_string_t srcnid;                        /* Source network ID */
+    osp_string_t destnid;                       /* Destination network ID */
     osp_string_t divuser;                       /* Diversion user */
     osp_string_t divhost;                       /* Diversion host */
     time_t start;                               /* Call start time */
@@ -549,266 +656,24 @@ typedef struct {
     time_t connect;                             /* Call connect time */
     time_t end;                                 /* Call end time */
     time_t duration;                            /* Length of call */
-    int pdd;                                    /* Post Dial Delay */
+    int pdd;                                    /* Post Dial Delay, in milliseconds */
     int release;                                /* EP that released the call */
+    OSPE_PROTOCOL_NAME protocol;                /* Signaling protocol */
+    OSPE_PROTOCOL_NAME srcprotocol;             /* Source protocol */
+    OSPE_PROTOCOL_NAME destprotocol;            /* Destination protocol */
     OSPE_TERM_CAUSE causetype;                  /* Release reason type */
     int cause;                                  /* Release reason */
-    OSPE_PROTOCOL_NAME protocol;                /* Signaling protocol */
     osp_string_t srcsessionid;                  /* Source session ID */
     osp_string_t destsessionid;                 /* Destination session ID */
+    osp_string_t corrsessionid;                 /* Correlation session ID */
     osp_string_t srccodec;                      /* Source codec */
     osp_string_t destcodec;                     /* Destination codec */
     osp_string_t confid;                        /* Conference ID */
+    osp_string_t custinfo[OSP_CUSTOMINFO_MAX];  /* Custom info */
+    osp_string_t srcrealm;                      /* Source realm */
+    osp_string_t destrealm;                     /* Destination realm */
     osp_stats_t stats;                          /* Statistics */
-    osp_string_t custinfo[OSP_CUSTOMINFO_MAX];  /* Conference ID */
 } osp_usage_t;
-
-/*
- * A mapping of configuration file names to internal variables.
- *
- *   Note that the string is dynamically allocated, so it MUST
- *   be freed.  When the configuration file parse re-reads the string,
- *   it free's the old one, and strdup's the new one, placing the pointer
- *   to the strdup'd string into 'config.string'.  This gets around
- *   buffer over-flows.
- */
-static const CONF_PARSER running_config[] = {
-    /* OSP module running parameters */
-    { "loglevel", PW_TYPE_INTEGER, offsetof(rlm_osp_t, running.loglevel), NULL, OSP_LOGLEVEL_DEF },
-    /* End */
-    { NULL, -1, 0, NULL, NULL }     /* end the list */
-};
-
-static const CONF_PARSER provider_config[] = {
-    /*
-     * OSP provider parameters
-     *
-     *   All service points, weights and cacerts must be listed to allow config
-     *   parser to read them.
-     */
-    { "accelerate", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, provider.accelerate), NULL, OSP_HWACCE_DEF },
-    { "security", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, provider.security), NULL, OSP_SECURITY_DEF },
-    { "spuri1", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[0]), NULL, OSP_SPURI_DEF },
-    { "spuri2", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[1]), NULL, NULL },
-    { "spuri3", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[2]), NULL, NULL },
-    { "spuri4", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[3]), NULL, NULL },
-    { "spweight1", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.spweights[0]), NULL, OSP_SPWEIGHT_DEF },
-    { "spweight2", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.spweights[1]), NULL, OSP_SPWEIGHT_DEF },
-    { "spweight3", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.spweights[2]), NULL, OSP_SPWEIGHT_DEF },
-    { "spweight4", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.spweights[3]), NULL, OSP_SPWEIGHT_DEF },
-    { "privatekey", PW_TYPE_FILENAME, offsetof(rlm_osp_t, provider.privatekey), NULL, OSP_PRIVATEKEY_DEF },
-    { "localcert", PW_TYPE_FILENAME, offsetof(rlm_osp_t, provider.localcert), NULL, OSP_LOCALCERT_DEF },
-    { "cacert0", PW_TYPE_FILENAME, offsetof(rlm_osp_t, provider.cacerts[0]), NULL, OSP_CACERT_DEF },
-    { "cacert1", PW_TYPE_FILENAME, offsetof(rlm_osp_t, provider.cacerts[1]), NULL, NULL },
-    { "cacert2", PW_TYPE_FILENAME, offsetof(rlm_osp_t, provider.cacerts[2]), NULL, NULL },
-    { "cacert3", PW_TYPE_FILENAME, offsetof(rlm_osp_t, provider.cacerts[3]), NULL, NULL },
-    { "ssllifetime", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.ssllifetime), NULL, OSP_SSLLIFETIME_DEF },
-    { "maxconnections", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.maxconn), NULL, OSP_MAXCONN_DEF },
-    { "persistence", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.persistence), NULL, OSP_PERSISTENCE_DEF },
-    { "retrydelay", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.retrydelay), NULL, OSP_RETRYDELAY_DEF },
-    { "retrylimit", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.retrylimit), NULL, OSP_RETRYLIMIT_DEF },
-    { "timeout", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.timeout), NULL, OSP_TIMEOUT_DEF },
-    { "deviceip", PW_TYPE_IPADDR, offsetof(rlm_osp_t, provider.deviceip), NULL, OSP_DEVICEIP_DEF },
-    { "deviceport", PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.deviceport), NULL, OSP_DEVICEPORT_DEF },
-    /* End */
-    { NULL, -1, 0, NULL, NULL }     /* end the list */
-};
-
-static const CONF_PARSER mapping_config[] = {
-    /*
-     * RADIUS OSP mapping parameters
-     *
-     *   All custom info must be listed to allow config parser to read them.
-     */
-    { "reportstart", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportstart), NULL, OSP_MAP_REPORTRAD },
-    { "reportstop", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportstop), NULL, OSP_MAP_REPORTRAD },
-    { "reportinterim", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportinterim), NULL, OSP_MAP_REPORTRAD },
-    { "radiusclienttype", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.clienttype), NULL, OSP_MAP_CLIENTTYPE },
-    { "ignoreddestinationlist", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.ignoreddeststr), NULL, OSP_MAP_NETLIST },
-    { "callorigin", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.origin), NULL, OSP_MAP_ORIGIN },
-    { "ignoreanswer", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.ignoreterm), NULL, OSP_MAP_IGNORERAD },
-    { "ignoreoriginate", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.ignoreinit), NULL, OSP_MAP_IGNORERAD },
-    { "transactionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transid), NULL, OSP_MAP_TRANSID },
-    { "callid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.callid), NULL, OSP_MAP_CALLID },
-    { "callingnumberformat", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.callingformat), NULL, OSP_MAP_NUMFORMAT },
-    { "callingnumber", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.calling), NULL, OSP_MAP_CALLING },
-    { "callednumberformat", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.calledformat), NULL, OSP_MAP_NUMFORMAT },
-    { "callednumber", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.called), NULL, OSP_MAP_CALLED },
-    { "assertedid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.assertedid), NULL, OSP_MAP_ASSERTEDID },
-    { "source", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.source), NULL, OSP_MAP_SOURCE },
-    { "proxy", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.proxy), NULL, OSP_MAP_PROXY },
-    { "sourcedevice", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcdev), NULL, OSP_MAP_SRCDEV },
-    { "destination", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destination), NULL, OSP_MAP_DESTINATION },
-    { "destinationdevice", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destdev), NULL, OSP_MAP_DESTDEV },
-    { "destinationcount", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destcount), NULL, OSP_MAP_DESTCOUNT },
-    { "sourcenetworkid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.snid), NULL, OSP_MAP_NETWORKID },
-    { "destinationnetworkid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.dnid), NULL, OSP_MAP_NETWORKID },
-    { "diversionuser", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.divuser), NULL, OSP_MAP_DIVUSER },
-    { "diversionhost", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.divhost), NULL, OSP_MAP_DIVHOST },
-    { "timestringformat", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.timeformat), NULL, OSP_MAP_TIMEFORMAT },
-    { "starttime", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.start), NULL, OSP_MAP_START },
-    { "alerttime", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.alert), NULL, OSP_MAP_ALERT },
-    { "connecttime", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.connect), NULL, OSP_MAP_CONNECT },
-    { "endtime", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.end), NULL, OSP_MAP_END },
-    { "duration", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.duration), NULL, OSP_MAP_DURATION },
-    { "postdialdelayunit", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.pddunit), NULL, OSP_MAP_PDDUNIT },
-    { "postdialdelay", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.pdd), NULL, OSP_MAP_PDD },
-    { "releasesource", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.release), NULL, OSP_MAP_RELEASE },
-    { "releasecause", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.cause), NULL, OSP_MAP_CAUSE },
-    { "signalingprotocol", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.protocol), NULL, OSP_MAP_PROTOCOL },
-    { "sourcesessionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcsessionid), NULL, OSP_MAP_SESSIONID },
-    { "destinationsessionid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destsessionid), NULL, OSP_MAP_SESSIONID },
-    { "sourcecodec", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srccodec), NULL, OSP_MAP_CODEC },
-    { "destinationcodec", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destcodec), NULL, OSP_MAP_CODEC },
-    { "conferenceid", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.confid), NULL, OSP_MAP_CONFID },
-    /* Statistics mapping */
-#define mSMAP   mapping.stats
-    { "reportstatistics", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mSMAP.reportstats), NULL, OSP_MAP_REPORTSTATS },
-    { "rfactorscaleindex", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mSMAP.rfactorscale), NULL, OSP_MAP_SCALE },
-    { "mosscaleindex", PW_TYPE_INTEGER, offsetof(rlm_osp_t, mSMAP.mosscale), NULL, OSP_MAP_SCALE },
-    { "sendlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.slost.pack), NULL, OSP_MAP_STATS },
-    { "sendlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.slost.fract), NULL, OSP_MAP_STATS },
-    { "receivelostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rlost.pack), NULL, OSP_MAP_STATS },
-    { "receivelostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rlost.fract), NULL, OSP_MAP_STATS },
-    { "roundtripdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.roundtrip.samp), NULL, OSP_MAP_STATS },
-    { "roundtripdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.roundtrip.min), NULL, OSP_MAP_STATS },
-    { "roundtripdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.roundtrip.max), NULL, OSP_MAP_STATS },
-    { "roundtripdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.roundtrip.mean), NULL, OSP_MAP_STATS },
-    { "roundtripdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.roundtrip.var), NULL, OSP_MAP_STATS },
-    /* Statistics direction mapping start */
-#define mSDMAP  mSMAP.dir
-    /* RFactor */
-    { "sourcetodestinationrfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSDMAP[OSP_DIR_SRCDEST].rfactor), NULL, OSP_MAP_STATS },
-    { "destinationtosourcerfactor", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSDMAP[OSP_DIR_DESTSRC].rfactor), NULL, OSP_MAP_STATS },
-    /* MOS */
-    { "sourcetodestinationmoscq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSDMAP[OSP_DIR_SRCDEST].moscq), NULL, OSP_MAP_STATS },
-    { "destinationtosourcemoscq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSDMAP[OSP_DIR_DESTSRC].moscq), NULL, OSP_MAP_STATS },
-    { "sourcetodestinationmoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSDMAP[OSP_DIR_SRCDEST].moslq), NULL, OSP_MAP_STATS },
-    { "destinationtosourcemoslq", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSDMAP[OSP_DIR_DESTSRC].moslq), NULL, OSP_MAP_STATS },
-    /* ICPIF */
-    { "sourcetoreportericpif", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSDMAP[OSP_DIR_SRCREP].icpif), NULL, OSP_MAP_STATS },
-    { "destinationtoreportericpif", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSDMAP[OSP_DIR_DESTREP].icpif), NULL, OSP_MAP_STATS },
-#undef mSDMAP
-    /* Statistics direction mapping end */
-    /* Statistics group mapping start */
-#define mSGMAP  mSMAP.group
-    /* Lost RTP */
-    { "rtpsourcetoreporterlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].lost.pack), NULL, OSP_MAP_STATS },
-    { "rtpsourcetoreporterlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].lost.fract), NULL, OSP_MAP_STATS },
-    { "rtpdestinationtoreporterlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].lost.pack), NULL, OSP_MAP_STATS },
-    { "rtpdestinationtoreporterlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].lost.fract), NULL, OSP_MAP_STATS },
-    /* Lost RTCP */
-    { "rtcpdestinationtosourcelostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DESTSRC].lost.pack), NULL, OSP_MAP_STATS },
-    { "rtcpdestinationtosourcelostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DESTSRC].lost.fract), NULL, OSP_MAP_STATS },
-    { "rtcpsourcetodestinationlostpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_SRCDEST].lost.pack), NULL, OSP_MAP_STATS },
-    { "rtcpsourcetodestinationlostfraction", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_SRCDEST].lost.fract), NULL, OSP_MAP_STATS },
-    /* Jitter RTP */
-    { "rtpsourcetoreporterjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].jitter.samp), NULL, OSP_MAP_STATS },
-    { "rtpsourcetoreporterjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].jitter.min), NULL, OSP_MAP_STATS },
-    { "rtpsourcetoreporterjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].jitter.max), NULL, OSP_MAP_STATS },
-    { "rtpsourcetoreporterjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].jitter.mean), NULL, OSP_MAP_STATS },
-    { "rtpsourcetoreporterjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].jitter.var), NULL, OSP_MAP_STATS },
-    { "rtpdestinationtoreporterjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].jitter.samp), NULL, OSP_MAP_STATS },
-    { "rtpdestinationtoreporterjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].jitter.min), NULL, OSP_MAP_STATS },
-    { "rtpudestinationtoreporterjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].jitter.max), NULL, OSP_MAP_STATS },
-    { "rtpdestinationtoreporterjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].jitter.mean), NULL, OSP_MAP_STATS },
-    { "rtpdestinationtoreporterjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].jitter.var), NULL, OSP_MAP_STATS },
-    /* Jitter RTCP */
-    { "rtcpdestinationtosourcejittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DESTSRC].jitter.samp), NULL, OSP_MAP_STATS },
-    { "rtcpdestinationtosourcejitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DESTSRC].jitter.min), NULL, OSP_MAP_STATS },
-    { "rtcpdestinationtosourcejittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DESTSRC].jitter.max), NULL, OSP_MAP_STATS },
-    { "rtcpdestinationtosourcejittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DESTSRC].jitter.mean), NULL, OSP_MAP_STATS },
-    { "rtcpdestinationtosourcejittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DESTSRC].jitter.var), NULL, OSP_MAP_STATS },
-    { "rtcpsourcetodestinationjittersamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_SRCDEST].jitter.samp), NULL, OSP_MAP_STATS },
-    { "rtcpusourcetodestinationjitterminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_SRCDEST].jitter.min), NULL, OSP_MAP_STATS },
-    { "rtcpsourcetodestinationjittermaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_SRCDEST].jitter.max), NULL, OSP_MAP_STATS },
-    { "rtcpsourcetodestinationjittermean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_SRCDEST].jitter.mean), NULL, OSP_MAP_STATS },
-    { "rtcpupsourcetodestinationjittervariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_SRCDEST].jitter.var), NULL, OSP_MAP_STATS },
-    /* Delay RTP */
-    { "rtpsourcetoreporterdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.samp), NULL, OSP_MAP_STATS },
-    { "rtpsourcetoreporterdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.min), NULL, OSP_MAP_STATS },
-    { "rtpsourcetoreporterdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.max), NULL, OSP_MAP_STATS },
-    { "rtpsourcetoreporterdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.mean), NULL, OSP_MAP_STATS },
-    { "rtpsourcetoreporterdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.var), NULL, OSP_MAP_STATS },
-    { "rtpdestinationtoreporterdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.samp), NULL, OSP_MAP_STATS },
-    { "rtpdestinationtoreporterdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.min), NULL, OSP_MAP_STATS },
-    { "rtpdestinationtoreporterdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.max), NULL, OSP_MAP_STATS },
-    { "rtpdestinationtoreporterdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.mean), NULL, OSP_MAP_STATS },
-    { "rtpdestinationtoreporterdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].delay.var), NULL, OSP_MAP_STATS },
-#if 0
-    { "rtcpdownstreamdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DOWN].delay.samp), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DOWN].delay.min), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DOWN].delay.max), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DOWN].delay.mean), NULL, OSP_MAP_STATS },
-    { "rtcpdownstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_DOWN].delay.var), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamdelaysamples", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_UP].delay.samp), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamdelayminimum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_UP].delay.min), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamdelaymaximum", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_UP].delay.max), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamdelaymean", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_UP].delay.mean), NULL, OSP_MAP_STATS },
-    { "rtcpupstreamdelayvariance", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_UP].delay.var), NULL, OSP_MAP_STATS },
-#endif
-    /* Octets */
-    { "rtpoctetscrossover", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mSMAP.cross.rtpoctets), NULL, OSP_MAP_CROSSOVER },
-    { "rtpsourcetoreporteroctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].octets), NULL, OSP_MAP_STATS },
-    { "rtpdestinationtoreporteroctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].octets), NULL, OSP_MAP_STATS },
-    { "rtcpreportertosourceoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_REPSRC].octets), NULL, OSP_MAP_STATS },
-    { "rtcpreportertodestinationoctets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_REPDEST].octets), NULL, OSP_MAP_STATS },
-    /* Packets */
-    { "rtppacketscrossover", PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mSMAP.cross.rtppackets), NULL, OSP_MAP_CROSSOVER },
-    { "rtpsourcetoreporterpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_SRCREP].packets), NULL, OSP_MAP_STATS },
-    { "rtpestinationtoreporterpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTP][OSP_DIR_DESTREP].packets), NULL, OSP_MAP_STATS },
-    { "rtcpreportertosourcepackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_REPSRC].packets), NULL, OSP_MAP_STATS },
-    { "rtcpreportertodestinationpackets", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSGMAP[OSP_GROUP_RTCP][OSP_DIR_REPDEST].packets), NULL, OSP_MAP_STATS },
-#undef mSGMAP
-#undef mSMAP
-    /* Statistics group mapping end */
-    { "custominfo1", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[0]), NULL, OSP_MAP_CUSTOMINFO },
-    { "custominfo2", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[1]), NULL, OSP_MAP_CUSTOMINFO },
-    { "custominfo3", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[2]), NULL, OSP_MAP_CUSTOMINFO },
-    { "custominfo4", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[3]), NULL, OSP_MAP_CUSTOMINFO },
-    { "custominfo5", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[4]), NULL, OSP_MAP_CUSTOMINFO },
-    { "custominfo6", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[5]), NULL, OSP_MAP_CUSTOMINFO },
-    { "custominfo7", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[6]), NULL, OSP_MAP_CUSTOMINFO },
-    { "custominfo8", PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[7]), NULL, OSP_MAP_CUSTOMINFO },
-    /* End */
-    { NULL, -1, 0, NULL, NULL }     /* end the list */
-};
-
-static const CONF_PARSER module_config[] = {
-    /* OSP running parameters */
-    { "running", PW_TYPE_SUBSECTION, 0, NULL, (const void*)running_config },
-    /* OSP provider parameters */
-    { "provider", PW_TYPE_SUBSECTION, 0, NULL, (const void*)provider_config },
-    /* RADIUS OSP mapping parameters */
-    { "mapping", PW_TYPE_SUBSECTION, 0, NULL, (const void*)mapping_config },
-    /* End */
-    { NULL, -1, 0, NULL, NULL }     /* end the list */
-};
-
-/*
- * Internal function prototype
- */
-static int osp_check_running(osp_running_t* running);
-static int osp_check_provider(osp_provider_t* provider);
-static int osp_check_mapping(osp_mapping_t* mapping);
-static int osp_parse_netlist(char* liststr, osp_netlist_t* list);
-static int osp_check_statsmap(osp_statsmap_t* stats);
-static int osp_check_itemmap(char* item, osp_deflevel_t level);
-static int osp_create_provider(osp_provider_t* provider);
-static void osp_report_statsinfo(OSPTTRANHANDLE transaction, osp_statsmap_t* mapping, osp_stats_t* stats);
-static int osp_get_usageinfo(rlm_osp_t* data, REQUEST* request, int type, osp_usage_t* usage);
-static int osp_match_subnet(osp_netlist_t* list, uint32_t ip);
-static int osp_get_statsinfo(osp_mapping_t* mapping, REQUEST* request, int type, osp_usage_t* usage);
-static void osp_get_iphost(char* ip, char* buffer, int buffersize);
-static void osp_create_device(uint32_t ip, int port, char* buffer, int buffersize);
-static void osp_format_device(char* device, char* buffer, int buffersize);
-static int osp_get_uriuser(char* uri, char* buffer, int buffersize);
-static int osp_get_urihost(char* uri, char* buffer, int buffersize);
-static OSPE_PROTOCOL_NAME osp_parse_protocol(osp_mapping_t* mapping, char* protocol);
-static OSPE_TERM_CAUSE osp_get_causetype(osp_mapping_t* mapping, OSPE_PROTOCOL_NAME protocol);
-static time_t osp_format_time(char* timestamp, osp_timestr_t format);
-static int osp_cal_timeoffset(char* tzone, long int* toffset);
-static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
 
 /*
  * Macros
@@ -832,7 +697,7 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
         radlog(L_ERR, "rlm_osp: '%s' must be larger than '%d', not '%d'.", _name, _min - 1, _val); \
         return -1; \
     } \
-    DEBUG("rlm_osp: '%s' = '%d'", _name, _val); \
+    DEBUG2("rlm_osp: '%s' = '%d'", _name, _val); \
 }
 
 /*
@@ -848,7 +713,7 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
         radlog(L_ERR, "rlm_osp: '%s' must be an integer from '%d' to '%d', not '%d'.", _name, _min, _max, _val); \
         return -1; \
     } \
-    DEBUG("rlm_osp: '%s' = '%d'", _name, _val); \
+    DEBUG2("rlm_osp: '%s' = '%d'", _name, _val); \
 }
 
 /*
@@ -859,7 +724,7 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
  * param _map Item mapping string
  */
 #define OSP_CHECK_ITEMMAP(_name, _lev, _map) { \
-    DEBUG("rlm_osp: check '%s' mapping", _name); \
+    DEBUG3("rlm_osp: check '%s' mapping", _name); \
     if (osp_check_itemmap(_map, _lev) < 0) { \
         if (OSP_CHECK_STRING(_map)) { \
             radlog(L_ERR, "rlm_osp: Incorrect '%s' mapping '%s'.", _name, _map); \
@@ -869,44 +734,60 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
         return -1; \
     } \
     if (OSP_CHECK_STRING(_map)) { \
-        DEBUG("rlm_osp: '%s' = '%s'", _name, _map); \
+        DEBUG2("rlm_osp: '%s' = '%s'", _name, _map); \
     } else { \
         /* Undefined may be defined item */ \
-        DEBUG("rlm_osp: '%s' = 'NULL'", _name); \
+        DEBUG2("rlm_osp: '%s' = 'NULL'", _name); \
     } \
 }
 
 /*
- * Crossover mapping
+ * Get integer
  *
- * param _cli Client type
- * param _ori Call origin
- * param _grp Statistic group
- * param _dir Statistic dir
- * param _flag Crossover flag
- * param _map VSA default mapping
- * param _down VSA downstream mapping
- * param _up VSA upstream mapping
- * param _vsa Used VSA mapping
+ * param _req FreeRADIUS request
+ * param _flag Parse flag
+ * param _name Item name
+ * param _lev Must or may be defined
+ * param _map Item mapping string
+ * param _fmt Integer string format
+ * param _def Item default value
+ * param _buf Buffer
+ * param _val Item value
  */
-#define OSP_CROSSOVER_MAPS(_cli, _ori, _grp, _dir, _flag, _map, _down, _up, _vsa) { \
-    _vsa = _map; \
-    switch (_cli) { \
-    case OSP_CLIENT_CISCO: \
-        if ((_ori == OSP_ORIGIN_INIT) && (_grp == OSP_GROUP_RTP) && (_flag)) { \
-            if (_dir == OSP_DIR_SRCREP) { \
-                _vsa = _up; \
+#define OSP_GET_INTEGER(_req, _flag, _name, _lev, _map, _fmt, _def, _buf, _val) { \
+    if (_flag) { \
+        if (OSP_CHECK_STRING(_map)) { \
+            radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
+            if (_buf[0] == '\0') { \
+                /* Has checked string NULL */ \
+                if (_lev == OSP_DEF_MUST) { \
+                    radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    return -1; \
+                } else { \
+                    radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    _val = _def; \
+                } \
             } else { \
-               _vsa = _down; \
+                if (_fmt == OSP_INTSTR_HEX) { \
+                    sscanf(_buf, "%x", &_val); \
+                } else { \
+                    _val = atoi(_buf); \
+                } \
+            } \
+        } else { \
+            if (_lev == OSP_DEF_MUST) { \
+                radlog(L_ERR, "rlm_osp: '%s' mapping undefined.", _name); \
+                return -1; \
+            } else { \
+                DEBUG("rlm_osp: '%s' mapping undefined.", _name); \
+                _val = _def; \
             } \
         } \
-        break; \
-    case OSP_CLIENT_UNDEF: \
-    case OSP_CLIENT_ACME: \
-    case OSP_CLIENT_GENBANDS3: \
-    default: \
-        break; \
+    } else { \
+        DEBUG2("rlm_osp: do not parse '%s'.", _name); \
+        _val = _def; \
     } \
+    DEBUG2("rlm_osp: '%s' = '%d'", _name, _val); \
 }
 
 /*
@@ -947,10 +828,95 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
             } \
         } \
     } else { \
-        DEBUG("rlm_osp: do not parse '%s'.", _name); \
+        DEBUG2("rlm_osp: do not parse '%s'.", _name); \
         _val = _def; \
     } \
-    DEBUG("rlm_osp: '%s' = '%llu'", _name, _val); \
+    DEBUG2("rlm_osp: '%s' = '%llu'", _name, _val); \
+}
+
+/*
+ * Get float
+ *
+ * param _req FreeRADIUS request
+ * param _flag Parse flag
+ * param _name Item name
+ * param _lev Must or may be defined
+ * param _map Item mapping string
+ * param _sca Item scale index
+ * param _def Item default value
+ * param _buf Buffer
+ * param _val Item value
+ */
+#define OSP_GET_FLOAT(_req, _flag, _name, _lev, _map, _sca, _def, _buf, _val) { \
+    if (_flag) { \
+        if (OSP_CHECK_STRING(_map)) { \
+            radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
+            if (_buf[0] == '\0') { \
+                /* Has checked string NULL */ \
+                if (_lev == OSP_DEF_MUST) { \
+                    radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    return -1; \
+                } else { \
+                    radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    _val = _def; \
+                } \
+            } else { \
+                _val = (float)atoi(_buf) * OSP_SCALE_TABLE[_sca]; \
+            } \
+        } else { \
+            if (_lev == OSP_DEF_MUST) { \
+                radlog(L_ERR, "rlm_osp: '%s' mapping undefined.", _name); \
+                return -1; \
+            } else { \
+                DEBUG("rlm_osp: '%s' mapping undefined.", _name); \
+                _val = _def; \
+            } \
+        } \
+    } else { \
+        DEBUG2("rlm_osp: do not parse '%s'.", _name); \
+        _val = _def; \
+    } \
+    DEBUG2("rlm_osp: '%s' = '%.4f'", _name, _val); \
+}
+
+/*
+ * Get string
+ *
+ * param _req FreeRADIUS request
+ * param _flag Parse flag
+ * param _name Item name
+ * param _lev Must or may be defined
+ * param _map Item mapping string
+ * param _val Item string
+ */
+#define OSP_GET_STRING(_req, _flag, _name, _lev, _map, _val) { \
+    if (_flag) { \
+        if (OSP_CHECK_STRING(_map)) { \
+            radius_xlat(_val, sizeof(_val), _map, _req, NULL); \
+            if (_val[0] == '\0') { \
+                /* Has checked string NULL */ \
+                if (_lev == OSP_DEF_MUST) { \
+                   radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                   return -1; \
+                } else { \
+                   radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                } \
+            } \
+        } else { \
+            if (_lev == OSP_DEF_MUST) { \
+                radlog(L_ERR, "rlm_osp: '%s' mapping undefined.", _name); \
+                return -1; \
+            } else { \
+                DEBUG("rlm_osp: '%s' mapping undefined.", _name); \
+                _val[0] = '\0'; \
+            } \
+        } \
+    } else { \
+        DEBUG2("rlm_osp: do not parse '%s'.", _name); \
+        _val[0] = '\0'; \
+    } \
+    /* Do not have to check string NULL */ \
+    DEBUG2("rlm_osp: '%s' = '%s'", _name, _val); \
 }
 
 /*
@@ -1023,11 +989,59 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
             } \
         } \
     } else { \
-        DEBUG("rlm_osp: do not parse '%s'.", _name); \
+        DEBUG2("rlm_osp: do not parse '%s'.", _name); \
         _val[0] = '\0'; \
     } \
     /* Do not have to check string NULL */ \
-    DEBUG("rlm_osp: '%s' = '%s'", _name, _val); \
+    DEBUG2("rlm_osp: '%s' = '%s'", _name, _val); \
+}
+
+/*
+ * Get IP address
+ *
+ * param _req FreeRADIUS request
+ * param _flag Parse flag
+ * param _name Item name
+ * param _lev Must or may be defined
+ * param _map Item mapping string
+ * param _ip Default IP address
+ * param _port Default port
+ * param _buf Buffer
+ * param _val Item value
+ * param _host Host of IP
+ */
+#define OSP_GET_IP(_req, _flag, _name, _lev, _map, _ip, _port, _buf, _val, _host) { \
+    if (_flag) { \
+        if (OSP_CHECK_STRING(_map)) { \
+            radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
+            if (_buf[0] == '\0') { \
+                /* Has checked string NULL */ \
+                if (_lev == OSP_DEF_MUST) { \
+                    radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    return -1; \
+                } else { \
+                    radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    osp_create_device(_ip, _port, _val, sizeof(_val)); \
+                } \
+            } else { \
+                osp_format_device(_buf, _val, sizeof(_val)); \
+                osp_get_iphost(_buf, _host, sizeof(_host)); \
+            } \
+        } else { \
+            if (_lev == OSP_DEF_MUST) { \
+                radlog(L_ERR, "rlm_osp: '%s' mapping undefined.", _name); \
+                return -1; \
+            } else { \
+                DEBUG("rlm_osp: '%s' mapping undefined.", _name); \
+                osp_create_device(_ip, _port, _val, sizeof(_val)); \
+            } \
+        } \
+    } else { \
+        DEBUG2("rlm_osp: do not parse '%s'.", _name); \
+        osp_create_device(_ip, _port, _val, sizeof(_val)); \
+    } \
+    /* Do not have to check string NULL */ \
+    DEBUG2("rlm_osp: '%s' = '%s'", _name, _val); \
 }
 
 /*
@@ -1091,193 +1105,11 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
             } \
         } \
     } else { \
-        DEBUG("rlm_osp: do not parse '%s'.", _name); \
+        DEBUG2("rlm_osp: do not parse '%s'.", _name); \
         osp_create_device(_ip, _port, _val, sizeof(_val)); \
     } \
     /* Do not have to check string NULL */ \
-    DEBUG("rlm_osp: '%s' = '%s'", _name, _val); \
-}
-
-/*
- * Get IP address
- *
- * param _req FreeRADIUS request
- * param _flag Parse flag
- * param _name Item name
- * param _lev Must or may be defined
- * param _map Item mapping string
- * param _ip Default IP address
- * param _port Default port
- * param _buf Buffer
- * param _val Item value
- * param _host Host of IP
- */
-#define OSP_GET_IP(_req, _flag, _name, _lev, _map, _ip, _port, _buf, _val, _host) { \
-    if (_flag) { \
-        if (OSP_CHECK_STRING(_map)) { \
-            radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
-            if (_buf[0] == '\0') { \
-                /* Has checked string NULL */ \
-                if (_lev == OSP_DEF_MUST) { \
-                    radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
-                    return -1; \
-                } else { \
-                    radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
-                    osp_create_device(_ip, _port, _val, sizeof(_val)); \
-                } \
-            } else { \
-                osp_format_device(_buf, _val, sizeof(_val)); \
-                osp_get_iphost(_buf, _host, sizeof(_host)); \
-            } \
-        } else { \
-            if (_lev == OSP_DEF_MUST) { \
-                radlog(L_ERR, "rlm_osp: '%s' mapping undefined.", _name); \
-                return -1; \
-            } else { \
-                DEBUG("rlm_osp: '%s' mapping undefined.", _name); \
-                osp_create_device(_ip, _port, _val, sizeof(_val)); \
-            } \
-        } \
-    } else { \
-        DEBUG("rlm_osp: do not parse '%s'.", _name); \
-        osp_create_device(_ip, _port, _val, sizeof(_val)); \
-    } \
-    /* Do not have to check string NULL */ \
-    DEBUG("rlm_osp: '%s' = '%s'", _name, _val); \
-}
-
-/*
- * Get string
- *
- * param _req FreeRADIUS request
- * param _flag Parse flag
- * param _name Item name
- * param _lev Must or may be defined
- * param _map Item mapping string
- * param _val Item string
- */
-#define OSP_GET_STRING(_req, _flag, _name, _lev, _map, _val) { \
-    if (_flag) { \
-        if (OSP_CHECK_STRING(_map)) { \
-            radius_xlat(_val, sizeof(_val), _map, _req, NULL); \
-            if (_val[0] == '\0') { \
-                /* Has checked string NULL */ \
-                if (_lev == OSP_DEF_MUST) { \
-                   radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
-                   return -1; \
-                } else { \
-                   radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
-                } \
-            } \
-        } else { \
-            if (_lev == OSP_DEF_MUST) { \
-                radlog(L_ERR, "rlm_osp: '%s' mapping undefined.", _name); \
-                return -1; \
-            } else { \
-                DEBUG("rlm_osp: '%s' mapping undefined.", _name); \
-                _val[0] = '\0'; \
-            } \
-        } \
-    } else { \
-        DEBUG("rlm_osp: do not parse '%s'.", _name); \
-        _val[0] = '\0'; \
-    } \
-    /* Do not have to check string NULL */ \
-    DEBUG("rlm_osp: '%s' = '%s'", _name, _val); \
-}
-
-/*
- * Get integer
- *
- * param _req FreeRADIUS request
- * param _flag Parse flag
- * param _name Item name
- * param _lev Must or may be defined
- * param _map Item mapping string
- * param _fmt Integer string format
- * param _def Item default value
- * param _buf Buffer
- * param _val Item value
- */
-#define OSP_GET_INTEGER(_req, _flag, _name, _lev, _map, _fmt, _def, _buf, _val) { \
-    if (_flag) { \
-        if (OSP_CHECK_STRING(_map)) { \
-            radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
-            if (_buf[0] == '\0') { \
-                /* Has checked string NULL */ \
-                if (_lev == OSP_DEF_MUST) { \
-                    radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
-                    return -1; \
-                } else { \
-                    radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
-                    _val = _def; \
-                } \
-            } else { \
-                if (_fmt == OSP_INTSTR_HEX) { \
-                    sscanf(_buf, "%x", &_val); \
-                } else { \
-                    _val = atoi(_buf); \
-                } \
-            } \
-        } else { \
-            if (_lev == OSP_DEF_MUST) { \
-                radlog(L_ERR, "rlm_osp: '%s' mapping undefined.", _name); \
-                return -1; \
-            } else { \
-                DEBUG("rlm_osp: '%s' mapping undefined.", _name); \
-                _val = _def; \
-            } \
-        } \
-    } else { \
-        DEBUG("rlm_osp: do not parse '%s'.", _name); \
-        _val = _def; \
-    } \
-    DEBUG("rlm_osp: '%s' = '%d'", _name, _val); \
-}
-
-/*
- * Get float
- *
- * param _req FreeRADIUS request
- * param _flag Parse flag
- * param _name Item name
- * param _lev Must or may be defined
- * param _map Item mapping string
- * param _sca Item scale index
- * param _def Item default value
- * param _buf Buffer
- * param _val Item value
- */
-#define OSP_GET_FLOAT(_req, _flag, _name, _lev, _map, _sca, _def, _buf, _val) { \
-    if (_flag) { \
-        if (OSP_CHECK_STRING(_map)) { \
-            radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
-            if (_buf[0] == '\0') { \
-                /* Has checked string NULL */ \
-                if (_lev == OSP_DEF_MUST) { \
-                    radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
-                    return -1; \
-                } else { \
-                    radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
-                    _val = _def; \
-                } \
-            } else { \
-                _val = (float)atoi(_buf) * OSP_SCALE_TABLE[_sca]; \
-            } \
-        } else { \
-            if (_lev == OSP_DEF_MUST) { \
-                radlog(L_ERR, "rlm_osp: '%s' mapping undefined.", _name); \
-                return -1; \
-            } else { \
-                DEBUG("rlm_osp: '%s' mapping undefined.", _name); \
-                _val = _def; \
-            } \
-        } \
-    } else { \
-        DEBUG("rlm_osp: do not parse '%s'.", _name); \
-        _val = _def; \
-    } \
-    DEBUG("rlm_osp: '%s' = '%.4f'", _name, _val); \
+    DEBUG2("rlm_osp: '%s' = '%s'", _name, _val); \
 }
 
 /*
@@ -1319,32 +1151,207 @@ static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
             } \
         } \
     } else { \
-        DEBUG("rlm_osp: do not parse '%s'.", _name); \
+        DEBUG2("rlm_osp: do not parse '%s'.", _name); \
         _val = 0; \
     } \
-    DEBUG("rlm_osp: '%s' = '%lu'", _name, _val); \
+    DEBUG2("rlm_osp: '%s' = '%lu'", _name, _val); \
 }
+
+/*
+ * Internal function prototype
+ */
+static int osp_check_running(osp_running_t* running);
+static int osp_check_provider(osp_provider_t* provider);
+static int osp_check_mapping(osp_mapping_t* mapping);
+static int osp_parse_netlist(char* liststr, osp_netlist_t* list);
+static int osp_check_statsmap(osp_statsmap_t* stats);
+static int osp_check_itemmap(char* item, osp_deflevel_e level);
+static int osp_create_provider(osp_provider_t* provider);
+static void osp_report_statsinfo(OSPTTRANHANDLE transaction, osp_statsmap_t* mapping, osp_stats_t* stats);
+static int osp_get_usageinfo(rlm_osp_t* data, REQUEST* request, int type, osp_usage_t* usage);
+static int osp_match_subnet(osp_netlist_t* list, uint32_t ip);
+static int osp_get_statsinfo(osp_mapping_t* mapping, REQUEST* request, int type, osp_usage_t* usage);
+static void osp_get_iphost(char* ip, char* buffer, int buffersize);
+static void osp_create_device(uint32_t ip, int port, char* buffer, int buffersize);
+static void osp_format_device(char* device, char* buffer, int buffersize);
+static int osp_get_uriuser(char* uri, char* buffer, int buffersize);
+static int osp_get_urihost(char* uri, char* buffer, int buffersize);
+static OSPE_PROTOCOL_NAME osp_parse_protocol(osp_mapping_t* mapping, char* protocol);
+static OSPE_TERM_CAUSE osp_get_causetype(osp_mapping_t* mapping, OSPE_PROTOCOL_NAME protocol);
+static time_t osp_format_time(char* timestamp, osp_timestr_e format);
+static int osp_remove_timezone(char* timestamp, char* buffer, int buffersize, long int* toffset);
+static int osp_cal_timeoffset(char* tzone, long int* toffset);
+static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
+
+/* OSP instance flag */
+static int instance_count = 0;
 
 /* OSP default certificates */
 static const char* B64PKey = "MIIBOgIBAAJBAK8t5l+PUbTC4lvwlNxV5lpl+2dwSZGW46dowTe6y133XyVEwNiiRma2YNk3xKs/TJ3Wl9Wpns2SYEAJsFfSTukCAwEAAQJAPz13vCm2GmZ8Zyp74usTxLCqSJZNyMRLHQWBM0g44Iuy4wE3vpi7Wq+xYuSOH2mu4OddnxswCP4QhaXVQavTAQIhAOBVCKXtppEw9UaOBL4vW0Ed/6EA/1D8hDW6St0h7EXJAiEAx+iRmZKhJD6VT84dtX5ZYNVk3j3dAcIOovpzUj9a0CECIEduTCapmZQ5xqAEsLXuVlxRtQgLTUD4ZxDElPn8x0MhAiBE2HlcND0+qDbvtwJQQOUzDgqg5xk3w8capboVdzAlQQIhAMC+lDL7+gDYkNAft5Mu+NObJmQs4Cr+DkDFsKqoxqrm";
 static const char* B64LCert = "MIIBeTCCASMCEHqkOHVRRWr+1COq3CR/xsowDQYJKoZIhvcNAQEEBQAwOzElMCMGA1UEAxMcb3NwdGVzdHNlcnZlci50cmFuc25leHVzLmNvbTESMBAGA1UEChMJT1NQU2VydmVyMB4XDTA1MDYyMzAwMjkxOFoXDTA2MDYyNDAwMjkxOFowRTELMAkGA1UEBhMCQVUxEzARBgNVBAgTClNvbWUtU3RhdGUxITAfBgNVBAoTGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDBcMA0GCSqGSIb3DQEBAQUAA0sAMEgCQQCvLeZfj1G0wuJb8JTcVeZaZftncEmRluOnaME3ustd918lRMDYokZmtmDZN8SrP0yd1pfVqZ7NkmBACbBX0k7pAgMBAAEwDQYJKoZIhvcNAQEEBQADQQDnV8QNFVVJx/+7IselU0wsepqMurivXZzuxOmTEmTVDzCJx1xhA8jd3vGAj7XDIYiPub1PV23eY5a2ARJuw5w9";
 static const char* B64CACert = "MIIBYDCCAQoCAQEwDQYJKoZIhvcNAQEEBQAwOzElMCMGA1UEAxMcb3NwdGVzdHNlcnZlci50cmFuc25leHVzLmNvbTESMBAGA1UEChMJT1NQU2VydmVyMB4XDTAyMDIwNDE4MjU1MloXDTEyMDIwMzE4MjU1MlowOzElMCMGA1UEAxMcb3NwdGVzdHNlcnZlci50cmFuc25leHVzLmNvbTESMBAGA1UEChMJT1NQU2VydmVyMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAPGeGwV41EIhX0jEDFLRXQhDEr50OUQPq+f55VwQd0TQNts06BP29+UiNdRW3c3IRHdZcJdC1Cg68ME9cgeq0h8CAwEAATANBgkqhkiG9w0BAQQFAANBAGkzBSj1EnnmUxbaiG1N4xjIuLAWydun7o3bFk2tV8dBIhnuh445obYyk1EnQ27kI7eACCILBZqi2MHDOIMnoN0=";
 
-/* Media stream group strings */
-static const char* group_str[OSP_GROUP_NUMBER] = { "rtp", "rtcp" };
-
-/* Media stream direction stings */
-static const char* dir_str[OSP_DIR_NUMBER] = {
-    "source-to-reporter",
-    "reporter-to-source",
-    "destination-to-reporter",
-    "reporter-to-destination",
-    "source-to-destination",
-    "destination-to-source"
+/*
+ * A mapping of configuration file names to internal variables.
+ *
+ *   Note that the string is dynamically allocated, so it MUST
+ *   be freed.  When the configuration file parse re-reads the string,
+ *   it free's the old one, and strdup's the new one, placing the pointer
+ *   to the strdup'd string into 'config.string'.  This gets around
+ *   buffer over-flows.
+ */
+static const CONF_PARSER running_config[] = {
+    /* OSP module running parameters */
+    { OSP_STR_LOGLEVEL, PW_TYPE_INTEGER, offsetof(rlm_osp_t, running.loglevel), NULL, OSP_LOGLEVEL_DEF },
+    /* End */
+    { NULL, -1, 0, NULL, NULL } /* end the list */
 };
 
-/* OSP init flag */
-static int instance_count = 0;
+static const CONF_PARSER provider_config[] = {
+    /*
+     * OSP provider parameters
+     *
+     *   All service points, weights and cacerts must be listed to allow config
+     *   parser to read them.
+     */
+    { OSP_STR_ACCELERATE, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, provider.accelerate), NULL, OSP_HWACCE_DEF },
+    { OSP_STR_SECURITY, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, provider.security), NULL, OSP_SECURITY_DEF },
+    { OSP_STR_SPURI1, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[0]), NULL, OSP_SPURI_DEF },
+    { OSP_STR_SPURI2, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[1]), NULL, NULL },
+    { OSP_STR_SPURI3, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[2]), NULL, NULL },
+    { OSP_STR_SPURI4, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, provider.spuris[3]), NULL, NULL },
+    { OSP_STR_SPWEIGHT1, PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.spweights[0]), NULL, OSP_SPWEIGHT_DEF },
+    { OSP_STR_SPWEIGHT2, PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.spweights[1]), NULL, OSP_SPWEIGHT_DEF },
+    { OSP_STR_SPWEIGHT3, PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.spweights[2]), NULL, OSP_SPWEIGHT_DEF },
+    { OSP_STR_SPWEIGHT4, PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.spweights[3]), NULL, OSP_SPWEIGHT_DEF },
+    { OSP_STR_PRIVATEKEY, PW_TYPE_FILENAME, offsetof(rlm_osp_t, provider.privatekey), NULL, OSP_PRIVATEKEY_DEF },
+    { OSP_STR_LOCALCERT, PW_TYPE_FILENAME, offsetof(rlm_osp_t, provider.localcert), NULL, OSP_LOCALCERT_DEF },
+    { OSP_STR_CACERT0, PW_TYPE_FILENAME, offsetof(rlm_osp_t, provider.cacerts[0]), NULL, OSP_CACERT_DEF },
+    { OSP_STR_CACERT1, PW_TYPE_FILENAME, offsetof(rlm_osp_t, provider.cacerts[1]), NULL, NULL },
+    { OSP_STR_CACERT2, PW_TYPE_FILENAME, offsetof(rlm_osp_t, provider.cacerts[2]), NULL, NULL },
+    { OSP_STR_CACERT3, PW_TYPE_FILENAME, offsetof(rlm_osp_t, provider.cacerts[3]), NULL, NULL },
+    { OSP_STR_SSLLIFETIME, PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.ssllifetime), NULL, OSP_SSLLIFETIME_DEF },
+    { OSP_STR_MAXCONN, PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.maxconn), NULL, OSP_MAXCONN_DEF },
+    { OSP_STR_PERSISTENCE, PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.persistence), NULL, OSP_PERSISTENCE_DEF },
+    { OSP_STR_RETRYDELAY, PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.retrydelay), NULL, OSP_RETRYDELAY_DEF },
+    { OSP_STR_RETRYLIMIT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.retrylimit), NULL, OSP_RETRYLIMIT_DEF },
+    { OSP_STR_TIMEOUT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.timeout), NULL, OSP_TIMEOUT_DEF },
+    { OSP_STR_DEVICEIP, PW_TYPE_IPADDR, offsetof(rlm_osp_t, provider.deviceip), NULL, OSP_DEVICEIP_DEF },
+    { OSP_STR_DEVICEPORT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, provider.deviceport), NULL, OSP_DEVICEPORT_DEF },
+    /* End */
+    { NULL, -1, 0, NULL, NULL } /* end the list */
+};
+
+static const CONF_PARSER mapping_config[] = {
+    /*
+     * RADIUS OSP mapping parameters
+     *
+     *   All custom info must be listed to allow config parser to read them.
+     */
+    { OSP_STR_REPORTSTART, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportstart), NULL, OSP_MAP_REPORT },
+    { OSP_STR_REPORTSTOP, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportstop), NULL, OSP_MAP_REPORT },
+    { OSP_STR_REPORTINTERIM, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportinterim), NULL, OSP_MAP_REPORT },
+    { OSP_STR_CLIENTTYPE, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.clienttype), NULL, OSP_MAP_CLIENTTYPE },
+    { OSP_STR_IGNOREDDESTLIST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.ignoreddeststr), NULL, OSP_MAP_NETLIST },
+    { OSP_STR_CALLORIGIN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.origin), NULL, OSP_MAP_ORIGIN },
+    { OSP_STR_IGNOREANSWER, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.ignoreterm), NULL, OSP_MAP_IGNORERAD },
+    { OSP_STR_IGNOREORIGINATE, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.ignoreinit), NULL, OSP_MAP_IGNORERAD },
+    { OSP_STR_TRANSACTIONID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transid), NULL, OSP_MAP_TRANSID },
+    { OSP_STR_CALLID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.callid), NULL, OSP_MAP_CALLID },
+    { OSP_STR_CALLINGFORMAT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.callingformat), NULL, OSP_MAP_NUMFORMAT },
+    { OSP_STR_CALLINGNUMBER, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.calling), NULL, OSP_MAP_CALLING },
+    { OSP_STR_CALLEDFORMAT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.calledformat), NULL, OSP_MAP_NUMFORMAT },
+    { OSP_STR_CALLEDNUMBER, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.called), NULL, OSP_MAP_CALLED },
+    { OSP_STR_ASSERTEDID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.assertedid), NULL, OSP_MAP_ASSERTEDID },
+    { OSP_STR_RPID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.rpid), NULL, OSP_MAP_RPID },
+    { OSP_STR_SOURCE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.source), NULL, OSP_MAP_SOURCE },
+    { OSP_STR_PROXY, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.proxy), NULL, OSP_MAP_PROXY },
+    { OSP_STR_SRCDEVICE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcdev), NULL, OSP_MAP_SRCDEV },
+    { OSP_STR_DESTINATION, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destination), NULL, OSP_MAP_DESTINATION },
+    { OSP_STR_DESTDEVICE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destdev), NULL, OSP_MAP_DESTDEV },
+    { OSP_STR_DESTCOUNT, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destcount), NULL, OSP_MAP_DESTCOUNT },
+    { OSP_STR_SRCNETWORKID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcnid), NULL, OSP_MAP_NETWORKID },
+    { OSP_STR_DESTNETWORKID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destnid), NULL, OSP_MAP_NETWORKID },
+    { OSP_STR_DIVERSIONUSER, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.divuser), NULL, OSP_MAP_DIVUSER },
+    { OSP_STR_DIVERSIONHOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.divhost), NULL, OSP_MAP_DIVHOST },
+    { OSP_STR_TIMEFORMAT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.timeformat), NULL, OSP_MAP_TIMEFORMAT },
+    { OSP_STR_STARTTIME, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.start), NULL, OSP_MAP_START },
+    { OSP_STR_ALERTTIME, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.alert), NULL, OSP_MAP_ALERT },
+    { OSP_STR_CONNECTTIME, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.connect), NULL, OSP_MAP_CONNECT },
+    { OSP_STR_ENDTIME, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.end), NULL, OSP_MAP_END },
+    { OSP_STR_DURATION, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.duration), NULL, OSP_MAP_DURATION },
+    { OSP_STR_PDDUNIT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.pddunit), NULL, OSP_MAP_PDDUNIT },
+    { OSP_STR_PDD, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.pdd), NULL, OSP_MAP_PDD },
+    { OSP_STR_RELEASE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.release), NULL, OSP_MAP_RELEASE },
+    { OSP_STR_PROTOCOL, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.protocol), NULL, OSP_MAP_PROTOCOL },
+    { OSP_STR_SRCPROTOCOL, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcprotocol), NULL, OSP_MAP_PROTOCOL },
+    { OSP_STR_DESTPROTOCOL, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destprotocol), NULL, OSP_MAP_PROTOCOL },
+    { OSP_STR_CAUSE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.cause), NULL, OSP_MAP_CAUSE },
+    { OSP_STR_SRCSESSIONID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcsessionid), NULL, OSP_MAP_SESSIONID },
+    { OSP_STR_DESTSESSIONID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destsessionid), NULL, OSP_MAP_SESSIONID },
+    { OSP_STR_CORRSESSIONID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.corrsessionid), NULL, OSP_MAP_SESSIONID },
+    { OSP_STR_SRCCODEC, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srccodec), NULL, OSP_MAP_CODEC },
+    { OSP_STR_DESTCODEC, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destcodec), NULL, OSP_MAP_CODEC },
+    { OSP_STR_CONFID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.confid), NULL, OSP_MAP_CONFID },
+    { OSP_STR_CUSTOMINFO1, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[0]), NULL, OSP_MAP_CUSTOMINFO },
+    { OSP_STR_CUSTOMINFO2, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[1]), NULL, OSP_MAP_CUSTOMINFO },
+    { OSP_STR_CUSTOMINFO3, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[2]), NULL, OSP_MAP_CUSTOMINFO },
+    { OSP_STR_CUSTOMINFO4, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[3]), NULL, OSP_MAP_CUSTOMINFO },
+    { OSP_STR_CUSTOMINFO5, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[4]), NULL, OSP_MAP_CUSTOMINFO },
+    { OSP_STR_CUSTOMINFO6, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[5]), NULL, OSP_MAP_CUSTOMINFO },
+    { OSP_STR_CUSTOMINFO7, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[6]), NULL, OSP_MAP_CUSTOMINFO },
+    { OSP_STR_CUSTOMINFO8, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[7]), NULL, OSP_MAP_CUSTOMINFO },
+    { OSP_STR_SRCREALM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcrealm), NULL, OSP_MAP_REALM },
+    { OSP_STR_DESTREALM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destrealm), NULL, OSP_MAP_REALM },
+    /* Statistics mapping */
+#define mSMAP   mapping.stats
+    { OSP_STR_REPORTSTATS, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mSMAP.reportstats), NULL, OSP_MAP_REPORT },
+    { OSP_STR_SLOSTPACKETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.slost.pack), NULL, OSP_MAP_STATS },
+    { OSP_STR_SLOSTFRACTION, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.slost.fract), NULL, OSP_MAP_STATS },
+    { OSP_STR_RLOSTPACKETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rlost.pack), NULL, OSP_MAP_STATS },
+    { OSP_STR_RLOSTFRACTION, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rlost.fract), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPSRCREPOCTETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_octets), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPDESTREPOCTETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_octets), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPSRCREPPACKETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_packets), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPDESTREPPACKETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_packets), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPSRCREPLOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_lost), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPDESTREPLOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_lost), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPSRCREPJITTERMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_jitter_mean), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPDESTREPJITTERMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_jitter_mean), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPSRCREPJITTERMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_jitter_max), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPDESTREPJITTERMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_jitter_max), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPSRCDESTLOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_dest_lost), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPDESTSRCLOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_src_lost), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPSRCDESTJITTERMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_dest_jitter_mean), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPDESTSRCJITTERMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_src_jitter_mean), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPSRCDESTJITTERMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_dest_jitter_max), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPDESTSRCJITTERMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_src_jitter_max), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPSRCRTDELAYMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_rtdelay_mean), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPDESTRTDELAYMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_rtdelay_mean), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPSRCRTDELAYMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_rtdelay_max), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPDESTRTDELAYMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_rtdelay_max), NULL, OSP_MAP_STATS },
+    { OSP_STR_RFACTORSCALE, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mSMAP.rfactorscale), NULL, OSP_MAP_SCALE },
+    { OSP_STR_SRCREPRFACTOR, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.src_rep_rfactor), NULL, OSP_MAP_STATS },
+    { OSP_STR_DESTREPRFACTOR, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.dest_rep_rfactor), NULL, OSP_MAP_STATS },
+    { OSP_STR_MOSSCALE, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mSMAP.mosscale), NULL, OSP_MAP_SCALE },
+    { OSP_STR_SRCREPMOS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.src_rep_mos), NULL, OSP_MAP_STATS },
+    { OSP_STR_DESTREPMOS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.dest_rep_mos), NULL, OSP_MAP_STATS },
+#undef mSMAP
+    /* Statistics group mapping end */
+    /* End */
+    { NULL, -1, 0, NULL, NULL } /* end the list */
+};
+
+static const CONF_PARSER module_config[] = {
+    /* OSP running parameters */
+    { OSP_STR_RUNNING, PW_TYPE_SUBSECTION, 0, NULL, (const void*)running_config },
+    /* OSP provider parameters */
+    { OSP_STR_PROVIDER, PW_TYPE_SUBSECTION, 0, NULL, (const void*)provider_config },
+    /* RADIUS OSP mapping parameters */
+    { OSP_STR_MAPPING, PW_TYPE_SUBSECTION, 0, NULL, (const void*)mapping_config },
+    /* End */
+    { NULL, -1, 0, NULL, NULL } /* end the list */
+};
 
 /*
  * Do any per-module initialization that is separate to each
@@ -1366,7 +1373,7 @@ static int osp_instantiate(
 {
     rlm_osp_t* data;
 
-    DEBUG("rlm_osp: osp_instantiate start");
+    DEBUG3("rlm_osp: osp_instantiate start");
 
     /* Set up a storage area for instance data */
     data = rad_malloc(sizeof(*data));
@@ -1413,7 +1420,7 @@ static int osp_instantiate(
 
     *instance = data;
 
-    DEBUG("rlm_osp: osp_instantiate success");
+    DEBUG3("rlm_osp: osp_instantiate success");
 
     return 0;
 }
@@ -1427,7 +1434,7 @@ static int osp_instantiate(
 static int osp_check_running(
     osp_running_t* running)
 {
-    DEBUG("rlm_osp: osp_check_running start");
+    DEBUG3("rlm_osp: osp_check_running start");
 
     /* Check log level */
     switch (running->loglevel) {
@@ -1438,9 +1445,9 @@ static int osp_check_running(
         running->loglevel = OSP_LOG_LONG;
         break;
     }
-    DEBUG("rlm_osp: 'loglevel' = '%d'", running->loglevel);
+    DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_LOGLEVEL, running->loglevel);
 
-    DEBUG("rlm_osp: osp_check_running success");
+    DEBUG3("rlm_osp: osp_check_running success");
 
     return 0;
 }
@@ -1458,118 +1465,127 @@ static int osp_check_provider(
     struct in_addr ip;
     char buffer[OSP_STRBUF_SIZE];
 
-    DEBUG("rlm_osp: osp_check_provider start");
+    DEBUG3("rlm_osp: osp_check_provider start");
 
     /* Nothing to check for accelerate */
     if (instance_count == 0) {
-        DEBUG("rlm_osp: 'accelerate' = '%d'", provider->accelerate);
+        DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_ACCELERATE, provider->accelerate);
     }
 
     /* Nothing to check for security */
-    DEBUG("rlm_osp: 'security' = '%d'", provider->security);
+    DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_SECURITY, provider->security);
 
     /* Calculate number of service points */
-    provider->sps = 0;
-    for (i = 0; i < OSP_SPS_MAX; i++) {
+    provider->spnumber = 0;
+    for (i = 0; i < OSP_SPNUM_MAX; i++) {
         if (OSP_CHECK_STRING(provider->spuris[i])) {
             /* If any service point weight is wrong, then fail. */
             if (provider->spweights[i] <= 0) {
                 radlog(L_ERR,
-                    "rlm_osp: 'spweight%d' must be larger than 0, not '%d'.",
+                    "rlm_osp: '%s%d' must be larger than 0, not '%d'.",
+                    OSP_STR_SPWEIGHT,
                     i + 1,
                     provider->spweights[i]);
                 return -1;
             }
-            provider->sps++;
+            provider->spnumber++;
         } else {
             break;
         }
     }
 
     /* If number of service points is wrong, then fail. */
-    if (provider->sps == 0) {
-        radlog(L_ERR, "rlm_osp: 'spuri1' must be defined.");
+    if (provider->spnumber == 0) {
+        radlog(L_ERR,
+            "rlm_osp: '%s' must be defined.",
+            OSP_STR_SPURI1);
         return -1;
     }
-    DEBUG("rlm_osp: 'sps' = '%d'", provider->sps);
+    DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_SPNUM, provider->spnumber);
 
-    for (i = 0; i < provider->sps; i++) {
+    for (i = 0; i < provider->spnumber; i++) {
         /* Has checked string NULL */
-        DEBUG("rlm_osp: 'spuri%d' = '%s'", i + 1, provider->spuris[i]);
+        DEBUG2("rlm_osp: '%s%d' = '%s'", OSP_STR_SPURI, i + 1, provider->spuris[i]);
     }
 
-    for (i = 0; i < provider->sps; i++) {
-        DEBUG("rlm_osp: 'spweight%d' = '%d'", i + 1, provider->spweights[i]);
+    for (i = 0; i < provider->spnumber; i++) {
+        DEBUG2("rlm_osp: '%s%d' = '%d'", OSP_STR_SPWEIGHT, i + 1, provider->spweights[i]);
     }
 
     /* If security flag is set, check certificate file names. Otherwise, use default certificates */
     if (provider->security) {
         /* If privatekey is undefined, then fail. */
         if (!OSP_CHECK_STRING(provider->privatekey)) {
-            radlog(L_ERR, "rlm_osp: 'privatekey' must be defined.");
+            radlog(L_ERR,
+                "rlm_osp: '%s' must be defined.",
+                OSP_STR_PRIVATEKEY);
             return -1;
         }
         /* Has checked string NULL */
-        DEBUG("rlm_osp: 'privatekey' = '%s'", provider->privatekey);
+        DEBUG2("rlm_osp: '%s' = '%s'", OSP_STR_PRIVATEKEY, provider->privatekey);
 
         /* If localcert is undefined, then fail. */
         if (!OSP_CHECK_STRING(provider->localcert)) {
-            radlog(L_ERR, "rlm_osp: 'localcert' must be defined.");
+            radlog(L_ERR,
+                "rlm_osp: '%s' must be defined.",
+                OSP_STR_LOCALCERT);
             return -1;
         }
         /* Has checked string NULL */
-        DEBUG("rlm_osp: 'locacert' = '%s'", provider->localcert);
+        DEBUG2("rlm_osp: '%s' = '%s'", OSP_STR_LOCALCERT, provider->localcert);
 
         /* Calculate number of cacerts */
-        provider->cas = 0;
-        for (i = 0; i < OSP_CAS_MAX; i++) {
+        provider->canumber = 0;
+        for (i = 0; i < OSP_CANUM_MAX; i++) {
             if (OSP_CHECK_STRING(provider->cacerts[i]))  {
-                provider->cas++;
+                provider->canumber++;
             } else {
                 break;
             }
         }
 
         /* If number of cacerts is wrong, then fail. */
-        if (provider->cas == 0) {
-            radlog(L_ERR, "rlm_osp: 'cacert0' must be defined.");
+        if (provider->canumber == 0) {
+            radlog(L_ERR,
+                "rlm_osp: '%s' must be defined.",
+                OSP_STR_CACERT0);
             return -1;
         }
-        DEBUG("rlm_osp: 'cas' = '%d'", provider->cas);
+        DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_CANUM, provider->canumber);
 
-        for (i = 0; i < provider->cas; i++) {
+        for (i = 0; i < provider->canumber; i++) {
             /* Has checked string NULL */
-            DEBUG("rlm_osp: 'cacert%d' = '%s'", i, provider->cacerts[i]);
+            DEBUG2("rlm_osp: '%s%d' = '%s'", OSP_STR_CACERT, i, provider->cacerts[i]);
         }
     }
 
     /* If SSL life time is wrong, then fail. */
-    OSP_CHECK_MIN("ssllifetime", provider->ssllifetime, 0);
+    OSP_CHECK_MIN(OSP_STR_SSLLIFETIME, provider->ssllifetime, OSP_SSLLIFETIME_MIN);
 
     /* If max number of connections is wrong, then fail. */
-    OSP_CHECK_RANGE("maxconnections", provider->maxconn, OSP_MAXCONN_MIN, OSP_MAXCONN_MAX);
+    OSP_CHECK_RANGE(OSP_STR_MAXCONN, provider->maxconn, OSP_MAXCONN_MIN, OSP_MAXCONN_MAX);
 
     /* If persistence is wrong, then fail. */
-    OSP_CHECK_MIN("persistence", provider->persistence, 0);
+    OSP_CHECK_MIN(OSP_STR_PERSISTENCE, provider->persistence, OSP_PERSISTENCE_MIN);
 
     /* If retry delay is wrong, then fail. */
-    OSP_CHECK_RANGE("retrydelay", provider->retrydelay, OSP_RETRYDELAY_MIN, OSP_RETRYDELAY_MAX);
+    OSP_CHECK_RANGE(OSP_STR_RETRYDELAY, provider->retrydelay, OSP_RETRYDELAY_MIN, OSP_RETRYDELAY_MAX);
 
     /* If times of retry is wrong, then fail. */
-    OSP_CHECK_RANGE("retrylimit", provider->retrylimit, OSP_RETRYLIMIT_MIN, OSP_RETRYLIMIT_MAX);
+    OSP_CHECK_RANGE(OSP_STR_RETRYLIMIT, provider->retrylimit, OSP_RETRYLIMIT_MIN, OSP_RETRYLIMIT_MAX);
 
     /* If timeout is wrong, then fail. */
-    OSP_CHECK_RANGE("timeout", provider->timeout, OSP_TIMEOUT_MIN, OSP_TIMEOUT_MAX);
+    OSP_CHECK_RANGE(OSP_STR_TIMEOUT, provider->timeout, OSP_TIMEOUT_MIN, OSP_TIMEOUT_MAX);
 
     /* Nothing to check for deviceip */
     ip.s_addr = provider->deviceip;
     inet_ntop(AF_INET, &ip, buffer, sizeof(buffer));
-    DEBUG("rlm_osp: 'deviceip' = '%s'", buffer);
+    DEBUG2("rlm_osp: '%s' = '%s'", OSP_STR_DEVICEIP, buffer);
 
     /* Nothing to check for deviceport */
-    DEBUG("rlm_osp: 'deviceport' = '%d'", provider->deviceport);
+    DEBUG2("rlm_osp: 'deviceport' = '%d'", provider->deviceport);
 
-    DEBUG("rlm_osp: osp_check_provider success");
+    DEBUG3("rlm_osp: osp_check_provider success");
 
     return 0;
 }
@@ -1586,37 +1602,37 @@ static int osp_check_mapping(
     int i;
     char buffer[OSP_STRBUF_SIZE];
 
-    DEBUG("rlm_osp: osp_check_mapping start");
+    DEBUG3("rlm_osp: osp_check_mapping start");
 
     /* Nothing to check for reportstart */
-    DEBUG("rlm_osp: 'reportstart' = '%d'", mapping->reportstart);
+    DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_REPORTSTART, mapping->reportstart);
 
     /* Nothing to check for reportstop */
-    DEBUG("rlm_osp: 'reportstop' = '%d'", mapping->reportstop);
+    DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_REPORTSTOP, mapping->reportstop);
 
     /* Nothing to check for reportinterim */
-    DEBUG("rlm_osp: 'reportinterim' = '%d'", mapping->reportinterim);
+    DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_REPORTINTERIM, mapping->reportinterim);
 
     /* If ignored destination subnet list string is incorrect, then fail. */
-    DEBUG("rlm_osp: parse 'ignoreddestinationlist'"); \
+    DEBUG3("rlm_osp: parse '%s'", OSP_STR_IGNOREDDESTLIST);
     if (osp_parse_netlist(mapping->ignoreddeststr, &mapping->ignoreddestlist) < 0) {
         return -1;
     }
 
     /* If RADIUS client type is wrong, then fail. */
-    OSP_CHECK_RANGE("radiusclienttype", mapping->clienttype, OSP_CLIENT_MIN, OSP_CLIENT_MAX);
+    OSP_CHECK_RANGE(OSP_STR_CLIENTTYPE, mapping->clienttype, OSP_CLIENT_MIN, OSP_CLIENT_MAX);
 
     /* If call origin is undefined for GENBAND S3 and Cisco, then fail. */
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
-        OSP_CHECK_ITEMMAP("callorigin", OSP_DEF_MUST, mapping->origin);
+        OSP_CHECK_ITEMMAP(OSP_STR_CALLORIGIN, OSP_DEF_MUST, mapping->origin);
 
         /* Nothing to check for ignore answer */
-        DEBUG("rlm_osp: 'ignoreanswer' = '%d'", mapping->ignoreterm);
+        DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_IGNOREANSWER, mapping->ignoreterm);
 
         /* Nothing to check for ignore originate */
-        DEBUG("rlm_osp: 'ignoreoriginate' = '%d'", mapping->ignoreinit);
+        DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_IGNOREORIGINATE, mapping->ignoreinit);
 
         break;
     case OSP_CLIENT_UNDEF:
@@ -1626,34 +1642,37 @@ static int osp_check_mapping(
     }
 
     /* If transaction ID is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("transactionid", OSP_DEF_MAY, mapping->transid);
+    OSP_CHECK_ITEMMAP(OSP_STR_TRANSACTIONID, OSP_DEF_MAY, mapping->transid);
 
     /* If Call-ID is undefined, then fail. */
-    OSP_CHECK_ITEMMAP("callid", OSP_DEF_MUST, mapping->callid);
+    OSP_CHECK_ITEMMAP(OSP_STR_CALLID, OSP_DEF_MUST, mapping->callid);
 
     /* If calling number format is incorrect, then fail. */
-    OSP_CHECK_RANGE("callingnumberformat", mapping->callingformat, OSP_CALLNUM_MIN, OSP_CALLNUM_MAX);
+    OSP_CHECK_RANGE(OSP_STR_CALLINGFORMAT, mapping->callingformat, OSP_CALLNUM_MIN, OSP_CALLNUM_MAX);
 
     /* If calling number is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("callingnumber", OSP_DEF_MAY, mapping->calling);
+    OSP_CHECK_ITEMMAP(OSP_STR_CALLINGNUMBER, OSP_DEF_MAY, mapping->calling);
 
     /* If called number format is incorrect, then fail. */
-    OSP_CHECK_RANGE("callednumberformat", mapping->calledformat, OSP_CALLNUM_MIN, OSP_CALLNUM_MAX);
+    OSP_CHECK_RANGE(OSP_STR_CALLEDFORMAT, mapping->calledformat, OSP_CALLNUM_MIN, OSP_CALLNUM_MAX);
 
     /* If called number is undefined, then fail. */
-    OSP_CHECK_ITEMMAP("callednumber", OSP_DEF_MUST, mapping->called);
+    OSP_CHECK_ITEMMAP(OSP_STR_CALLEDNUMBER, OSP_DEF_MUST, mapping->called);
 
     /* If asserted ID is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("assertedid", OSP_DEF_MAY, mapping->assertedid);
+    OSP_CHECK_ITEMMAP(OSP_STR_ASSERTEDID, OSP_DEF_MAY, mapping->assertedid);
+
+    /* If RPID is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_RPID, OSP_DEF_MAY, mapping->rpid);
 
     /* If source is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("source", OSP_DEF_MAY, mapping->source);
+    OSP_CHECK_ITEMMAP(OSP_STR_SOURCE, OSP_DEF_MAY, mapping->source);
 
     /* If proxy is undefined for GENBAND S3 and Cisco, then fail. */
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
-        OSP_CHECK_ITEMMAP("proxy", OSP_DEF_MUST, mapping->proxy);
+        OSP_CHECK_ITEMMAP(OSP_STR_PROXY, OSP_DEF_MUST, mapping->proxy);
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
@@ -1662,89 +1681,104 @@ static int osp_check_mapping(
     }
 
     /* If source device is undefined, then fail. */
-    OSP_CHECK_ITEMMAP("sourcedevice", OSP_DEF_MUST, mapping->srcdev);
+    OSP_CHECK_ITEMMAP(OSP_STR_SRCDEVICE, OSP_DEF_MUST, mapping->srcdev);
 
     /* If destination is undefined, then fail. */
-    OSP_CHECK_ITEMMAP("destination", OSP_DEF_MUST, mapping->destination);
+    OSP_CHECK_ITEMMAP(OSP_STR_DESTINATION, OSP_DEF_MUST, mapping->destination);
 
     /* If destination device is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("destinationdevice", OSP_DEF_MAY, mapping->destdev);
+    OSP_CHECK_ITEMMAP(OSP_STR_DESTDEVICE, OSP_DEF_MAY, mapping->destdev);
 
     /* If destination count is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("destinationcount", OSP_DEF_MAY, mapping->destcount);
+    OSP_CHECK_ITEMMAP(OSP_STR_DESTCOUNT, OSP_DEF_MAY, mapping->destcount);
 
     /* If source network ID is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("sourcenetworkid", OSP_DEF_MAY, mapping->snid);
+    OSP_CHECK_ITEMMAP(OSP_STR_SRCNETWORKID, OSP_DEF_MAY, mapping->srcnid);
 
     /* If destination network ID is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("destinationnetworkid", OSP_DEF_MAY, mapping->dnid);
+    OSP_CHECK_ITEMMAP(OSP_STR_DESTNETWORKID, OSP_DEF_MAY, mapping->destnid);
 
     /* If diversion user is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("diversionuser", OSP_DEF_MAY, mapping->divuser);
+    OSP_CHECK_ITEMMAP(OSP_STR_DIVERSIONUSER, OSP_DEF_MAY, mapping->divuser);
 
     /* If diversion host is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("diversionhost", OSP_DEF_MAY, mapping->divhost);
+    OSP_CHECK_ITEMMAP(OSP_STR_DIVERSIONHOST, OSP_DEF_MAY, mapping->divhost);
 
     /* If time string format is wrong, then fail. */
-    OSP_CHECK_RANGE("timestringformat", mapping->timeformat, OSP_TIMESTR_MIN, OSP_TIMESTR_MAX);
+    OSP_CHECK_RANGE(OSP_STR_TIMEFORMAT, mapping->timeformat, OSP_TIMESTR_MIN, OSP_TIMESTR_MAX);
 
     /* If call start time is undefined, then fail. */
-    OSP_CHECK_ITEMMAP("starttime", OSP_DEF_MUST, mapping->start);
+    OSP_CHECK_ITEMMAP(OSP_STR_STARTTIME, OSP_DEF_MUST, mapping->start);
 
     /* If call alert time is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("alerttime", OSP_DEF_MAY, mapping->alert);
+    OSP_CHECK_ITEMMAP(OSP_STR_ALERTTIME, OSP_DEF_MAY, mapping->alert);
 
     /* If call connect time is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("connecttime", OSP_DEF_MAY, mapping->connect);
+    OSP_CHECK_ITEMMAP(OSP_STR_CONNECTTIME, OSP_DEF_MAY, mapping->connect);
 
     /* If call end time is undefined, then fail. */
-    OSP_CHECK_ITEMMAP("endtime", OSP_DEF_MUST, mapping->end);
+    OSP_CHECK_ITEMMAP(OSP_STR_ENDTIME, OSP_DEF_MUST, mapping->end);
 
     /* If call duration is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("duration", OSP_DEF_MAY, mapping->duration);
+    OSP_CHECK_ITEMMAP(OSP_STR_DURATION, OSP_DEF_MAY, mapping->duration);
 
     /* If pdd unit is wrong, then fail. */
-    OSP_CHECK_RANGE("postdialdelayunit", mapping->pddunit, OSP_TIMEUNIT_MIN, OSP_TIMEUNIT_MAX);
+    OSP_CHECK_RANGE(OSP_STR_PDDUNIT, mapping->pddunit, OSP_TIMEUNIT_MIN, OSP_TIMEUNIT_MAX);
 
     /* If pdd is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("postdialdelay", OSP_DEF_MAY, mapping->pdd);
+    OSP_CHECK_ITEMMAP(OSP_STR_PDD, OSP_DEF_MAY, mapping->pdd);
 
     /* If release source is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("releasesource", OSP_DEF_MAY, mapping->release);
-
-    /* If release cause is undefined, then fail. */
-    OSP_CHECK_ITEMMAP("releasecause", OSP_DEF_MUST, mapping->cause);
+    OSP_CHECK_ITEMMAP(OSP_STR_RELEASE, OSP_DEF_MAY, mapping->release);
 
     /* If signaling protocol is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("signalingprotocol", OSP_DEF_MAY, mapping->protocol);
+    OSP_CHECK_ITEMMAP(OSP_STR_PROTOCOL, OSP_DEF_MAY, mapping->protocol);
+
+    /* If source protocol is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_SRCPROTOCOL, OSP_DEF_MAY, mapping->srcprotocol);
+
+    /* If destination protocol is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_DESTPROTOCOL, OSP_DEF_MAY, mapping->destprotocol);
+
+    /* If release cause is undefined, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_CAUSE, OSP_DEF_MUST, mapping->cause);
 
     /* If source session ID is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("sourcesessionid", OSP_DEF_MAY, mapping->srcsessionid);
+    OSP_CHECK_ITEMMAP(OSP_STR_SRCSESSIONID, OSP_DEF_MAY, mapping->srcsessionid);
 
     /* If destination session ID is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("destinationsessionid", OSP_DEF_MAY, mapping->destsessionid);
+    OSP_CHECK_ITEMMAP(OSP_STR_DESTSESSIONID, OSP_DEF_MAY, mapping->destsessionid);
+
+    /* If correlation session ID is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_CORRSESSIONID, OSP_DEF_MAY, mapping->corrsessionid);
 
     /* If source codec is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("sourcecodec", OSP_DEF_MAY, mapping->srccodec);
+    OSP_CHECK_ITEMMAP(OSP_STR_SRCCODEC, OSP_DEF_MAY, mapping->srccodec);
 
     /* If destination codec is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("destinationcodec", OSP_DEF_MAY, mapping->destcodec);
+    OSP_CHECK_ITEMMAP(OSP_STR_DESTCODEC, OSP_DEF_MAY, mapping->destcodec);
 
     /* If conference ID is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP("conferenceid", OSP_DEF_MAY, mapping->confid);
+    OSP_CHECK_ITEMMAP(OSP_STR_CONFID, OSP_DEF_MAY, mapping->confid);
+
+    /* If user-defined info are incorrect, then fail. */
+    for (i = 0; i < OSP_CUSTOMINFO_MAX; i++) {
+        snprintf(buffer, sizeof(buffer), "%s%d", OSP_STR_CUSTOMINFO, i + 1);
+        OSP_CHECK_ITEMMAP(buffer, OSP_DEF_MAY, mapping->custinfo[i]);
+    }
+
+    /* If source realm is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_SRCREALM, OSP_DEF_MAY, mapping->srcrealm);
+
+    /* If destination realm is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_DESTREALM, OSP_DEF_MAY, mapping->destrealm);
 
     /* If statistics are incorrect, then fail. */
     if (osp_check_statsmap(&mapping->stats) < 0) {
         return -1;
     }
 
-    /* If user-defined info are incorrect, then fail. */
-    for (i = 0; i < OSP_CUSTOMINFO_MAX; i++) {
-        snprintf(buffer, sizeof(buffer), "custominfo%d", i + 1);
-        OSP_CHECK_ITEMMAP(buffer, OSP_DEF_MAY, mapping->custinfo[i]);
-    }
-
-    DEBUG("rlm_osp: osp_check_mapping success");
+    DEBUG3("rlm_osp: osp_check_mapping success");
 
     return 0;
 }
@@ -1769,7 +1803,7 @@ static int osp_parse_netlist(
     char* tmpnet;
     int i;
 
-    DEBUG("rlm_osp: osp_parse_netlist start");
+    DEBUG3("rlm_osp: osp_parse_netlist start");
 
     if (liststr) {
         strncpy(listbuf, liststr, OSP_STRBUF_SIZE);
@@ -1785,14 +1819,14 @@ static int osp_parse_netlist(
             } else {
                 list->subnet[i].ip = ip.s_addr;
                 inet_ntop(AF_INET, &ip, buffer, sizeof(buffer));
-                DEBUG("rlm_osp: subnet[%d] ip = '%s'", i, buffer);
+                DEBUG2("rlm_osp: subnet[%d] ip = '%s'", i, buffer);
 
                 if (((ipstr = strtok_r(NULL, OSP_NET_DELIMITER, &tmpnet)) == NULL) || (inet_pton(AF_INET, ipstr, &ip) != 1)) {
                     ip.s_addr = OSP_NETMASK_DEF;
                 }
                 list->subnet[i].mask = ip.s_addr;
                 inet_ntop(AF_INET, &ip, buffer, sizeof(buffer));
-                DEBUG("rlm_osp: subnet[%d] mask = '%s'", i, buffer);
+                DEBUG2("rlm_osp: subnet[%d] mask = '%s'", i, buffer);
             }
         }
         list->number = i;
@@ -1800,7 +1834,7 @@ static int osp_parse_netlist(
         list->number = 0;
     }
 
-    DEBUG("rlm_osp: osp_parse_netlist success");
+    DEBUG3("rlm_osp: osp_parse_netlist success");
 
     return 0;
 }
@@ -1814,143 +1848,104 @@ static int osp_parse_netlist(
 static int osp_check_statsmap(
     osp_statsmap_t* stats)
 {
-    osp_group_t group;
-    osp_dir_t dir;
-    char name[OSP_STRBUF_SIZE];
-
-    DEBUG("rlm_osp: osp_check_statsmap start");
+    DEBUG3("rlm_osp: osp_check_statsmap start");
 
     /* Nothing to check for reportstatistics */
-    DEBUG("rlm_osp: 'reportstatistics' = '%d'", stats->reportstats);
+    DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_REPORTSTATS, stats->reportstats);
 
     if (stats->reportstats) {
-        /* If R-Factor scale index is wrong, then fail. */
-        OSP_CHECK_RANGE("rfactorscaleindex", stats->rfactorscale, OSP_SCALE_MIN, OSP_SCALE_MAX);
-
-        /* If MOS scale index is wrong, then fail. */
-        OSP_CHECK_RANGE("mosscaleindex", stats->mosscale, OSP_SCALE_MIN, OSP_SCALE_MAX);
-
         /* If lost send packets is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP("sendlostpackets", OSP_DEF_MAY, stats->slost.pack);
+        OSP_CHECK_ITEMMAP(OSP_STR_SLOSTPACKETS, OSP_DEF_MAY, stats->slost.pack);
 
         /* If lost send packet fraction is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP("sendlostfraction", OSP_DEF_MAY, stats->slost.fract);
+        OSP_CHECK_ITEMMAP(OSP_STR_SLOSTFRACTION, OSP_DEF_MAY, stats->slost.fract);
 
         /* If lost receive packets is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP("receivelostpackets", OSP_DEF_MAY, stats->rlost.pack);
+        OSP_CHECK_ITEMMAP(OSP_STR_RLOSTPACKETS, OSP_DEF_MAY, stats->rlost.pack);
 
         /* If lost receive packet fraction is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP("receivelostfraction", OSP_DEF_MAY, stats->rlost.fract);
+        OSP_CHECK_ITEMMAP(OSP_STR_RLOSTFRACTION, OSP_DEF_MAY, stats->rlost.fract);
 
-        /* If round trip delay samples is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP("roundtripdelaysamples", OSP_DEF_MAY, stats->roundtrip.samp);
+        /* If RTP source-to-reporter octets is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPOCTETS, OSP_DEF_MAY, stats->rtp_src_rep_octets);
 
-        /* If round trip delay minimum is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP("roundtripdelayminimum", OSP_DEF_MAY, stats->roundtrip.min);
+        /* If RTP destination-to-reporter octets is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPOCTETS, OSP_DEF_MAY, stats->rtp_dest_rep_octets);
 
-        /* If round trip delay maximum is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP("roundtripdelaymaximum", OSP_DEF_MAY, stats->roundtrip.max);
+        /* If RTP source-to-reporter packets is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPPACKETS, OSP_DEF_MAY, stats->rtp_src_rep_packets);
 
-        /* If round trip delay mean is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP("roundtripdelaymean", OSP_DEF_MAY, stats->roundtrip.mean);
+        /* If RTP destination-to-reporter packets is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPPACKETS, OSP_DEF_MAY, stats->rtp_dest_rep_packets);
 
-        /* If round trip delay variance is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP("roundtripdelayvariance", OSP_DEF_MAY, stats->roundtrip.var);
+        /* If RTP source-to-reporter lost packets is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPLOST, OSP_DEF_MAY, stats->rtp_src_rep_lost);
 
-        for (dir = OSP_DIR_MIN; dir < OSP_DIR_NUMBER; dir++) {
-#define mDMAP               (stats->dir[dir])
-#define mDSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s", dir_str[dir], _var)
-            /* If rfactor is incorrect, then fail. */
-            mDSTR(name, "rfactor");
-            OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mDMAP.rfactor);
+        /* If RTP destination-to-reporter lost packets is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPLOST, OSP_DEF_MAY, stats->rtp_dest_rep_lost);
 
-            /* If moscq is incorrect, then fail. */
-            mDSTR(name, "moscq");
-            OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mDMAP.moscq);
+        /* If RTP source-to-reporter jitter mean is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPJITTERMEAN, OSP_DEF_MAY, stats->rtp_src_rep_jitter_mean);
 
-            /* If moslq is incorrect, then fail. */
-            mDSTR(name, "moslq");
-            OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mDMAP.moslq);
+        /* If RTP destination-to-reporter jitter mean is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPJITTERMEAN, OSP_DEF_MAY, stats->rtp_dest_rep_jitter_mean);
 
-            /* If icpif is incorrect, then fail. */
-            mDSTR(name, "icpif");
-            OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mDMAP.icpif);
-#undef mDSTR
-#undef mDMAP
-        }
+        /* If RTP source-to-reporter jitter max is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPJITTERMAX, OSP_DEF_MAY, stats->rtp_src_rep_jitter_max);
 
-        for (group = OSP_GROUP_RTP; group < OSP_GROUP_NUMBER; group++) {
-            for (dir = OSP_DIR_MIN; dir < OSP_DIR_NUMBER; dir++) {
-#define mGMAP               (stats->group[group][dir])
-#define mGSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s%s", group_str[group], dir_str[dir], _var)
-                /* If packets lost packets is incorrect, then fail. */
-                mGSTR(name, "lostpackets");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.lost.pack);
+        /* If RTP destination-to-reporter jitter max is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPJITTERMAX, OSP_DEF_MAY, stats->rtp_dest_rep_jitter_max);
 
-                /* If packets lost fraction is incorrect, then fail. */
-                mGSTR(name, "lostfraction");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.lost.fract);
+        /* If RTCP source-to-destination lost packets is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCDESTLOST, OSP_DEF_MAY, stats->rtcp_src_dest_lost);
 
-                /* If jitter samples is incorrect, then fail. */
-                mGSTR(name, "jittersamples");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.jitter.samp);
+        /* If RTCP destination-to-source lost packets is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTSRCLOST, OSP_DEF_MAY, stats->rtcp_dest_src_lost);
 
-                /* If jitter minimum is incorrect, then fail. */
-                mGSTR(name, "jitterminimum");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.jitter.min);
+        /* If RTCP source-to-destination jitter mean is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCDESTJITTERMEAN, OSP_DEF_MAY, stats->rtcp_src_dest_jitter_mean);
 
-                /* If jitter maximum is incorrect, then fail. */
-                mGSTR(name, "jittermaximum");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.jitter.max);
+        /* If RTCP destination-to-source jitter mean is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTSRCJITTERMEAN, OSP_DEF_MAY, stats->rtcp_dest_src_jitter_mean);
 
-                /* If jitter mean is incorrect, then fail. */
-                mGSTR(name, "jittermean");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.jitter.mean);
+        /* If RTCP source-to-destination jitter max is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCDESTJITTERMAX, OSP_DEF_MAY, stats->rtcp_src_dest_jitter_max);
 
-                /* If jitter variance is incorrect, then fail. */
-                mGSTR(name, "jittervariance");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.jitter.var);
+        /* If RTCP destination-to-source jitter max is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTSRCJITTERMAX, OSP_DEF_MAY, stats->rtcp_dest_src_jitter_max);
 
-                /* If delay samples is incorrect, then fail. */
-                mGSTR(name, "delaysamples");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.delay.samp);
+        /* If RTCP source round trip delay mean is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCRTDELAYMEAN, OSP_DEF_MAY, stats->rtcp_src_rtdelay_mean);
 
-                /* If delay minimum is incorrect, then fail. */
-                mGSTR(name, "delayminimum");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.delay.min);
+        /* If RTCP destination round trip delay mean is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTRTDELAYMEAN, OSP_DEF_MAY, stats->rtcp_dest_rtdelay_mean);
 
-                /* If delay maximum is incorrect, then fail. */
-                mGSTR(name, "delaymaximum");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.delay.max);
+        /* If RTCP source round trip delay max is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCRTDELAYMAX, OSP_DEF_MAY, stats->rtcp_src_rtdelay_max);
 
-                /* If delay mean is incorrect, then fail. */
-                mGSTR(name, "delaymean");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.delay.mean);
+        /* If RTCP destination round trip delay max is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTRTDELAYMAX, OSP_DEF_MAY, stats->rtcp_dest_rtdelay_max);
 
-                /* If delay variance is incorrect, then fail. */
-                mGSTR(name, "delayvariance");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.delay.var);
+        /* If R-Factor scale index is wrong, then fail. */
+        OSP_CHECK_RANGE(OSP_STR_RFACTORSCALE, stats->rfactorscale, OSP_SCALE_MIN, OSP_SCALE_MAX);
 
-                /* If octets is incorrect, then fail. */
-                mGSTR(name, "octets");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.octets);
+        /* If source-to-reporter R-Factor is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_SRCREPRFACTOR, OSP_DEF_MAY, stats->src_rep_rfactor);
 
-                /* If packets is incorrect, then fail. */
-                mGSTR(name, "packets");
-                OSP_CHECK_ITEMMAP(name, OSP_DEF_MAY, mGMAP.packets);
-#undef mGSTR
-#undef mGMAP
-            }
-        }
+        /* If destiantion-to-reporter R-Factor is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_DESTREPRFACTOR, OSP_DEF_MAY, stats->dest_rep_rfactor);
 
-        /* Nothing to check for rtpoctets */
-        DEBUG("rlm_osp: 'rtpoctetscrossover' = '%d'", stats->cross.rtpoctets);
+        /* If MOS scale index is wrong, then fail. */
+        OSP_CHECK_RANGE(OSP_STR_MOSSCALE, stats->mosscale, OSP_SCALE_MIN, OSP_SCALE_MAX);
 
-        /* Nothing to check for rtppackets */
-        DEBUG("rlm_osp: 'rtppacketscrossover' = '%d'", stats->cross.rtppackets);
+        /* If source-to-reporter MOS is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_SRCREPMOS, OSP_DEF_MAY, stats->src_rep_mos);
+
+        /* If destination-to-reporter MOS is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_DESTREPMOS, OSP_DEF_MAY, stats->dest_rep_mos);
     }
 
-    DEBUG("rlm_osp: osp_check_statsmap success");
+    DEBUG3("rlm_osp: osp_check_statsmap success");
 
     return 0;
 }
@@ -1964,18 +1959,18 @@ static int osp_check_statsmap(
  */
 static int osp_check_itemmap (
     char* item,
-    osp_deflevel_t level)
+    osp_deflevel_e level)
 {
     int last;
 
-    DEBUG("rlm_osp: osp_check_itemmap start");
+    DEBUG3("rlm_osp: osp_check_itemmap start");
 
     if (!OSP_CHECK_STRING(item)) {
         if (level == OSP_DEF_MUST) {
             radlog(L_ERR, "rlm_osp: Failed to check mapping item.");
             return -1;
         } else {
-            DEBUG("rlm_osp: osp_check_itemmap success");
+            DEBUG3("rlm_osp: osp_check_itemmap success");
             return 0;
         }
     }
@@ -2005,7 +2000,7 @@ static int osp_check_itemmap (
         return -1;
     }
 
-    DEBUG("rlm_osp: osp_check_itemmap success");
+    DEBUG3("rlm_osp: osp_check_itemmap success");
 
     return 0;
 }
@@ -2020,29 +2015,29 @@ static int osp_create_provider(
     osp_provider_t* provider)
 {
     int i, error, result = -1;
-    unsigned long spweights[OSP_SPS_MAX];
+    unsigned long spweights[OSP_SPNUM_MAX];
     OSPTPRIVATEKEY privatekey;
     OSPT_CERT localcert;
-    OSPT_CERT cacerts[OSP_CAS_MAX];
-    const OSPT_CERT* pcacerts[OSP_CAS_MAX];
+    OSPT_CERT cacerts[OSP_CANUM_MAX];
+    const OSPT_CERT* pcacerts[OSP_CANUM_MAX];
     unsigned char privatekeydata[OSP_KEYBUF_SIZE];
     unsigned char localcertdata[OSP_KEYBUF_SIZE];
     unsigned char cacertdata[OSP_KEYBUF_SIZE];
 
-    DEBUG("rlm_osp: osp_create_provider start");
+    DEBUG3("rlm_osp: osp_create_provider start");
 
     /* Initialize OSP */
     if (instance_count == 0) {
         if ((error = OSPPInit(provider->accelerate)) != OSPC_ERR_NO_ERROR) {
             radlog(L_ERR,
-                "Failed to initalize OSP, error '%d'.",
+                "Failed to initialize OSP, error '%d'.",
                 error);
             return -1;
         }
     }
 
-    /* Copy service point weights to a temp buffer to avoid compile warning */
-    for (i = 0; i < provider->sps; i++) {
+    /* Copy service point weights to a temporary buffer to avoid compile warning */
+    for (i = 0; i < provider->spnumber; i++) {
         spweights[i] = provider->spweights[i];
     }
 
@@ -2053,7 +2048,7 @@ static int osp_create_provider(
         localcert.CertData = NULL;
         localcert.CertDataLength = 0;
 
-        for (i = 0; i < provider->cas; i++) {
+        for (i = 0; i < provider->canumber; i++) {
             cacerts[i].CertData = NULL;
             cacerts[i].CertDataLength = 0;
         }
@@ -2071,7 +2066,7 @@ static int osp_create_provider(
                 provider->localcert,
                 error);
         } else {
-            for (i = 0; i < provider->cas; i++) {
+            for (i = 0; i < provider->canumber; i++) {
                 if ((error = OSPPUtilLoadPEMCert((unsigned char*)provider->cacerts[i], &cacerts[i])) != OSPC_ERR_NO_ERROR) {
                     cacerts[i].CertData = NULL;
                     /* Has checked string NULL by osp_check_provider */
@@ -2092,7 +2087,7 @@ static int osp_create_provider(
         localcert.CertData = localcertdata;
         localcert.CertDataLength = sizeof(localcertdata);
 
-        provider->cas = 1;
+        provider->canumber = 1;
         cacerts[0].CertData = cacertdata;
         cacerts[0].CertDataLength = sizeof(cacertdata);
         pcacerts[0] = &cacerts[0];
@@ -2115,13 +2110,13 @@ static int osp_create_provider(
     if (error == OSPC_ERR_NO_ERROR) {
         /* Create a provider handle */
         error = OSPPProviderNew(
-            provider->sps,                  /* Number of service points */
+            provider->spnumber,             /* Number of service points */
             (const char**)provider->spuris, /* Service point URIs */
             spweights,                      /* Service point weights */
             OSP_AUDITURL_DEF,               /* Audit URL */
             &privatekey,                    /* Private key */
             &localcert,                     /* Local cert */
-            provider->cas,                  /* Number of cacerts */
+            provider->canumber,             /* Number of cacerts */
             pcacerts,                       /* Cacerts */
             OSP_VALIDATION_DEF,             /* Token Validation mode */
             provider->ssllifetime,          /* SSL life time */
@@ -2138,7 +2133,7 @@ static int osp_create_provider(
                 "rlm_osp: Failed to create provider, error '%d'.",
                 error);
         } else {
-            DEBUG("rlm_osp: osp_create_provider success");
+            DEBUG3("rlm_osp: osp_create_provider success");
             instance_count++;
             result = 0;
         }
@@ -2151,8 +2146,8 @@ static int osp_create_provider(
     }
 
     if (provider->security) {
-        /* Release temp key buffers */
-        for (i = 0; i < provider->cas; i++) {
+        /* Release temporary key buffers */
+        for (i = 0; i < provider->canumber; i++) {
             if (cacerts[i].CertData != NULL) {
                 free(cacerts[i].CertData);
             }
@@ -2180,50 +2175,52 @@ static int osp_accounting(
     REQUEST* request)
 {
     VALUE_PAIR* vp;
+    int type;
     rlm_osp_t* data = (rlm_osp_t*)instance;
     osp_running_t* running = &data->running;
     osp_provider_t* provider = &data->provider;
     osp_mapping_t* mapping = &data->mapping;
     OSPTTRANHANDLE transaction;
-    OSPE_ROLE role;
+    OSPE_ROLE_STATE rolestate;
+    OSPE_ROLE_VENDOR rolevendor;
     OSPT_CALL_ID* sessionid;
     osp_usage_t usage;
     const int MAX_RETRIES = 5;
     char buffer[OSP_LOGBUF_SIZE];
     int i, error;
 
+    DEBUG3("rlm_osp: osp_accounting start");
+
     if ((vp = pairfind(request->packet->vps, PW_ACCT_STATUS_TYPE)) == NULL) {
         DEBUG("rlm_osp: failed to get accounting status type.");
         return RLM_MODULE_NOOP;
     }
 
-    switch (vp->vp_integer) {
+    type = vp->vp_integer;
+    switch (type) {
     case PW_STATUS_START:
-        if (mapping->reportstart) {
-            role = OSPC_ROLE_SOURCE;
-            break;
-        } else {
-            DEBUG("rlm_osp: nothing to do for Start request.");
+        rolestate = OSPC_RSTATE_START;
+        if (!mapping->reportstart) {
+            DEBUG2("rlm_osp: nothing to do for Start request.");
             return RLM_MODULE_NOOP;
         }
+        break;
     case PW_STATUS_STOP:
-        if (mapping->reportstop) {
-            role = OSPC_ROLE_SOURCE;
-            break;
-        } else {
-            DEBUG("rlm_osp: nothing to do for Stop request.");
+        rolestate = OSPC_RSTATE_STOP;
+        if (!mapping->reportstop) {
+            DEBUG2("rlm_osp: nothing to do for Stop request.");
             return RLM_MODULE_NOOP;
         }
+        break;
     case PW_STATUS_ALIVE:   /* Interim-Update */
-        if (mapping->reportinterim) {
-            role = OSPC_ROLE_SOURCE;
-            break;
-        } else {
-            DEBUG("rlm_osp: nothing to do for Interim-Update request.");
+        rolestate = OSPC_RSTATE_INTERIM;
+        if (!mapping->reportinterim) {
+            DEBUG2("rlm_osp: nothing to do for Interim-Update request.");
             return RLM_MODULE_NOOP;
         }
+        break;
     default:
-        DEBUG("rlm_osp: nothing to do for request type '%d'.", vp->vp_integer);
+        DEBUG2("rlm_osp: nothing to do for request type '%d'.", type);
         return RLM_MODULE_NOOP;
     }
 
@@ -2276,7 +2273,7 @@ static int osp_accounting(
     error = OSPPTransactionBuildUsageFromScratch(
         transaction,            /* Transaction handle */
         usage.transid,          /* Transaction ID */
-        role,                   /* Usage type */
+        OSPC_ROLE_SOURCE,       /* Usage type */
         usage.source,           /* Source */
         usage.destination,      /* Destination */
         usage.srcdev,           /* Source device */
@@ -2298,6 +2295,52 @@ static int osp_accounting(
         return RLM_MODULE_FAIL;
     }
 
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_ACME:
+        rolevendor = OSPC_RVENDOR_ACME;
+        break;
+    case OSP_CLIENT_GENBANDS3:
+        if (usage.origin == OSP_ORIGIN_TERM) {
+            switch (type) {
+            case PW_STATUS_START:
+                rolestate = OSPC_RSTATE_START1;
+                break;
+            case PW_STATUS_ALIVE:   /* Interim-Update */
+                rolestate = OSPC_RSTATE_INTERIM1;
+                break;
+            case PW_STATUS_STOP:
+            default:
+                rolestate = OSPC_RSTATE_STOP1;
+                break;
+            }
+        } else {
+            switch (type) {
+            case PW_STATUS_START:
+                rolestate = OSPC_RSTATE_START2;
+                break;
+            case PW_STATUS_ALIVE:   /* Interim-Update */
+                rolestate = OSPC_RSTATE_INTERIM2;
+                break;
+            case PW_STATUS_STOP:
+            default:
+                rolestate = OSPC_RSTATE_STOP2;
+                break;
+            }
+        }
+        rolevendor = OSPC_RVENDOR_GENBANDS3;
+        break;
+    default:
+        rolevendor = OSPC_RVENDOR_UNDEFINED;
+        break;
+    }
+
+    /* Report role info */
+    OSPPTransactionSetRoleInfo(
+        transaction,
+        rolestate,
+        OSPC_RFORMAT_RADIUS,
+        rolevendor);
+
     /* Report destination count */
     if (usage.destcount != OSP_DESTCOUNT_DEF) {
         OSPPTransactionSetDestinationCount(
@@ -2308,12 +2351,12 @@ static int osp_accounting(
     /* Report source network ID */
     OSPPTransactionSetSrcNetworkId(
         transaction,
-        usage.snid);
+        usage.srcnid);
 
     /* Report destination network ID */
     OSPPTransactionSetDestNetworkId(
         transaction,
-        usage.dnid);
+        usage.destnid);
 
     /* Report diversion */
     OSPPTransactionSetDiversion(
@@ -2321,12 +2364,17 @@ static int osp_accounting(
         usage.divuser,
         usage.divhost);
 
-#if 0
     /* Report asserted ID */
     OSPPTransactionSetAssertedId(
         transaction,        /* Transaction handle */
+        OSPC_NFORMAT_E164,  /* Format */
         usage.assertedid);  /* Asserted ID */
-#endif
+
+    /* Report RPID */
+    OSPPTransactionSetRemotePartyId(
+        transaction,        /* Transaction handle */
+        OSPC_NFORMAT_E164,  /* Format */
+        usage.rpid);        /* RPID */
 
     /* Report user-defined info */
     for (i = 0; i < OSP_CUSTOMINFO_MAX; i++) {
@@ -2337,6 +2385,16 @@ static int osp_accounting(
                 usage.custinfo[i]); /* User-defined info */
         }
     }
+
+    /* Report source realm */
+    OSPPTransactionSetSrcRealm(
+        transaction,        /* Transaction handle */
+        usage.srcrealm);    /* Source realm */
+
+    /* Report destination realm */
+    OSPPTransactionSetSrcRealm(
+        transaction,        /* Transaction handle */
+        usage.destrealm);   /* Destination realm */
 
     /* Report release code */
     OSPPTransactionSetTermCause(
@@ -2350,6 +2408,18 @@ static int osp_accounting(
         transaction,        /* Transaction handle */
         OSPC_PROTTYPE_NA,   /* Protocol type */
         usage.protocol);    /* Protocol name */
+
+    /* Report source protocol */
+    OSPPTransactionSetProtocol(
+        transaction,            /* Transaction handle */
+        OSPC_PROTTYPE_SOURCE,   /* Protocol type */
+        usage.protocol);        /* Protocol name */
+
+    /* Report destination protocol */
+    OSPPTransactionSetProtocol(
+        transaction,                /* Transaction handle */
+        OSPC_PROTTYPE_DESTINATION,  /* Protocol type */
+        usage.protocol);            /* Protocol name */
 
     /* Report source session ID */
     if (usage.srcsessionid[0] != '\0') {
@@ -2371,6 +2441,18 @@ static int osp_accounting(
                 transaction,                /* Transaction handle */
                 OSPC_SESSIONID_DESTINATION, /* Destiantion */
                 sessionid);                 /* Destination session ID */
+            OSPPCallIdDelete(&sessionid);
+        }
+    }
+
+    /* Report correlation session ID */
+    if (usage.corrsessionid[0] != '\0') {
+        sessionid = OSPPCallIdNew(strlen(usage.corrsessionid), (const unsigned char *)usage.corrsessionid);
+        if (sessionid != NULL) {
+            OSPPTransactionSetSessionId(
+                transaction,                /* Transaction handle */
+                OSPC_SESSIONID_CORRELATION, /* Correlation */
+                sessionid);                 /* Correlation session ID */
             OSPPCallIdDelete(&sessionid);
         }
     }
@@ -2426,7 +2508,7 @@ static int osp_accounting(
         radlog(L_ERR, "rlm_osp: Failed to report usage.");
         return RLM_MODULE_FAIL;
     } else {
-        DEBUG("rlm_osp: osp_accounting success");
+        DEBUG3("rlm_osp: osp_accounting success");
         return RLM_MODULE_OK;
     }
 }
@@ -2444,185 +2526,210 @@ static void osp_report_statsinfo(
     osp_statsmap_t* mapping,
     osp_stats_t* stats)
 {
-    osp_group_t group;
-    osp_dir_t dir;
-    OSPE_STATS_METRIC metric;
-    OSPE_STATS_DIR direction;
-
-    DEBUG("rlm_osp: osp_report_statsinfo start");
+    DEBUG3("rlm_osp: osp_report_statsinfo start");
 
     if (mapping->reportstats) {
-        /* Report round trip delay */
-#if 0
-        OSPPTransactionSetRoundTripDelay(
-            transaction,            /* Transaction handle */
-            stats->roundtrip.samp,  /* Round trip delay samples */
-            stats->roundtrip.min,   /* Round trip delay minimum */
-            stats->roundtrip.max,   /* Round trip delay maximum */
-            stats->roundtrip.mean,  /* Round trip delay mean */
-            stats->roundtrip.var);  /* Round trip delay variance */
-#endif
-
-        for (dir = OSP_DIR_MIN; dir < OSP_DIR_NUMBER; dir++) {
-            switch (dir) {
-            case OSP_DIR_SRCREP:
-                direction = OSPC_SDIR_SRCREP;
-                break;
-            case OSP_DIR_REPSRC:
-                direction = OSPC_SDIR_REPSRC;
-                break;
-            case OSP_DIR_DESTREP:
-                direction = OSPC_SDIR_DESTREP;
-                break;
-            case OSP_DIR_REPDEST:
-                direction = OSPC_SDIR_REPDEST;
-                break;
-            case OSP_DIR_SRCDEST:
-                direction = OSPC_SDIR_SRCDEST;
-                break;
-            case OSP_DIR_DESTSRC:
-                direction = OSPC_SDIR_DESTSRC;
-                break;
-            default:
-                break;
-            }
-
-#define mDVAR   (stats->dir[dir])
-            /* Report rfactor */
-            if (mDVAR.rfactor != OSP_STATSFLOAT_DEF) {
-                OSPPTransactionSetRFactor(
-                    transaction,    /* Transaction handle */
-                    direction,      /* Direction */
-                    mDVAR.rfactor); /* R-Factor */
-            }
-
-            /* Report moscq */
-            if (mDVAR.moscq != OSP_STATSFLOAT_DEF) {
-                OSPPTransactionSetMOSCQ(
-                    transaction,    /* Transaction handle */
-                    direction,      /* Direction */
-                    mDVAR.moscq);   /* MOS-CQ */
-            }
-
-            /* Report moslq */
-            if (mDVAR.moslq != OSP_STATSFLOAT_DEF) {
-                OSPPTransactionSetMOSLQ(
-                    transaction,    /* Transaction handle */
-                    direction,      /* Direction */
-                    mDVAR.moslq);   /* MOS-LQ */
-            }
-
-            /* Report icpif */
-            if (mDVAR.icpif != OSP_STATSINT_DEF) {
-                OSPPTransactionSetICPIF(
-                    transaction,    /* Transaction handle */
-                    direction,      /* Direction */
-                    mDVAR.icpif);   /* ICPIF */
-            }
-#undef mDVAR
+        /* Report RTP source-to-reporter octets */
+        if (stats->rtp_src_rep_octets != OSP_STATSINT_DEF) {
+            OSPPTransactionSetOctets(
+                transaction,                /* Transaction handle */
+                OSPC_SMETRIC_RTP,           /* Metric */
+                OSPC_SDIR_SRCREP,           /* Direction */
+                stats->rtp_src_rep_octets); /* Octets */
         }
 
-        for (group = OSP_GROUP_RTP; group < OSP_GROUP_NUMBER; group++) {
-            if (group == OSP_GROUP_RTCP) {
-                metric = OSPC_SMETRIC_RTCP;
-            } else {
-                metric = OSPC_SMETRIC_RTP;
-            }
+        /* Report RTP destiantion-to-reporter octets */
+        if (stats->rtp_dest_rep_octets != OSP_STATSINT_DEF) {
+            OSPPTransactionSetOctets(
+                transaction,                /* Transaction handle */
+                OSPC_SMETRIC_RTP,           /* Metric */
+                OSPC_SDIR_DESTREP,          /* Direction */
+                stats->rtp_src_rep_octets); /* Octets */
+        }
 
-            for (dir = OSP_DIR_MIN; dir < OSP_DIR_NUMBER; dir++) {
-                switch (dir) {
-                case OSP_DIR_SRCREP:
-                    direction = OSPC_SDIR_SRCREP;
-                    break;
-                case OSP_DIR_REPSRC:
-                    direction = OSPC_SDIR_REPSRC;
-                    break;
-                case OSP_DIR_DESTREP:
-                    direction = OSPC_SDIR_DESTREP;
-                    break;
-                case OSP_DIR_REPDEST:
-                    direction = OSPC_SDIR_REPDEST;
-                    break;
-                case OSP_DIR_SRCDEST:
-                    direction = OSPC_SDIR_SRCDEST;
-                    break;
-                case OSP_DIR_DESTSRC:
-                    direction = OSPC_SDIR_DESTSRC;
-                    break;
-                default:
-                    break;
-                }
+        /* Report RTP source-to-reporter packets */
+        if (stats->rtp_src_rep_packets != OSP_STATSINT_DEF) {
+            OSPPTransactionSetPackets(
+                transaction,                    /* Transaction handle */
+                OSPC_SMETRIC_RTP,               /* Metric */
+                OSPC_SDIR_SRCREP,               /* Direction */
+                stats->rtp_src_rep_packets);    /* Packets */
+        }
 
-#define mGVAR   (stats->group[group][dir])
-                /* Report packets lost */
-                if ((mGVAR.lost.pack != OSP_STATSINT_DEF) || (mGVAR.lost.fract != OSP_STATSINT_DEF)) {
-                    OSPPTransactionSetLost(
-                        transaction,        /* Transaction handle */
-                        metric,             /* Metric */
-                        direction,          /* Direction */
-                        mGVAR.lost.pack,    /* Packets lost packets */
-                        mGVAR.lost.fract);  /* Packets lost fraction */
-                }
+        /* Report RTP destination-to-reporter packets */
+        if (stats->rtp_dest_rep_packets != OSP_STATSINT_DEF) {
+            OSPPTransactionSetPackets(
+                transaction,                    /* Transaction handle */
+                OSPC_SMETRIC_RTP,               /* Metric */
+                OSPC_SDIR_DESTREP,              /* Direction */
+                stats->rtp_src_rep_packets);    /* Packets */
+        }
 
-                /* Report jitter */
-                if ((mGVAR.jitter.samp != OSP_STATSINT_DEF) ||
-                    (mGVAR.jitter.min != OSP_STATSINT_DEF) ||
-                    (mGVAR.jitter.max != OSP_STATSINT_DEF) ||
-                    (mGVAR.jitter.mean != OSP_STATSINT_DEF) ||
-                    (mGVAR.jitter.var != OSP_STATSFLOAT_DEF))
-                {
-                    OSPPTransactionSetJitter(
-                        transaction,        /* Transaction handle */
-                        metric,             /* Metric */
-                        direction,          /* Direction */
-                        mGVAR.jitter.samp,  /* Jitter samples */
-                        mGVAR.jitter.min,   /* Jitter minimum */
-                        mGVAR.jitter.max,   /* Jitter maximum */
-                        mGVAR.jitter.mean,  /* Jitter mean */
-                        mGVAR.jitter.var);  /* Jitter variance */
-                }
+        /* Report RTP source-to-reporter lost packets */
+        if (stats->rtp_src_rep_lost != OSP_STATSINT_DEF) {
+            OSPPTransactionSetLost(
+                transaction,                /* Transaction handle */
+                OSPC_SMETRIC_RTP,           /* Metric */
+                OSPC_SDIR_SRCREP,           /* Direction */
+                stats->rtp_src_rep_lost,    /* Packets lost packets */
+                OSP_STATSINT_DEF);          /* Packets lost fraction */
+        }
 
-                /* Report delay */
-                if ((mGVAR.delay.samp != OSP_STATSINT_DEF) ||
-                    (mGVAR.delay.min != OSP_STATSINT_DEF) ||
-                    (mGVAR.delay.max != OSP_STATSINT_DEF) ||
-                    (mGVAR.delay.mean != OSP_STATSINT_DEF) ||
-                    (mGVAR.delay.var != OSP_STATSFLOAT_DEF))
-                {
-                    OSPPTransactionSetDelay(
-                        transaction,        /* Transaction handle */
-                        metric,             /* Metric */
-                        direction,          /* Direction */
-                        mGVAR.delay.samp,   /* Delay samples */
-                        mGVAR.delay.min,    /* Delay minimum */
-                        mGVAR.delay.max,    /* Delay maximum */
-                        mGVAR.delay.mean,   /* Delay mean */
-                        mGVAR.delay.var);   /* Delay variance */
-                }
+        /* Report RTP destination-to-reporter lost packets */
+        if (stats->rtp_dest_rep_lost != OSP_STATSINT_DEF) {
+            OSPPTransactionSetLost(
+                transaction,                /* Transaction handle */
+                OSPC_SMETRIC_RTP,           /* Metric */
+                OSPC_SDIR_DESTREP,          /* Direction */
+                stats->rtp_dest_rep_lost,   /* Packets lost packets */
+                OSP_STATSINT_DEF);          /* Packets lost fraction */
+        }
 
-                /* Report octets */
-                if (mGVAR.octets != OSP_STATSINT_DEF) {
-                    OSPPTransactionSetOctets(
-                        transaction,    /* Transaction handle */
-                        metric,         /* Metric */
-                        direction,      /* Direction */
-                        mGVAR.octets);  /* Octets */
-                }
+        /* Report RTP source-to-reporter jitter mean and max */
+        if ((stats->rtp_src_rep_jitter_mean != OSP_STATSINT_DEF) ||
+            (stats->rtp_src_rep_jitter_max != OSP_STATSINT_DEF))
+        {
+            OSPPTransactionSetJitter(
+                transaction,                    /* Transaction handle */
+                OSPC_SMETRIC_RTP,               /* Metric */
+                OSPC_SDIR_SRCREP,               /* Direction */
+                OSP_STATSINT_DEF,               /* Jitter samples */
+                OSP_STATSINT_DEF,               /* Jitter minimum */
+                stats->rtp_src_rep_jitter_max,  /* Jitter maximum */
+                stats->rtp_src_rep_jitter_mean, /* Jitter mean */
+                OSP_STATSFLOAT_DEF);            /* Jitter variance */
+        }
 
-                /* Report packets */
-                if (mGVAR.packets != OSP_STATSINT_DEF) {
-                    OSPPTransactionSetPackets(
-                        transaction,    /* Transaction handle */
-                        metric,         /* Metric */
-                        direction,      /* Direction */
-                        mGVAR.packets); /* Packets */
-                }
-#undef mGVAR
-            }
+        /* Report RTP destination-to-reporter jitter mean and max */
+        if ((stats->rtp_dest_rep_jitter_mean != OSP_STATSINT_DEF) ||
+            (stats->rtp_dest_rep_jitter_max != OSP_STATSINT_DEF))
+        {
+            OSPPTransactionSetJitter(
+                transaction,                        /* Transaction handle */
+                OSPC_SMETRIC_RTP,                   /* Metric */
+                OSPC_SDIR_DESTREP,                  /* Direction */
+                OSP_STATSINT_DEF,                   /* Jitter samples */
+                OSP_STATSINT_DEF,                   /* Jitter minimum */
+                stats->rtp_dest_rep_jitter_max,     /* Jitter maximum */
+                stats->rtp_dest_rep_jitter_mean,    /* Jitter mean */
+                OSP_STATSFLOAT_DEF);                /* Jitter variance */
+        }
+
+        /* Report RTCP source-to-destination lost packets */
+        if (stats->rtcp_src_dest_lost != OSP_STATSINT_DEF) {
+            OSPPTransactionSetLost(
+                transaction,                /* Transaction handle */
+                OSPC_SMETRIC_RTCP,          /* Metric */
+                OSPC_SDIR_SRCDEST,          /* Direction */
+                stats->rtcp_src_dest_lost,  /* Packets lost packets */
+                OSP_STATSINT_DEF);          /* Packets lost fraction */
+        }
+
+        /* Report RTCP destination-to-source lost packets */
+        if (stats->rtcp_dest_src_lost != OSP_STATSINT_DEF) {
+            OSPPTransactionSetLost(
+                transaction,                /* Transaction handle */
+                OSPC_SMETRIC_RTCP,          /* Metric */
+                OSPC_SDIR_DESTSRC,          /* Direction */
+                stats->rtcp_dest_src_lost,  /* Packets lost packets */
+                OSP_STATSINT_DEF);          /* Packets lost fraction */
+        }
+
+
+        /* Report RTCP source-to-destination jitter mean and max */
+        if ((stats->rtcp_src_dest_jitter_mean != OSP_STATSINT_DEF) ||
+            (stats->rtcp_src_dest_jitter_max != OSP_STATSINT_DEF))
+        {
+            OSPPTransactionSetJitter(
+                transaction,                        /* Transaction handle */
+                OSPC_SMETRIC_RTCP,                  /* Metric */
+                OSPC_SDIR_SRCDEST,                  /* Direction */
+                OSP_STATSINT_DEF,                   /* Jitter samples */
+                OSP_STATSINT_DEF,                   /* Jitter minimum */
+                stats->rtcp_src_dest_jitter_max,    /* Jitter maximum */
+                stats->rtcp_src_dest_jitter_mean,   /* Jitter mean */
+                OSP_STATSFLOAT_DEF);                /* Jitter variance */
+        }
+
+        /* Report RTCP destination-to-source jitter mean and max */
+        if ((stats->rtcp_dest_src_jitter_mean != OSP_STATSINT_DEF) ||
+            (stats->rtcp_dest_src_jitter_max != OSP_STATSINT_DEF))
+        {
+            OSPPTransactionSetJitter(
+                transaction,                        /* Transaction handle */
+                OSPC_SMETRIC_RTCP,                  /* Metric */
+                OSPC_SDIR_DESTSRC,                  /* Direction */
+                OSP_STATSINT_DEF,                   /* Jitter samples */
+                OSP_STATSINT_DEF,                   /* Jitter minimum */
+                stats->rtcp_dest_src_jitter_max,    /* Jitter maximum */
+                stats->rtcp_dest_src_jitter_mean,   /* Jitter mean */
+                OSP_STATSFLOAT_DEF);                /* Jitter variance */
+        }
+
+        /* Report RTCP source round trip delay */
+        if ((stats->rtcp_src_rtdelay_mean != OSP_STATSINT_DEF) ||
+            (stats->rtcp_src_rtdelay_max != OSP_STATSINT_DEF))
+        {
+            OSPPTransactionSetRTDelay(
+                transaction,                    /* Transaction handle */
+                OSPC_SMETRIC_RTCP,              /* Metric */
+                OSPC_SLEG_SOURCE,               /* Session leg */
+                OSP_STATSINT_DEF,               /* Round trip delay samples */
+                OSP_STATSINT_DEF,               /* Round trip delay minimum */
+                stats->rtcp_src_rtdelay_max,    /* Round trip delay maximum */
+                stats->rtcp_src_rtdelay_mean,   /* Round trip delay mean */
+                OSP_STATSFLOAT_DEF);            /* Round trip delay variance */
+        }
+
+        /* Report RTCP destination round trip delay */
+        if ((stats->rtcp_dest_rtdelay_mean != OSP_STATSINT_DEF) ||
+            (stats->rtcp_dest_rtdelay_max != OSP_STATSINT_DEF))
+        {
+            OSPPTransactionSetRTDelay(
+                transaction,                    /* Transaction handle */
+                OSPC_SMETRIC_RTCP,              /* Metric */
+                OSPC_SLEG_DESTINATION,          /* Session leg */
+                OSP_STATSINT_DEF,               /* Round trip delay samples */
+                OSP_STATSINT_DEF,               /* Round trip delay minimum */
+                stats->rtcp_dest_rtdelay_max,   /* Round trip delay maximum */
+                stats->rtcp_dest_rtdelay_mean,  /* Round trip delay mean */
+                OSP_STATSFLOAT_DEF);            /* Round trip delay variance */
+        }
+
+        /* Report source-to_reporter R-Factor */
+        if (stats->src_rep_rfactor != OSP_STATSFLOAT_DEF) {
+            OSPPTransactionSetRFactor(
+                transaction,                /* Transaction handle */
+                OSPC_SDIR_SRCREP,           /* Direction */
+                stats->src_rep_rfactor);    /* R-Factor */
+        }
+
+        /* Report destination-to_reporter R-Factor */
+        if (stats->dest_rep_rfactor != OSP_STATSFLOAT_DEF) {
+            OSPPTransactionSetRFactor(
+                transaction,                /* Transaction handle */
+                OSPC_SDIR_DESTREP,          /* Direction */
+                stats->dest_rep_rfactor);   /* R-Factor */
+        }
+
+        /* Report source-to_reporter MOS */
+        if (stats->src_rep_mos != OSP_STATSFLOAT_DEF) {
+            OSPPTransactionSetMOSLQ(
+                transaction,            /* Transaction handle */
+                OSPC_SDIR_SRCREP,       /* Direction */
+                stats->src_rep_mos);    /* MOS */
+        }
+
+        /* Report destination-to_reporter MOS */
+        if (stats->dest_rep_mos != OSP_STATSFLOAT_DEF) {
+            OSPPTransactionSetMOSLQ(
+                transaction,            /* Transaction handle */
+                OSPC_SDIR_DESTREP,      /* Direction */
+                stats->dest_rep_mos);   /* MOS */
         }
     }
 
-    DEBUG("rlm_osp: osp_report_statsinfo success");
+    DEBUG3("rlm_osp: osp_report_statsinfo success");
 }
 
 /*
@@ -2647,28 +2754,28 @@ static int osp_get_usageinfo(
     char desthost[OSP_STRBUF_SIZE];
     char* ptr;
     int parse, size, i;
-    osp_intstr_t format;
+    osp_intstr_e format;
     int release;
     struct in_addr dest;
 
-    DEBUG("rlm_osp: osp_get_usageinfo start");
+    DEBUG3("rlm_osp: osp_get_usageinfo start");
 
     /* Get call origin */
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
-        OSP_GET_STRING(request, TRUE, "callorigin", OSP_DEF_MUST, mapping->origin, buffer);
+        OSP_GET_STRING(request, TRUE, OSP_STR_CALLORIGIN, OSP_DEF_MUST, mapping->origin, buffer);
         if (!strcmp(buffer, OSP_CISCOCALL_TERM)) {
             usage->origin = OSP_ORIGIN_TERM;
         } else {
             usage->origin = OSP_ORIGIN_INIT;
         }
-        DEBUG("rlm_osp: call origin type = '%d'", usage->origin);
+        DEBUG2("rlm_osp: call origin type = '%d'", usage->origin);
 
         if (((usage->origin == OSP_ORIGIN_TERM) && (mapping->ignoreterm)) ||
             ((usage->origin == OSP_ORIGIN_INIT) && (mapping->ignoreinit)))
         {
-            DEBUG("rlm_osp: ignore '%s' record.", buffer);
+            DEBUG2("rlm_osp: ignore '%s' record.", buffer);
             return 1;
         } else {
             break;
@@ -2680,48 +2787,51 @@ static int osp_get_usageinfo(
     }
 
     /* Get transaction ID */
-    OSP_GET_LONGLONG(request, TRUE, "transactionid", OSP_DEF_MAY, mapping->transid, 0, buffer, usage->transid);
+    OSP_GET_LONGLONG(request, TRUE, OSP_STR_TRANSACTIONID, OSP_DEF_MAY, mapping->transid, 0, buffer, usage->transid);
 
     /* Get Call-ID */
-    OSP_GET_STRING(request, TRUE, "callid", OSP_DEF_MUST, mapping->callid, usage->callid);
+    OSP_GET_STRING(request, TRUE, OSP_STR_CALLID, OSP_DEF_MUST, mapping->callid, usage->callid);
 
     /* Get calling number */
-    OSP_GET_CALLNUM(request, TRUE, "callingnumber", OSP_DEF_MAY, mapping->calling, mapping->callingformat, buffer, ptr, size, usage->calling);
+    OSP_GET_CALLNUM(request, TRUE, OSP_STR_CALLINGNUMBER, OSP_DEF_MAY, mapping->calling, mapping->callingformat, buffer, ptr, size, usage->calling);
 
     /* Get called number */
-    OSP_GET_CALLNUM(request, TRUE, "callednumber", OSP_DEF_MUST, mapping->called, mapping->calledformat, buffer, ptr, size, usage->called);
+    OSP_GET_CALLNUM(request, TRUE, OSP_STR_CALLEDNUMBER, OSP_DEF_MUST, mapping->called, mapping->calledformat, buffer, ptr, size, usage->called);
 
     /* Get asserted ID */
-    OSP_GET_STRING(request, TRUE, "assertedid", OSP_DEF_MAY, mapping->assertedid, usage->assertedid);
+    OSP_GET_CALLNUM(request, TRUE, OSP_STR_ASSERTEDID, OSP_DEF_MAY, mapping->assertedid, OSPC_NFORMAT_URL, buffer, ptr, size, usage->assertedid);
+
+    /* Get RPID */
+    OSP_GET_CALLNUM(request, TRUE, OSP_STR_RPID, OSP_DEF_MAY, mapping->rpid, OSPC_NFORMAT_URL, buffer, ptr, size, usage->rpid);
 
     /* Get source */
-    OSP_GET_IP(request, TRUE, "source", OSP_DEF_MAY, mapping->source, provider->deviceip, provider->deviceport, buffer, usage->source, tmphost);
+    OSP_GET_IP(request, TRUE, OSP_STR_SOURCE, OSP_DEF_MAY, mapping->source, provider->deviceip, provider->deviceport, buffer, usage->source, tmphost);
 
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
         if (usage->origin == OSP_ORIGIN_TERM) {
             /* Get source device */
-            OSP_GET_IP(request, TRUE, "sourcedevice", OSP_DEF_MUST, mapping->srcdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev, tmphost);
+            OSP_GET_IP(request, TRUE, OSP_STR_SRCDEVICE, OSP_DEF_MUST, mapping->srcdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev, tmphost);
 
             /* Get proxy/destination */
-            OSP_GET_IP(request, TRUE, "proxy", OSP_DEF_MUST, mapping->proxy, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination, desthost);
+            OSP_GET_IP(request, TRUE, OSP_STR_PROXY, OSP_DEF_MUST, mapping->proxy, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination, desthost);
         } else {
             /* Get proxy/source device */
-            OSP_GET_IP(request, TRUE, "proxy", OSP_DEF_MUST, mapping->proxy, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev, tmphost);
+            OSP_GET_IP(request, TRUE, OSP_STR_PROXY, OSP_DEF_MUST, mapping->proxy, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev, tmphost);
 
             /* Get destination */
-            OSP_GET_IP(request, TRUE, "destination", OSP_DEF_MUST, mapping->destination, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination, desthost);
+            OSP_GET_IP(request, TRUE, OSP_STR_DESTINATION, OSP_DEF_MUST, mapping->destination, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination, desthost);
         }
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
     default:
         /* Get source device */
-        OSP_GET_IP(request, TRUE, "sourcedevice", OSP_DEF_MUST, mapping->srcdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev, tmphost);
+        OSP_GET_IP(request, TRUE, OSP_STR_SRCDEVICE, OSP_DEF_MUST, mapping->srcdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev, tmphost);
 
         /* Get destination */
-        OSP_GET_IP(request, TRUE, "destination", OSP_DEF_MUST, mapping->destination, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination, desthost);
+        OSP_GET_IP(request, TRUE, OSP_STR_DESTINATION, OSP_DEF_MUST, mapping->destination, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination, desthost);
 
         break;
     }
@@ -2729,44 +2839,44 @@ static int osp_get_usageinfo(
     /* Check if the record is for a destination should be ignored */
     if (inet_pton(AF_INET, desthost, &dest) == 1) {
         if (osp_match_subnet(&mapping->ignoreddestlist, dest.s_addr) == 0) {
-            DEBUG("rlm_osp: ignore record for destination '%s'.", usage->destination);
+            DEBUG2("rlm_osp: ignore record for destination '%s'.", usage->destination);
             return 1;
         }
     }
 
     /* Get destination device */
-    OSP_GET_IP(request, TRUE, "destinationdevice", OSP_DEF_MAY, mapping->destdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destdev, tmphost);
+    OSP_GET_IP(request, TRUE, OSP_STR_DESTDEVICE, OSP_DEF_MAY, mapping->destdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destdev, tmphost);
 
     /* Get destination count */
-    OSP_GET_INTEGER(request, TRUE, "destinationcount", OSP_DEF_MAY, mapping->destcount, OSP_INTSTR_DEC, OSP_DESTCOUNT_DEF, buffer, usage->destcount);
+    OSP_GET_INTEGER(request, TRUE, OSP_STR_DESTCOUNT, OSP_DEF_MAY, mapping->destcount, OSP_INTSTR_DEC, OSP_DESTCOUNT_DEF, buffer, usage->destcount);
 
     /* Get source network ID */
-    OSP_GET_STRING(request, TRUE, "sourcenetworkid", OSP_DEF_MAY, mapping->snid, usage->snid);
+    OSP_GET_STRING(request, TRUE, OSP_STR_SRCNETWORKID, OSP_DEF_MAY, mapping->srcnid, usage->srcnid);
 
     /* Get destination network ID */
-    OSP_GET_STRING(request, TRUE, "destinationnetworkid", OSP_DEF_MAY, mapping->dnid, usage->dnid);
+    OSP_GET_STRING(request, TRUE, OSP_STR_DESTNETWORKID, OSP_DEF_MAY, mapping->destnid, usage->destnid);
 
     /* Get diversion user */
-    OSP_GET_CALLNUM(request, TRUE, "diversionuser", OSP_DEF_MAY, mapping->divuser, TRUE, buffer, ptr, size, usage->divuser);
+    OSP_GET_CALLNUM(request, TRUE, OSP_STR_DIVERSIONUSER, OSP_DEF_MAY, mapping->divuser, TRUE, buffer, ptr, size, usage->divuser);
 
     /* Get diversion host */
-    OSP_GET_URIHOST(request, TRUE, "diversionhost", OSP_DEF_MAY, mapping->divhost, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->divhost);
+    OSP_GET_URIHOST(request, TRUE, OSP_STR_DIVERSIONHOST, OSP_DEF_MAY, mapping->divhost, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->divhost);
 
     /* Get call start time */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
-    OSP_GET_TIME(request, parse, "starttime", OSP_DEF_MUST, mapping->start, mapping->timeformat, OSP_TIME_DEF, buffer, usage->start);
+    OSP_GET_TIME(request, parse, OSP_STR_STARTTIME, OSP_DEF_MUST, mapping->start, mapping->timeformat, OSP_TIME_DEF, buffer, usage->start);
 
     /* Get call alert time */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_TIME(request, parse, "alerttime", OSP_DEF_MAY, mapping->alert, mapping->timeformat, OSP_TIME_DEF, buffer, usage->alert);
+    OSP_GET_TIME(request, parse, OSP_STR_ALERTTIME, OSP_DEF_MAY, mapping->alert, mapping->timeformat, OSP_TIME_DEF, buffer, usage->alert);
 
     /* Get call connect time */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
-    OSP_GET_TIME(request, parse, "connecttime", OSP_DEF_MAY, mapping->connect, mapping->timeformat, OSP_TIME_DEF, buffer, usage->connect);
+    OSP_GET_TIME(request, parse, OSP_STR_CONNECTTIME, OSP_DEF_MAY, mapping->connect, mapping->timeformat, OSP_TIME_DEF, buffer, usage->connect);
 
     /* Get call end time */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_TIME(request, parse, "endtime", OSP_DEF_MUST, mapping->end, mapping->timeformat, OSP_TIME_DEF, buffer, usage->end);
+    OSP_GET_TIME(request, parse, OSP_STR_ENDTIME, OSP_DEF_MUST, mapping->end, mapping->timeformat, OSP_TIME_DEF, buffer, usage->end);
 
     /* Get call duration */
     if (type == PW_STATUS_STOP) {
@@ -2775,29 +2885,30 @@ static int osp_get_usageinfo(
             if (buffer[0] == '\0') {
                 /* Has checked string NULL */
                 radlog(L_INFO,
-                    "rlm_osp: Failed to parse '%s' in request for 'duration'.",
-                    mapping->duration);
+                    "rlm_osp: Failed to parse '%s' in request for '%s'.",
+                    mapping->duration,
+                    OSP_STR_DURATION);
                 usage->duration = difftime(usage->start, usage->end);
             } else {
                 usage->duration = atoi(buffer);
             }
         } else {
-            DEBUG("rlm_osp: 'duration' mapping undefined.");
+            DEBUG("rlm_osp: '%s' mapping undefined.", OSP_STR_DURATION);
             usage->duration = difftime(usage->start, usage->end);
         }
     } else {
-        DEBUG("rlm_osp: do not parse 'duration'.");
+        DEBUG2("rlm_osp: do not parse '%s'.", OSP_STR_DURATION);
         usage->duration = 0;
     }
-    DEBUG("rlm_osp: 'duration' = '%lu'", usage->duration);
+    DEBUG2("rlm_osp: '%s' = '%lu'", OSP_STR_DURATION, usage->duration);
 
     /* Get post dial delay */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
-    OSP_GET_INTEGER(request, parse, "postdialdelay", OSP_DEF_MAY, mapping->pdd, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, usage->pdd);
+    OSP_GET_INTEGER(request, parse, OSP_STR_PDD, OSP_DEF_MAY, mapping->pdd, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, usage->pdd);
     if (usage->pdd != OSP_STATSINT_DEF) {
         usage->pdd /= OSP_TIMEUNIT_SCALE[mapping->pddunit];
     }
-    DEBUG("rlm_osp: post dial delay = '%d'", usage->pdd);
+    DEBUG2("rlm_osp: post dial delay = '%d'", usage->pdd);
 
     /* Get release source */
     if (type == PW_STATUS_STOP) {
@@ -2806,8 +2917,9 @@ static int osp_get_usageinfo(
             if (buffer[0] == '\0') {
                 /* Has checked string NULL */
                 radlog(L_INFO,
-                    "rlm_osp: Failed to parse '%s' in request for 'releasesource'.",
-                    mapping->release);
+                    "rlm_osp: Failed to parse '%s' in request for '%s'.",
+                    mapping->release,
+                    OSP_STR_RELEASE);
                 usage->release = OSP_TK_RELSRC;
             } else {
                 release = atoi(buffer);
@@ -2851,17 +2963,17 @@ static int osp_get_usageinfo(
                 }
             }
         } else {
-            DEBUG("rlm_osp: 'releasesource' mapping undefined.");
+            DEBUG("rlm_osp: '%s' mapping undefined.", OSP_STR_RELEASE);
             usage->release = OSP_TK_RELSRC;
         }
     } else if (type == PW_STATUS_START) {
-        DEBUG("rlm_osp: do not parse 'releasesource'.");
+        DEBUG2("rlm_osp: do not parse '%s'.", OSP_STR_RELEASE);
         usage->release = OSP_TK_RELSRC;
-    } else {   /* PW_STATUS_ALIVE */
-        DEBUG("rlm_osp: do not parse 'releasesource'.");
+    } else {    /* PW_STATUS_ALIVE */
+        DEBUG2("rlm_osp: do not parse '%s'.", OSP_STR_RELEASE);
         usage->release = OSP_TK_RELDST;
     }
-    DEBUG("rlm_osp: 'releasesource' = '%d'", usage->release);
+    DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_RELEASE, usage->release);
 
     /* Get release cause */
     parse = ((type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
@@ -2876,17 +2988,29 @@ static int osp_get_usageinfo(
         format = OSP_INTSTR_DEC;
         break;
     }
-    OSP_GET_INTEGER(request, parse, "releasecause", OSP_DEF_MUST, mapping->cause, format, OSP_CAUSE_DEF, buffer, usage->cause);
+    OSP_GET_INTEGER(request, parse, OSP_STR_CAUSE, OSP_DEF_MUST, mapping->cause, format, OSP_CAUSE_DEF, buffer, usage->cause);
 
     /* Get signaling protocol */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
-    OSP_GET_STRING(request, parse, "signalingprotocol", OSP_DEF_MAY, mapping->protocol, buffer);
+    OSP_GET_STRING(request, parse, OSP_STR_PROTOCOL, OSP_DEF_MAY, mapping->protocol, buffer);
     usage->protocol = osp_parse_protocol(mapping, buffer);
-    DEBUG("rlm_osp: signaling protocol type = '%d'", usage->protocol);
+    DEBUG2("rlm_osp: signaling protocol type = '%d'", usage->protocol);
+
+    /* Get source protocol */
+    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+    OSP_GET_STRING(request, parse, OSP_STR_SRCPROTOCOL, OSP_DEF_MAY, mapping->srcprotocol, buffer);
+    usage->srcprotocol = osp_parse_protocol(mapping, buffer);
+    DEBUG2("rlm_osp: source protocol type = '%d'", usage->srcprotocol);
+
+    /* Get destination protocol */
+    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+    OSP_GET_STRING(request, parse, OSP_STR_DESTPROTOCOL, OSP_DEF_MAY, mapping->destprotocol, buffer);
+    usage->destprotocol = osp_parse_protocol(mapping, buffer);
+    DEBUG2("rlm_osp: destination protocol type = '%d'", usage->destprotocol);
 
     /* Get release reason type */
     usage->causetype = osp_get_causetype(mapping, usage->protocol);
-    DEBUG("rlm_osp: termination cause type = '%d'", usage->causetype);
+    DEBUG2("rlm_osp: termination cause type = '%d'", usage->causetype);
 
     /* Get source session ID */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
@@ -2902,7 +3026,7 @@ static int osp_get_usageinfo(
     default:
         break;
     }
-    OSP_GET_STRING(request, parse, "sourcesessionid", OSP_DEF_MAY, mapping->srcsessionid, usage->srcsessionid);
+    OSP_GET_STRING(request, parse, OSP_STR_SRCSESSIONID, OSP_DEF_MAY, mapping->srcsessionid, usage->srcsessionid);
 
     /* Get destination session ID */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
@@ -2918,31 +3042,43 @@ static int osp_get_usageinfo(
     default:
         break;
     }
-    OSP_GET_STRING(request, parse, "destinationsessionid", OSP_DEF_MAY, mapping->destsessionid, usage->destsessionid);
+    OSP_GET_STRING(request, parse, OSP_STR_DESTSESSIONID, OSP_DEF_MAY, mapping->destsessionid, usage->destsessionid);
+
+    /* Get correlation session ID */
+    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+    OSP_GET_STRING(request, parse, OSP_STR_CORRSESSIONID, OSP_DEF_MAY, mapping->corrsessionid, usage->corrsessionid);
 
     /* Get source codec */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
-    OSP_GET_STRING(request, parse, "sourcecodec", OSP_DEF_MAY, mapping->srccodec, usage->srccodec);
+    OSP_GET_STRING(request, parse, OSP_STR_SRCCODEC, OSP_DEF_MAY, mapping->srccodec, usage->srccodec);
 
     /* Get destination codec */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
-    OSP_GET_STRING(request, parse, "destinationcodec", OSP_DEF_MAY, mapping->destcodec, usage->destcodec);
+    OSP_GET_STRING(request, parse, OSP_STR_DESTCODEC, OSP_DEF_MAY, mapping->destcodec, usage->destcodec);
 
     /* Get conference ID */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_STRING(request, parse, "conferenceid",  OSP_DEF_MAY, mapping->confid, usage->confid);
-
-    /* Get statistics */
-    osp_get_statsinfo(mapping, request, type, usage);
+    OSP_GET_STRING(request, parse, OSP_STR_CONFID, OSP_DEF_MAY, mapping->confid, usage->confid);
 
     /* Get user-defined info */
     for (i = 0; i < OSP_CUSTOMINFO_MAX; i++) {
-        snprintf(buffer, sizeof(buffer), "custominfo%d", i + 1);
+        snprintf(buffer, sizeof(buffer), "%s%d", OSP_STR_CUSTOMINFO, i + 1);
         parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
         OSP_GET_STRING(request, parse, buffer, OSP_DEF_MAY, mapping->custinfo[i], usage->custinfo[i]);
     }
 
-    DEBUG("rlm_osp: osp_get_usageinfo success");
+    /* Get source realm */
+    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+    OSP_GET_STRING(request, parse, OSP_STR_SRCREALM, OSP_DEF_MAY, mapping->srcrealm, usage->srcrealm);
+
+    /* Get destination realm */
+    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+    OSP_GET_STRING(request, parse, OSP_STR_DESTREALM, OSP_DEF_MAY, mapping->destrealm, usage->destrealm);
+
+    /* Get statistics */
+    osp_get_statsinfo(mapping, request, type, usage);
+
+    DEBUG3("rlm_osp: osp_get_usageinfo success");
 
     return 0;
 }
@@ -2960,7 +3096,7 @@ static int osp_match_subnet(
 {
     int i;
 
-    DEBUG("rlm_osp: osp_match_subnet start");
+    DEBUG3("rlm_osp: osp_match_subnet start");
 
     for (i = 0; i < list->number; i++) {
         if (!((list->subnet[i].ip & list->subnet[i].mask) ^ (ip & list->subnet[i].mask))) {
@@ -2968,11 +3104,11 @@ static int osp_match_subnet(
         }
     }
     if (i >= list->number) {
-        DEBUG("rlm_osp: osp_match_subnet failed");
+        DEBUG2("rlm_osp: osp_match_subnet failed");
         return -1;
     }
 
-    DEBUG("rlm_osp: osp_match_subnet success");
+    DEBUG3("rlm_osp: osp_match_subnet success");
 
     return 0;
 }
@@ -2995,186 +3131,97 @@ static int osp_get_statsinfo(
     osp_statsmap_t* map = &mapping->stats;
     osp_stats_t* var = &usage->stats;
     int parse, parseleg;
-    osp_group_t group;
-    osp_dir_t dir;
-    char name[OSP_STRBUF_SIZE];
     char buffer[OSP_STRBUF_SIZE];
-    char* vsa;
-    char* uvsa;
-    char* dvsa;
 
-    DEBUG("rlm_osp: osp_get_statsinfo start");
+    DEBUG3("rlm_osp: osp_get_statsinfo start");
 
     if (map->reportstats) {
         /* If parse statistics */
         parse = (type == PW_STATUS_STOP);
 
         /* Get lost send packets */
-        OSP_GET_INTEGER(request, parse, "sendlostpackets", OSP_DEF_MAY, map->slost.pack, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->slost.pack);
+        OSP_GET_INTEGER(request, parse, OSP_STR_SLOSTPACKETS, OSP_DEF_MAY, map->slost.pack, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->slost.pack);
 
         /* Get lost send packet fraction */
-        OSP_GET_INTEGER(request, parse, "sendlostfraction", OSP_DEF_MAY, map->slost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->slost.fract);
+        OSP_GET_INTEGER(request, parse, OSP_STR_SLOSTFRACTION, OSP_DEF_MAY, map->slost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->slost.fract);
 
         /* Get lost receive packets */
-        OSP_GET_INTEGER(request, parse, "receivelostpackets", OSP_DEF_MAY, map->rlost.pack, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rlost.pack);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RLOSTPACKETS, OSP_DEF_MAY, map->rlost.pack, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rlost.pack);
 
         /* Get lost receive packet fraction */
-        OSP_GET_INTEGER(request, parse, "receivelostfraction", OSP_DEF_MAY, map->rlost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rlost.fract);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RLOSTFRACTION, OSP_DEF_MAY, map->rlost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rlost.fract);
 
-#define mRMAP   (map->roundtrip)
-#define mRVAR   (var->roundtrip)
-        /* Get round trip delay samples */
-        OSP_GET_INTEGER(request, parse, "roundtripdelaysamples", OSP_DEF_MAY, mRMAP.samp, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mRVAR.samp);
+        /* Get RTP source-to-reporter octets */
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPOCTETS, OSP_DEF_MAY, map->rtp_src_rep_octets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_octets);
 
-        /* Get round trip delay minimim */
-        OSP_GET_INTEGER(request, parse, "roundtripdelayminimum", OSP_DEF_MAY, mRMAP.min, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mRVAR.min);
+        /* Get RTP destination-to-reporter octets */
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPOCTETS, OSP_DEF_MAY, map->rtp_dest_rep_octets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_octets);
 
-        /* Get round trip delay maximum */
-        OSP_GET_INTEGER(request, parse, "roundtripdelaymaximum", OSP_DEF_MAY, mRMAP.max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mRVAR.max);
+        /* Get RTP source-to-reporter packets */
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPPACKETS, OSP_DEF_MAY, map->rtp_src_rep_packets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_packets);
 
-        /* Get round trip delay mean */
-        OSP_GET_INTEGER(request, parse, "roundtripdelaymean", OSP_DEF_MAY, mRMAP.mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mRVAR.mean);
+        /* Get RTP destination-to-reporter packets */
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPPACKETS, OSP_DEF_MAY, map->rtp_dest_rep_packets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_packets);
 
-        /* Get round trip delay variance */
-        OSP_GET_FLOAT(request, parse, "roundtripdelayvariance", OSP_DEF_MAY, mRMAP.var, OSP_SCALE_1, OSP_STATSFLOAT_DEF, buffer, mRVAR.var);
-#undef mRVAR
-#undef mRMAP
+        /* Get RTP source-to-reporter lost packets */
+        OSP_GET_INTEGER(request, parseleg, OSP_STR_RTPSRCREPLOST, OSP_DEF_MAY, map->rtp_src_rep_lost, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_lost);
 
-        for (dir = OSP_DIR_MIN; dir < OSP_DIR_NUMBER; dir++) {
-#define mDMAP               (map->dir[dir])
-#define mDVAR               (var->dir[dir])
-#define mDSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s", dir_str[dir], _var)
-            /* Get rfactor */
-            mDSTR(name, "rfactor");
-            OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mDMAP.rfactor, map->rfactorscale, OSP_STATSFLOAT_DEF, buffer, mDVAR.rfactor);
+        /* Get RTP destination-to-reporter lost packets */
+        OSP_GET_INTEGER(request, parseleg, OSP_STR_RTPDESTREPLOST, OSP_DEF_MAY, map->rtp_dest_rep_lost, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_lost);
 
-            /* Get moscq */
-            mDSTR(name, "moscq");
-            OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mDMAP.moscq, map->mosscale, OSP_STATSFLOAT_DEF, buffer, mDVAR.moscq);
+        /* Get RTP source-to-reporter jitter mean */
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPJITTERMEAN, OSP_DEF_MAY, map->rtp_src_rep_jitter_mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_jitter_mean);
 
-            /* Get moslq */
-            mDSTR(name, "moslq");
-            OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mDMAP.moslq, map->mosscale, OSP_STATSFLOAT_DEF, buffer, mDVAR.moslq);
+        /* Get RTP destination-to-reporter jitter mean */
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPJITTERMEAN, OSP_DEF_MAY, map->rtp_dest_rep_jitter_mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_jitter_mean);
 
-            parseleg = parse;
-            switch (mapping->clienttype) {
-            case OSP_CLIENT_CISCO:
-                // TODO:
-                /*
-                if (((usage->origin == OSP_ORIGIN_TERM) && (dir == OSP_FLOW_UP)) ||
-                    ((usage->origin == OSP_ORIGIN_INIT) && (dir == OSP_FLOW_DOWN)))
-                {
-                    parseleg = FALSE;
-                }
-                */
-                break;
-            case OSP_CLIENT_UNDEF:
-            case OSP_CLIENT_ACME:
-            case OSP_CLIENT_GENBANDS3:
-            default:
-                break;
-            }
+        /* Get RTP source-to-reporter jitter max */
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPJITTERMAX, OSP_DEF_MAY, map->rtp_src_rep_jitter_max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_jitter_max);
 
-            /* Get icpif */
-            mDSTR(name, "icpif");
-            OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mDMAP.icpif, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mDVAR.icpif);
-#undef mDSTR
-#undef mDVAR
-#undef mDMAP
-        }
+        /* Get RTP destination-to-reporter jitter max */
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPJITTERMAX, OSP_DEF_MAY, map->rtp_dest_rep_jitter_max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_jitter_max);
 
-        for (group = OSP_GROUP_RTP; group < OSP_GROUP_NUMBER; group++) {
-            for (dir = OSP_DIR_MIN; dir < OSP_DIR_NUMBER; dir++) {
-#define mGMAP               (map->group[group][dir])
-#define mGVAR               (var->group[group][dir])
-#define mGSTR(_name, _var)  snprintf(_name, sizeof(_name), "%s%s%s", group_str[group], dir_str[dir], _var)
-                parseleg = parse;
-                switch (mapping->clienttype) {
-                case OSP_CLIENT_CISCO:
-                    // TODO:
-                    /*
-                    if (((usage->origin == OSP_ORIGIN_TERM) && (group == OSP_GROUP_RTP) && (dir == OSP_FLOW_UP)) ||
-                        ((usage->origin == OSP_ORIGIN_INIT) && (group == OSP_GROUP_RTP) && (dir == OSP_FLOW_DOWN)))
-                    {
-                        parseleg = FALSE;
-                    }
-                    */
-                    break;
-                case OSP_CLIENT_UNDEF:
-                case OSP_CLIENT_ACME:
-                case OSP_CLIENT_GENBANDS3:
-                default:
-                    break;
-                }
+        /* Get RTCP source-to-destination lost packets */
+        OSP_GET_INTEGER(request, parseleg, OSP_STR_RTCPSRCDESTLOST, OSP_DEF_MAY, map->rtcp_src_dest_lost, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_dest_lost);
 
-                /* Get packets lost packets */
-                mGSTR(name, "lostpackets");
-                OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mGMAP.lost.pack, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.lost.pack);
+        /* Get RTCP destination-to-source lost packets */
+        OSP_GET_INTEGER(request, parseleg, OSP_STR_RTCPDESTSRCLOST, OSP_DEF_MAY, map->rtcp_dest_src_lost, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_src_lost);
 
-                /* Get packets lost fraction */
-                mGSTR(name, "lostfraction");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.lost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.lost.fract);
+        /* Get RTCP source-to-destination jitter mean */
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCDESTJITTERMEAN, OSP_DEF_MAY, map->rtcp_src_dest_jitter_mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_dest_jitter_mean);
 
-                /* Get jitter samples */
-                mGSTR(name, "jittersamples");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.jitter.samp, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.jitter.samp);
+        /* Get RTCP destination-to-source jitter mean */
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTSRCJITTERMEAN, OSP_DEF_MAY, map->rtcp_dest_src_jitter_mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_src_jitter_mean);
 
-                /* Get jitter minimim */
-                mGSTR(name, "jitterminimum");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.jitter.min, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.jitter.min);
+        /* Get RTCP source-to-destination jitter max */
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCDESTJITTERMAX, OSP_DEF_MAY, map->rtcp_src_dest_jitter_max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_dest_jitter_max);
 
-                /* Get jitter maximum */
-                mGSTR(name, "jittermaximum");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.jitter.max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.jitter.max);
+        /* Get RTCP destination-to-source jitter max */
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTSRCJITTERMAX, OSP_DEF_MAY, map->rtcp_dest_src_jitter_max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_src_jitter_max);
 
-                /* Get jitter mean */
-                mGSTR(name, "jittermean");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.jitter.mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.jitter.mean);
+        /* Get RTCP source round trip delay mean */
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCRTDELAYMEAN, OSP_DEF_MAY, map->rtcp_src_rtdelay_mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_rtdelay_mean);
 
-                /* Get jitter variance */
-                mGSTR(name, "jittervariance");
-                OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mGMAP.jitter.var, OSP_SCALE_1, OSP_STATSFLOAT_DEF, buffer, mGVAR.jitter.var);
+        /* Get RTCP destination round trip delay mean */
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTRTDELAYMEAN, OSP_DEF_MAY, map->rtcp_dest_rtdelay_mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_rtdelay_mean);
 
-                /* Get delay samples */
-                mGSTR(name, "delaysamples");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.delay.samp, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.delay.samp);
+        /* Get RTCP source round trip delay max */
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCRTDELAYMAX, OSP_DEF_MAY, map->rtcp_src_rtdelay_max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_rtdelay_max);
 
-                /* Get delay minimim */
-                mGSTR(name, "delayminimum");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.delay.min, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.delay.min);
+        /* Get RTCP destination round trip delay max */
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTRTDELAYMAX, OSP_DEF_MAY, map->rtcp_dest_rtdelay_max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_rtdelay_max);
 
-                /* Get delay maximum */
-                mGSTR(name, "delaymaximum");
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, mGMAP.delay.max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.delay.max);
+        /* Get source-to-reporter R-Factor */
+        OSP_GET_FLOAT(request, parse, OSP_STR_SRCREPRFACTOR, OSP_DEF_MAY, map->src_rep_rfactor, map->rfactorscale, OSP_STATSFLOAT_DEF, buffer, var->src_rep_rfactor);
 
-                /* Get delay mean */
-                mGSTR(name, "delaymean");
-                OSP_GET_INTEGER(request, parseleg, name, OSP_DEF_MAY, mGMAP.delay.mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.delay.mean);
+        /* Get destination-to-reporter R-Factor */
+        OSP_GET_FLOAT(request, parse, OSP_STR_DESTREPRFACTOR, OSP_DEF_MAY, map->dest_rep_rfactor, map->rfactorscale, OSP_STATSFLOAT_DEF, buffer, var->dest_rep_rfactor);
 
-                /* Get delay variance */
-                mGSTR(name, "delayvariance");
-                OSP_GET_FLOAT(request, parse, name, OSP_DEF_MAY, mGMAP.delay.var, OSP_SCALE_1, OSP_STATSFLOAT_DEF, buffer, mGVAR.delay.var);
+        /* Get source-to-reporter MOS */
+        OSP_GET_FLOAT(request, parse, OSP_STR_SRCREPMOS, OSP_DEF_MAY, map->src_rep_mos, map->mosscale, OSP_STATSFLOAT_DEF, buffer, var->src_rep_mos);
 
-#define mCRO    (map->cross)
-                /* Get octets */
-                mGSTR(name, "octets");
-                dvsa = map->group[OSP_GROUP_RTP][OSP_DIR_SRCREP].octets;
-                uvsa = map->group[OSP_GROUP_RTP][OSP_DIR_DESTREP].octets;
-                OSP_CROSSOVER_MAPS(mapping->clienttype, usage->origin, group, dir, mCRO.rtpoctets, mGMAP.octets, dvsa, uvsa, vsa);
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, vsa, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.octets);
-
-                /* Get packets */
-                mGSTR(name, "packets");
-                dvsa = map->group[OSP_GROUP_RTP][OSP_DIR_SRCREP].packets;
-                uvsa = map->group[OSP_GROUP_RTP][OSP_DIR_DESTREP].packets;
-                OSP_CROSSOVER_MAPS(mapping->clienttype, usage->origin, group, dir, mCRO.rtppackets, mGMAP.packets, dvsa, uvsa, vsa);
-                OSP_GET_INTEGER(request, parse, name, OSP_DEF_MAY, vsa, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, mGVAR.packets);
-#undef mCRO
-#undef mGSTR
-#undef mGVAR
-#undef mGMAP
-            }
-        }
+        /* Get destination-to-reporter MOS */
+        OSP_GET_FLOAT(request, parse, OSP_STR_DESTREPMOS, OSP_DEF_MAY, map->dest_rep_mos, map->mosscale, OSP_STATSFLOAT_DEF, buffer, var->dest_rep_mos);
     } else {
         /* Do not report statistics. slost and rlost must be set to default. */
         var->slost.pack = OSP_STATSINT_DEF;
@@ -3183,7 +3230,7 @@ static int osp_get_statsinfo(
         var->rlost.fract = OSP_STATSINT_DEF;
     }
 
-    DEBUG("rlm_osp: osp_get_statsinfo success");
+    DEBUG3("rlm_osp: osp_get_statsinfo success");
 
     return 0;
 }
@@ -3204,7 +3251,7 @@ static void osp_get_iphost(
     int size;
     char* tmpptr;
 
-    DEBUG("rlm_osp: osp_get_iphost start");
+    DEBUG3("rlm_osp: osp_get_iphost start");
 
     size = buffersize - 1;
     strncpy(buffer, ip, size);
@@ -3214,9 +3261,9 @@ static void osp_get_iphost(
         *tmpptr = '\0';
     }
 
-    DEBUG("rlm_osp: host = '%s'", buffer);
+    DEBUG2("rlm_osp: host = '%s'", buffer);
 
-    DEBUG("rlm_osp: osp_get_iphost success");
+    DEBUG3("rlm_osp: osp_get_iphost success");
 }
 
 /*
@@ -3237,7 +3284,7 @@ static void osp_create_device(
     struct in_addr inp;
     char tmpbuf[OSP_STRBUF_SIZE];
 
-    DEBUG("rlm_osp: osp_create_device start");
+    DEBUG3("rlm_osp: osp_create_device start");
 
     if (ip == OSP_IP_DEF) {
         buffer[0] = '\0';
@@ -3251,9 +3298,9 @@ static void osp_create_device(
             snprintf(buffer, buffersize, "[%s]:%d", tmpbuf, port);
         }
     }
-    DEBUG("rlm_osp: device = '%s'", buffer);
+    DEBUG2("rlm_osp: device = '%s'", buffer);
 
-    DEBUG("rlm_osp: osp_create_device success");
+    DEBUG3("rlm_osp: osp_create_device success");
 }
 
 /*
@@ -3274,7 +3321,7 @@ static void osp_format_device(
     char tmpbuf[OSP_STRBUF_SIZE];
     char* tmpptr;
 
-    DEBUG("rlm_osp: osp_format_device start");
+    DEBUG3("rlm_osp: osp_format_device start");
 
     size = sizeof(tmpbuf) - 1;
     strncpy(tmpbuf, device, size);
@@ -3297,9 +3344,9 @@ static void osp_format_device(
     }
     buffer[size] = '\0';
 
-    DEBUG("rlm_osp: device = '%s'", buffer);
+    DEBUG2("rlm_osp: device = '%s'", buffer);
 
-    DEBUG("rlm_osp: osp_format_device success");
+    DEBUG3("rlm_osp: osp_format_device success");
 }
 
 /*
@@ -3324,7 +3371,7 @@ static int osp_get_uriuser(
     char* tmp;
     int size;
 
-    DEBUG("rlm_osp: osp_get_uriuser start");
+    DEBUG3("rlm_osp: osp_get_uriuser start");
 
     if ((start = strstr(uri, "sip:")) == NULL) {
         if (OSP_CHECK_STRING(uri)) {
@@ -3361,9 +3408,9 @@ static int osp_get_uriuser(
         buffer[size] = '\0';
     }
     /* Do not have to check string NULL */
-    DEBUG("rlm_osp: uri userinfo = '%s'", buffer);
+    DEBUG2("rlm_osp: uri userinfo = '%s'", buffer);
 
-    DEBUG("rlm_osp: osp_get_uriuser success");
+    DEBUG3("rlm_osp: osp_get_uriuser success");
 
     return 0;
 }
@@ -3390,7 +3437,7 @@ static int osp_get_urihost(
     char* tmp;
     int size;
 
-    DEBUG("rlm_osp: osp_get_urihost start");
+    DEBUG3("rlm_osp: osp_get_urihost start");
 
     if ((start = strstr(uri, "sip:")) == NULL) {
         if (OSP_CHECK_STRING(uri)) {
@@ -3421,9 +3468,9 @@ static int osp_get_urihost(
         buffer[size] = '\0';
     }
     /* Do not have to check string NULL */
-    DEBUG("rlm_osp: uri hostport = '%s'", buffer);
+    DEBUG2("rlm_osp: uri hostport = '%s'", buffer);
 
-    DEBUG("rlm_osp: osp_get_urihost success");
+    DEBUG3("rlm_osp: osp_get_urihost success");
 
     return 0;
 }
@@ -3441,7 +3488,7 @@ static OSPE_PROTOCOL_NAME osp_parse_protocol(
 {
     OSPE_PROTOCOL_NAME name = OSPC_PROTNAME_UNKNOWN;
 
-    DEBUG("rlm_osp: osp_parse_protocol start");
+    DEBUG3("rlm_osp: osp_parse_protocol start");
 
     if (OSP_CHECK_STRING(protocol)) {
         /* Comparing ignore case, Solaris does not support strcasestr */
@@ -3465,9 +3512,9 @@ static OSPE_PROTOCOL_NAME osp_parse_protocol(
             }
         }
     }
-    DEBUG("rlm_osp: protocol name = '%d'", name);
+    DEBUG2("rlm_osp: protocol name = '%d'", name);
 
-    DEBUG("rlm_osp: osp_parse_protocol success");
+    DEBUG3("rlm_osp: osp_parse_protocol success");
 
     return name;
 }
@@ -3485,7 +3532,7 @@ static OSPE_TERM_CAUSE osp_get_causetype(
 {
     OSPE_TERM_CAUSE type;
 
-    DEBUG("rlm_osp: osp_get_causetype start");
+    DEBUG3("rlm_osp: osp_get_causetype start");
 
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
@@ -3512,9 +3559,9 @@ static OSPE_TERM_CAUSE osp_get_causetype(
         }
         break;
     }
-    DEBUG("rlm_osp: cause type = '%d'", type);
+    DEBUG2("rlm_osp: cause type = '%d'", type);
 
-    DEBUG("rlm_osp: osp_get_causetype success");
+    DEBUG3("rlm_osp: osp_get_causetype success");
 
     return type;
 }
@@ -3528,17 +3575,16 @@ static OSPE_TERM_CAUSE osp_get_causetype(
  */
 static time_t osp_format_time(
     char* timestamp,
-    osp_timestr_t format)
+    osp_timestr_e format)
 {
     struct tm dt;
     char* timestr = timestamp;
     char buffer[OSP_STRBUF_SIZE];
-    int size;
     char* tzone;
     long int toffset;
     time_t tvalue = 0;
 
-    DEBUG("rlm_osp: osp_format_time start");
+    DEBUG3("rlm_osp: osp_format_time start");
 
     switch (format) {
     case OSP_TIMESTR_T:
@@ -3554,21 +3600,8 @@ static time_t osp_format_time(
         break;
     case OSP_TIMESTR_ACME:
         /* hh:mm:ss.kkk ZON MMM DD YYYY */
-        size = sizeof(buffer) - 1;
-        snprintf(buffer, size, "%s", timestr + 13);
-        buffer[3] = '\0';
-
-        if (osp_cal_timeoffset(buffer, &toffset) == 0) {
-            size = sizeof(buffer) - 1;
-            snprintf(buffer, size, "%s", timestr);
-            buffer[size] = '\0';
-
-            size = sizeof(buffer) - 1 - 8;
-            snprintf(buffer + 8, size, "%s", timestr + 16);
-            buffer[size + 8] = '\0';
-
+        if (osp_remove_timezone(timestr, buffer, sizeof(buffer), &toffset) == 0) {
             strptime(buffer, "%T %b %d %Y", &dt);
-
             osp_cal_elapsed(&dt, toffset, &tvalue);
         }
         break;
@@ -3584,32 +3617,72 @@ static time_t osp_format_time(
         }
     case OSP_TIMESTR_NTP:
         /* hh:mm:ss.kkk ZON WWW MMM DD YYYY */
-        size = sizeof(buffer) - 1;
-        snprintf(buffer, size, "%s", timestr + 13);
-        buffer[3] = '\0';
-
-        if (osp_cal_timeoffset(buffer, &toffset) == 0) {
-            size = sizeof(buffer) - 1;
-            snprintf(buffer, size, "%s", timestr);
-            buffer[size] = '\0';
-
-            size = sizeof(buffer) - 1 - 8;
-            snprintf(buffer + 8, size, "%s", timestr + 16);
-            buffer[size + 8] = '\0';
-
+        if (osp_remove_timezone(timestr, buffer, sizeof(buffer), &toffset) == 0) {
             strptime(buffer, "%T %a %b %d %Y", &dt);
-
             osp_cal_elapsed(&dt, toffset, &tvalue);
         }
         break;
     default:
         break;
     }
-    DEBUG("rlm_osp: time = '%lu'", tvalue);
+    DEBUG2("rlm_osp: time = '%lu'", tvalue);
 
-    DEBUG("rlm_osp: osp_format_time success");
+    DEBUG3("rlm_osp: osp_format_time success");
 
     return tvalue;
+}
+
+/*
+ * Remove time zone substring from timestamp and calculate time zone offset
+ *
+ * param timestr Timestamp string
+ * param buffer Buffer for timestamp string without time zone
+ * param buffersize Buffer size
+ * param toffset Time offset in seconds
+ * return 0 success, -1 failure
+ */
+static int osp_remove_timezone(
+    char* timestr,
+    char* buffer,
+    int buffersize,
+    long int* toffset)
+{
+    int i, size, tzlen;
+
+    DEBUG3("rlm_osp: osp_remove_timezone start");
+
+    size = buffersize - 1;
+    snprintf(buffer, size, "%s", timestr + 13);
+    buffer[size] = '\0';
+
+    size = buffersize;
+    for (i = 0; i < size; i++) {
+        if ((buffer[i] == ' ') || (buffer[i] == '\0')) {
+            break;
+        }
+    }
+    buffer[i] = '\0';
+    tzlen = i;
+
+    if (osp_cal_timeoffset(buffer, toffset) == 0) {
+        size = buffersize - 1;
+        snprintf(buffer, size, "%s", timestr);
+        buffer[size] = '\0';
+
+        size = buffersize - 8 - 1;
+        snprintf(buffer + 8, size, "%s", timestr + 13 + tzlen);
+        buffer[size + 8] = '\0';
+        DEBUG2("rlm_osp: timestr = '%s'", buffer);
+        DEBUG3("rlm_osp: osp_remove_timezone success");
+        return 0;
+    } else {
+        buffer[0] = '\0';
+        /* Has checked string NULL */
+        radlog(L_INFO,
+            "rlm_osp: Failed to remove time zone from '%s'.",
+            timestr);
+        return -1;
+    }
 }
 
 /*
@@ -3625,7 +3698,7 @@ static int osp_cal_timeoffset(
 {
     int ret = 0;
 
-    DEBUG("rlm_osp: osp_get_timeoffset start");
+    DEBUG3("rlm_osp: osp_get_timeoffset start");
 
     if (!OSP_CHECK_STRING(tzone)) {
         *toffset = OSP_TOFF_UTC;
@@ -3663,9 +3736,9 @@ static int osp_cal_timeoffset(
         *toffset = OSP_TOFF_UTC;
         ret = -1;
     }
-    DEBUG("rlm_osp: time offset = '%ld'", *toffset);
+    DEBUG2("rlm_osp: time offset = '%ld'", *toffset);
 
-    DEBUG("rlm_osp: osp_get_timeoffset success");
+    DEBUG3("rlm_osp: osp_get_timeoffset success");
 
     return ret;
 }
@@ -3686,7 +3759,7 @@ static int osp_cal_elapsed(
     int DaysAtMonth[] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
     time_t days;
 
-    DEBUG("rlm_osp: osp_cal_elapsed start");
+    DEBUG3("rlm_osp: osp_cal_elapsed start");
 
     if ((dt->tm_mon < 0) || (dt->tm_mon > 11)) {
         radlog(L_ERR, "rlm_osp: Failed to calculate elapsed seconds.");
@@ -3705,7 +3778,7 @@ static int osp_cal_elapsed(
 
     *elapsed = ((days * 86400) + (dt->tm_hour * 3600) + (dt->tm_min * 60) + dt->tm_sec - toffset);
 
-    DEBUG("rlm_osp: osp_cal_elapsed success");
+    DEBUG3("rlm_osp: osp_cal_elapsed success");
 
     return 0;
 }
@@ -3723,7 +3796,7 @@ static int osp_detach(
     rlm_osp_t* data = (rlm_osp_t*)instance;
     osp_provider_t* provider = &data->provider;
 
-    DEBUG("rlm_osp: osp_detach start");
+    DEBUG3("rlm_osp: osp_detach start");
 
     /* Delete provider handle */
     OSPPProviderDelete(provider->handle, 0);
@@ -3739,7 +3812,7 @@ static int osp_detach(
         OSPPCleanup();
     }
 
-    DEBUG("rlm_osp: osp_detach success");
+    DEBUG3("rlm_osp: osp_detach success");
 
     return 0;
 }
@@ -3755,7 +3828,7 @@ static int osp_detach(
  */
 module_t rlm_osp = {
     RLM_MODULE_INIT,
-    "osp",
+    OSP_STR_OSP,
     RLM_TYPE_THREAD_SAFE,   /* type */
     osp_instantiate,        /* instantiation */
     osp_detach,             /* detach */
