@@ -104,7 +104,7 @@ RCSID("$Id$")
 #define OSP_MAP_ASSERTEDID      NULL                            /* P-Asserted-Identity */
 #define OSP_MAP_RPID            NULL                            /* Remote-Party-ID */
 #define OSP_MAP_SOURCE          "%{NAS-IP-Address}"             /* Source, RFC 2865 */
-#define OSP_MAP_PROXY           "%{NAS-IP-Address}"             /* Proxy, RFC 2865 */
+#define OSP_MAP_PROXY           NULL                            /* Proxy */
 #define OSP_MAP_SRCDEV          NULL                            /* Source device */
 #define OSP_MAP_DESTINATION     NULL                            /* Destination */
 #define OSP_MAP_DESTDEV         NULL                            /* Destination device */
@@ -118,7 +118,7 @@ RCSID("$Id$")
 #define OSP_MAP_CONNECT         NULL                            /* Call connect time */
 #define OSP_MAP_END             NULL                            /* Call end time */
 #define OSP_MAP_DURATION        "%{Acct-Session-Time}"          /* Call duration, RFC 2866 */
-#define OSP_MAP_PDDUNIT         "0"                             /* PDD unit, second */
+#define OSP_MAP_PDDUNIT         "1"                             /* PDD unit, second */
 #define OSP_MAP_PDD             NULL                            /* Post dial delay */
 #define OSP_MAP_RELEASE         NULL                            /* Release source */
 #define OSP_MAP_PROTOCOL        NULL                            /* Signaling protocol */
