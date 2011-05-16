@@ -175,7 +175,7 @@ RCSID("$Id$")
 #define OSP_STR_REPORTSTART     "reportstart"
 #define OSP_STR_REPORTSTOP      "reportstop"
 #define OSP_STR_REPORTINTERIM   "reportinterim"
-#define OSP_STR_CLIENTTYPE      "radiusclienttype"
+#define OSP_STR_CLIENTTYPE      "clienttype"
 #define OSP_STR_IGNOREDDESTLIST "ignoreddestinationlist"
 #define OSP_STR_CALLORIGIN      "callorigin"
 #define OSP_STR_IGNOREANSWER    "ignoreanswer"
