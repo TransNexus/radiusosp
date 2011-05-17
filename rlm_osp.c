@@ -59,7 +59,7 @@ RCSID("$Id$")
 #define OSP_MAXCONN_DEF     "20"                        /* Mapping default max number of connections */
 #define OSP_MAXCONN_MIN     1                           /* OSP min max number of connections */
 #define OSP_MAXCONN_MAX     1000                        /* OSP max max number of connections */
-#define OSP_PERSISTENCE_DEF "60000"                     /* Mapping default HTTP persistence in milliseconds */
+#define OSP_PERSISTENCE_DEF "60"                        /* Mapping default HTTP persistence in seconds */
 #define OSP_PERSISTENCE_MIN 0                           /* OSP min HTTP persistence */
 #define OSP_RETRYDELAY_DEF  "0"                         /* Mapping default retry delay */
 #define OSP_RETRYDELAY_MIN  0                           /* OSP min retry delay */
@@ -79,6 +79,7 @@ RCSID("$Id$")
 #define OSP_PORT_DEF        0                           /* OSP default port */
 #define OSP_DESTCOUNT_DEF   0                           /* OSP default destination count, unknown */
 #define OSP_CAUSE_DEF       0                           /* OSP default termination cause */
+#define OSP_CAUSE_UNKNOWN   -1                          /* OSP unknown termination cause */
 #define OSP_TIME_DEF        0                           /* OSP default time value */
 #define OSP_STATSINT_DEF    ((int)-1)                   /* OSP default statistics, integer */
 #define OSP_STATSFLOAT_DEF  ((float)-1.0)               /* OSP default statistics, float */
@@ -121,8 +122,9 @@ RCSID("$Id$")
 #define OSP_MAP_PDDUNIT         "1"                             /* PDD unit, second */
 #define OSP_MAP_PDD             NULL                            /* Post dial delay */
 #define OSP_MAP_RELEASE         NULL                            /* Release source */
+#define OSP_MAP_CAUSE           NULL                            /* Release cause per protocol */
+#define OSP_MAP_Q850CAUSE       "%{Acct-Terminate-Cause}"       /* Release cause, RFC 2866 */
 #define OSP_MAP_PROTOCOL        NULL                            /* Signaling protocol */
-#define OSP_MAP_CAUSE           "%{Acct-Terminate-Cause}"       /* Release cause, RFC 2866 */
 #define OSP_MAP_SESSIONID       NULL                            /* Session ID */
 #define OSP_MAP_CODEC           NULL                            /* Codec */
 #define OSP_MAP_CONFID          NULL                            /* Conference ID */
@@ -207,10 +209,11 @@ RCSID("$Id$")
 #define OSP_STR_PDDUNIT         "postdialdelayunit"
 #define OSP_STR_PDD             "postdialdelay"
 #define OSP_STR_RELEASE         "releasesource"
+#define OSP_STR_Q850CAUSE       "q850releasecause"
+#define OSP_STR_SIPCAUSE        "sipreleasecause"
 #define OSP_STR_PROTOCOL        "signalingprotocol"
 #define OSP_STR_SRCPROTOCOL     "sourceprotocol"
 #define OSP_STR_DESTPROTOCOL    "destinationprotocol"
-#define OSP_STR_CAUSE           "releasecause"
 #define OSP_STR_SRCSESSIONID    "sourcesessionid"
 #define OSP_STR_DESTSESSIONID   "destinationsessionid"
 #define OSP_STR_CORRSESSIONID   "correlationsessionid"
@@ -572,10 +575,11 @@ typedef struct {
     int pddunit;                        /* Post dial delay unit */
     char* pdd;                          /* Post dial delay */
     char* release;                      /* Release source */
+    char* q850cause;                    /* Release cause, Q850 */
+    char* sipcause;                     /* Release cause, SIP */
     char* protocol;                     /* Signaling protocol */
     char* srcprotocol;                  /* Source protocol */
     char* destprotocol;                 /* Destination protocol */
-    char* cause;                        /* Release cause */
     char* srcsessionid;                 /* Source sessionID */
     char* destsessionid;                /* Destination session ID */
     char* corrsessionid;                /* Correlation session ID */
@@ -658,11 +662,11 @@ typedef struct {
     time_t duration;                            /* Length of call */
     int pdd;                                    /* Post Dial Delay, in milliseconds */
     int release;                                /* EP that released the call */
+    int q850cause;                              /* Release reason, Q850 */
+    int sipcause;                               /* Release reason, SIP */
     OSPE_PROTOCOL_NAME protocol;                /* Signaling protocol */
     OSPE_PROTOCOL_NAME srcprotocol;             /* Source protocol */
     OSPE_PROTOCOL_NAME destprotocol;            /* Destination protocol */
-    OSPE_TERM_CAUSE causetype;                  /* Release reason type */
-    int cause;                                  /* Release reason */
     osp_string_t srcsessionid;                  /* Source session ID */
     osp_string_t destsessionid;                 /* Destination session ID */
     osp_string_t corrsessionid;                 /* Correlation session ID */
@@ -1177,7 +1181,6 @@ static void osp_format_device(char* device, char* buffer, int buffersize);
 static int osp_get_uriuser(char* uri, char* buffer, int buffersize);
 static int osp_get_urihost(char* uri, char* buffer, int buffersize);
 static OSPE_PROTOCOL_NAME osp_parse_protocol(osp_mapping_t* mapping, char* protocol);
-static OSPE_TERM_CAUSE osp_get_causetype(osp_mapping_t* mapping, OSPE_PROTOCOL_NAME protocol);
 static time_t osp_format_time(char* timestamp, osp_timestr_e format);
 static int osp_remove_timezone(char* timestamp, char* buffer, int buffersize, long int* toffset);
 static int osp_cal_timeoffset(char* tzone, long int* toffset);
@@ -1283,10 +1286,11 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_PDDUNIT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.pddunit), NULL, OSP_MAP_PDDUNIT },
     { OSP_STR_PDD, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.pdd), NULL, OSP_MAP_PDD },
     { OSP_STR_RELEASE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.release), NULL, OSP_MAP_RELEASE },
+    { OSP_STR_Q850CAUSE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.q850cause), NULL, OSP_MAP_Q850CAUSE },
+    { OSP_STR_SIPCAUSE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.sipcause), NULL, OSP_MAP_CAUSE },
     { OSP_STR_PROTOCOL, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.protocol), NULL, OSP_MAP_PROTOCOL },
     { OSP_STR_SRCPROTOCOL, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcprotocol), NULL, OSP_MAP_PROTOCOL },
     { OSP_STR_DESTPROTOCOL, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destprotocol), NULL, OSP_MAP_PROTOCOL },
-    { OSP_STR_CAUSE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.cause), NULL, OSP_MAP_CAUSE },
     { OSP_STR_SRCSESSIONID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcsessionid), NULL, OSP_MAP_SESSIONID },
     { OSP_STR_DESTSESSIONID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destsessionid), NULL, OSP_MAP_SESSIONID },
     { OSP_STR_CORRSESSIONID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.corrsessionid), NULL, OSP_MAP_SESSIONID },
@@ -1740,8 +1744,11 @@ static int osp_check_mapping(
     /* If destination protocol is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_DESTPROTOCOL, OSP_DEF_MAY, mapping->destprotocol);
 
-    /* If release cause is undefined, then fail. */
-    OSP_CHECK_ITEMMAP(OSP_STR_CAUSE, OSP_DEF_MUST, mapping->cause);
+    /* If Q850 release cause is undefined, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_Q850CAUSE, OSP_DEF_MUST, mapping->q850cause);
+
+    /* If SIP release cause is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_SIPCAUSE, OSP_DEF_MAY, mapping->sipcause);
 
     /* If source session ID is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_SRCSESSIONID, OSP_DEF_MAY, mapping->srcsessionid);
@@ -2396,12 +2403,23 @@ static int osp_accounting(
         transaction,        /* Transaction handle */
         usage.destrealm);   /* Destination realm */
 
-    /* Report release code */
-    OSPPTransactionSetTermCause(
-        transaction,        /* Transaction handle */
-        usage.causetype,    /* Release reason type */
-        usage.cause,        /* Release reason */
-        NULL);              /* Description */
+    /* Report Q850 release code */
+    if (usage.q850cause != OSP_CAUSE_UNKNOWN) {
+        OSPPTransactionSetTermCause(
+            transaction,        /* Transaction handle */
+            OSPC_TCAUSE_Q850,   /* Q850 */
+            usage.q850cause,    /* Release reason */
+            NULL);              /* Description */
+    }
+
+    /* Report SIP release code */
+    if (usage.sipcause != OSP_CAUSE_UNKNOWN) {
+        OSPPTransactionSetTermCause(
+            transaction,        /* Transaction handle */
+            OSPC_TCAUSE_SIP,    /* SIP */
+            usage.sipcause,     /* Release reason */
+            NULL);              /* Description */
+    }
 
     /* Report signaling protocol */
     OSPPTransactionSetProtocol(
@@ -2975,7 +2993,7 @@ static int osp_get_usageinfo(
     }
     DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_RELEASE, usage->release);
 
-    /* Get release cause */
+    /* Get release causes */
     parse = ((type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
@@ -2988,7 +3006,8 @@ static int osp_get_usageinfo(
         format = OSP_INTSTR_DEC;
         break;
     }
-    OSP_GET_INTEGER(request, parse, OSP_STR_CAUSE, OSP_DEF_MUST, mapping->cause, format, OSP_CAUSE_DEF, buffer, usage->cause);
+    OSP_GET_INTEGER(request, parse, OSP_STR_Q850CAUSE, OSP_DEF_MUST, mapping->q850cause, format, OSP_CAUSE_UNKNOWN, buffer, usage->q850cause);
+    OSP_GET_INTEGER(request, parse, OSP_STR_SIPCAUSE, OSP_DEF_MAY, mapping->sipcause, format, OSP_CAUSE_UNKNOWN, buffer, usage->sipcause);
 
     /* Get signaling protocol */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
@@ -3007,10 +3026,6 @@ static int osp_get_usageinfo(
     OSP_GET_STRING(request, parse, OSP_STR_DESTPROTOCOL, OSP_DEF_MAY, mapping->destprotocol, buffer);
     usage->destprotocol = osp_parse_protocol(mapping, buffer);
     DEBUG2("rlm_osp: destination protocol type = '%d'", usage->destprotocol);
-
-    /* Get release reason type */
-    usage->causetype = osp_get_causetype(mapping, usage->protocol);
-    DEBUG2("rlm_osp: termination cause type = '%d'", usage->causetype);
 
     /* Get source session ID */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
@@ -3517,53 +3532,6 @@ static OSPE_PROTOCOL_NAME osp_parse_protocol(
     DEBUG3("rlm_osp: osp_parse_protocol success");
 
     return name;
-}
-
-/*
- * Get termination cause type from signaling protocol
- *
- * param mapping Mapping parameters
- * param protocol Signaling protocol
- * return Termination cause type
- */
-static OSPE_TERM_CAUSE osp_get_causetype(
-    osp_mapping_t* mapping,
-    OSPE_PROTOCOL_NAME protocol)
-{
-    OSPE_TERM_CAUSE type;
-
-    DEBUG3("rlm_osp: osp_get_causetype start");
-
-    switch (mapping->clienttype) {
-    case OSP_CLIENT_GENBANDS3:
-    case OSP_CLIENT_CISCO:
-        type = OSPC_TCAUSE_H323;
-        break;
-    case OSP_CLIENT_UNDEF:
-    case OSP_CLIENT_ACME:
-    default:
-        switch (protocol) {
-        case OSPC_PROTNAME_SIP:
-            type = OSPC_TCAUSE_SIP;
-            break;
-        case OSPC_PROTNAME_LRQ:
-        case OSPC_PROTNAME_Q931:
-            type = OSPC_TCAUSE_H323;
-            break;
-        case OSPC_PROTNAME_XMPP:
-            type = OSPC_TCAUSE_XMPP;
-            break;
-        default:
-            type = OSPC_TCAUSE_Q850;
-            break;
-        }
-        break;
-    }
-    DEBUG2("rlm_osp: cause type = '%d'", type);
-
-    DEBUG3("rlm_osp: osp_get_causetype success");
-
-    return type;
 }
 
 /*
