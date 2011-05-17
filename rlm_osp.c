@@ -3145,7 +3145,7 @@ static int osp_get_statsinfo(
 {
     osp_statsmap_t* map = &mapping->stats;
     osp_stats_t* var = &usage->stats;
-    int parse, parseleg;
+    int parse;
     char buffer[OSP_STRBUF_SIZE];
 
     DEBUG3("rlm_osp: osp_get_statsinfo start");
@@ -3179,10 +3179,10 @@ static int osp_get_statsinfo(
         OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPPACKETS, OSP_DEF_MAY, map->rtp_dest_rep_packets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_packets);
 
         /* Get RTP source-to-reporter lost packets */
-        OSP_GET_INTEGER(request, parseleg, OSP_STR_RTPSRCREPLOST, OSP_DEF_MAY, map->rtp_src_rep_lost, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_lost);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPLOST, OSP_DEF_MAY, map->rtp_src_rep_lost, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_lost);
 
         /* Get RTP destination-to-reporter lost packets */
-        OSP_GET_INTEGER(request, parseleg, OSP_STR_RTPDESTREPLOST, OSP_DEF_MAY, map->rtp_dest_rep_lost, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_lost);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPLOST, OSP_DEF_MAY, map->rtp_dest_rep_lost, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_lost);
 
         /* Get RTP source-to-reporter jitter mean */
         OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPJITTERMEAN, OSP_DEF_MAY, map->rtp_src_rep_jitter_mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_jitter_mean);
@@ -3197,10 +3197,10 @@ static int osp_get_statsinfo(
         OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPJITTERMAX, OSP_DEF_MAY, map->rtp_dest_rep_jitter_max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_jitter_max);
 
         /* Get RTCP source-to-destination lost packets */
-        OSP_GET_INTEGER(request, parseleg, OSP_STR_RTCPSRCDESTLOST, OSP_DEF_MAY, map->rtcp_src_dest_lost, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_dest_lost);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCDESTLOST, OSP_DEF_MAY, map->rtcp_src_dest_lost, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_dest_lost);
 
         /* Get RTCP destination-to-source lost packets */
-        OSP_GET_INTEGER(request, parseleg, OSP_STR_RTCPDESTSRCLOST, OSP_DEF_MAY, map->rtcp_dest_src_lost, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_src_lost);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTSRCLOST, OSP_DEF_MAY, map->rtcp_dest_src_lost, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_src_lost);
 
         /* Get RTCP source-to-destination jitter mean */
         OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCDESTJITTERMEAN, OSP_DEF_MAY, map->rtcp_src_dest_jitter_mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_dest_jitter_mean);
