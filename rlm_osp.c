@@ -119,7 +119,7 @@ RCSID("$Id$")
 #define OSP_MAP_CONNECT         NULL                            /* Call connect time */
 #define OSP_MAP_END             NULL                            /* Call end time */
 #define OSP_MAP_DURATION        "%{Acct-Session-Time}"          /* Call duration, RFC 2866 */
-#define OSP_MAP_PDDUNIT         "1"                             /* PDD unit, second */
+#define OSP_MAP_PDDUNIT         "1"                             /* PDD unit, millisecond */
 #define OSP_MAP_PDD             NULL                            /* Post dial delay */
 #define OSP_MAP_RELEASE         NULL                            /* Release source */
 #define OSP_MAP_CAUSE           NULL                            /* Release cause per protocol */
@@ -312,7 +312,7 @@ typedef enum {
     OSP_TIMEUNIT_NUMBER
 } osp_timeunit_e;
 
-static const int OSP_TIMEUNIT_SCALE[OSP_TIMEUNIT_NUMBER] = { 1, 1000 };
+static const int OSP_TIMEUNIT_SCALE[OSP_TIMEUNIT_NUMBER] = { 1000, 1 };
 
 /*
  * Integer string format types
@@ -2431,13 +2431,13 @@ static int osp_accounting(
     OSPPTransactionSetProtocol(
         transaction,            /* Transaction handle */
         OSPC_PROTTYPE_SOURCE,   /* Protocol type */
-        usage.protocol);        /* Protocol name */
+        usage.srcprotocol);     /* Protocol name */
 
     /* Report destination protocol */
     OSPPTransactionSetProtocol(
         transaction,                /* Transaction handle */
         OSPC_PROTTYPE_DESTINATION,  /* Protocol type */
-        usage.protocol);            /* Protocol name */
+        usage.destprotocol);        /* Protocol name */
 
     /* Report source session ID */
     if (usage.srcsessionid[0] != '\0') {
@@ -2924,7 +2924,7 @@ static int osp_get_usageinfo(
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
     OSP_GET_INTEGER(request, parse, OSP_STR_PDD, OSP_DEF_MAY, mapping->pdd, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, usage->pdd);
     if (usage->pdd != OSP_STATSINT_DEF) {
-        usage->pdd /= OSP_TIMEUNIT_SCALE[mapping->pddunit];
+        usage->pdd *= OSP_TIMEUNIT_SCALE[mapping->pddunit];
     }
     DEBUG2("rlm_osp: post dial delay = '%d'", usage->pdd);
 
@@ -3013,19 +3013,16 @@ static int osp_get_usageinfo(
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     OSP_GET_STRING(request, parse, OSP_STR_PROTOCOL, OSP_DEF_MAY, mapping->protocol, buffer);
     usage->protocol = osp_parse_protocol(mapping, buffer);
-    DEBUG2("rlm_osp: signaling protocol type = '%d'", usage->protocol);
 
     /* Get source protocol */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     OSP_GET_STRING(request, parse, OSP_STR_SRCPROTOCOL, OSP_DEF_MAY, mapping->srcprotocol, buffer);
     usage->srcprotocol = osp_parse_protocol(mapping, buffer);
-    DEBUG2("rlm_osp: source protocol type = '%d'", usage->srcprotocol);
 
     /* Get destination protocol */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     OSP_GET_STRING(request, parse, OSP_STR_DESTPROTOCOL, OSP_DEF_MAY, mapping->destprotocol, buffer);
     usage->destprotocol = osp_parse_protocol(mapping, buffer);
-    DEBUG2("rlm_osp: destination protocol type = '%d'", usage->destprotocol);
 
     /* Get source session ID */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
