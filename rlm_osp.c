@@ -3073,7 +3073,6 @@ static int osp_get_usageinfo(
     /* Get destination session ID */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     switch (mapping->clienttype) {
-    case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
         if (usage->origin == OSP_ORIGIN_TERM) {
             parse = FALSE;
@@ -3081,6 +3080,7 @@ static int osp_get_usageinfo(
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
     default:
         break;
     }
@@ -3146,7 +3146,7 @@ static int osp_match_subnet(
         }
     }
     if (i >= list->number) {
-        DEBUG2("rlm_osp: osp_match_subnet failed");
+        DEBUG2("rlm_osp: subnet list unmatched");
         return -1;
     }
 
