@@ -1735,20 +1735,29 @@ static int osp_check_mapping(
     /* If release source is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_RELEASE, OSP_DEF_MAY, mapping->release);
 
-    /* If signaling protocol is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP(OSP_STR_PROTOCOL, OSP_DEF_MAY, mapping->protocol);
-
-    /* If source protocol is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP(OSP_STR_SRCPROTOCOL, OSP_DEF_MAY, mapping->srcprotocol);
-
-    /* If destination protocol is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP(OSP_STR_DESTPROTOCOL, OSP_DEF_MAY, mapping->destprotocol);
-
     /* If Q850 release cause is undefined, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_Q850CAUSE, OSP_DEF_MUST, mapping->q850cause);
 
     /* If SIP release cause is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_SIPCAUSE, OSP_DEF_MAY, mapping->sipcause);
+
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+        /* If source protocol is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_SRCPROTOCOL, OSP_DEF_MAY, mapping->srcprotocol);
+
+        /* If destination protocol is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_DESTPROTOCOL, OSP_DEF_MAY, mapping->destprotocol);
+
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    default:
+        /* If signaling protocol is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_PROTOCOL, OSP_DEF_MAY, mapping->protocol);
+        break;
+    }
 
     /* If source session ID is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_SRCSESSIONID, OSP_DEF_MAY, mapping->srcsessionid);
@@ -3009,20 +3018,41 @@ static int osp_get_usageinfo(
     OSP_GET_INTEGER(request, parse, OSP_STR_Q850CAUSE, OSP_DEF_MUST, mapping->q850cause, format, OSP_CAUSE_UNKNOWN, buffer, usage->q850cause);
     OSP_GET_INTEGER(request, parse, OSP_STR_SIPCAUSE, OSP_DEF_MAY, mapping->sipcause, format, OSP_CAUSE_UNKNOWN, buffer, usage->sipcause);
 
-    /* Get signaling protocol */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
-    OSP_GET_STRING(request, parse, OSP_STR_PROTOCOL, OSP_DEF_MAY, mapping->protocol, buffer);
-    usage->protocol = osp_parse_protocol(mapping, buffer);
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+        usage->protocol = OSPC_PROTNAME_UNKNOWN;
 
-    /* Get source protocol */
-    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
-    OSP_GET_STRING(request, parse, OSP_STR_SRCPROTOCOL, OSP_DEF_MAY, mapping->srcprotocol, buffer);
-    usage->srcprotocol = osp_parse_protocol(mapping, buffer);
+        if (usage->origin == OSP_ORIGIN_TERM) {
+            /* Get source protocol */
+            parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+            OSP_GET_STRING(request, parse, OSP_STR_SRCPROTOCOL, OSP_DEF_MAY, mapping->srcprotocol, buffer);
+            usage->srcprotocol = osp_parse_protocol(mapping, buffer);
 
-    /* Get destination protocol */
-    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
-    OSP_GET_STRING(request, parse, OSP_STR_DESTPROTOCOL, OSP_DEF_MAY, mapping->destprotocol, buffer);
-    usage->destprotocol = osp_parse_protocol(mapping, buffer);
+            usage->destprotocol = OSPC_PROTNAME_UNKNOWN;
+        } else {
+            usage->srcprotocol = OSPC_PROTNAME_UNKNOWN;
+
+            /* Get destination protocol */
+            parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+            OSP_GET_STRING(request, parse, OSP_STR_DESTPROTOCOL, OSP_DEF_MAY, mapping->destprotocol, buffer);
+            usage->destprotocol = osp_parse_protocol(mapping, buffer);
+        }
+
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    default:
+        /* Get signaling protocol */
+        OSP_GET_STRING(request, parse, OSP_STR_PROTOCOL, OSP_DEF_MAY, mapping->protocol, buffer);
+        usage->protocol = osp_parse_protocol(mapping, buffer);
+
+        usage->srcprotocol = OSPC_PROTNAME_UNKNOWN;
+        usage->destprotocol = OSPC_PROTNAME_UNKNOWN;
+
+        break;
+    }
 
     /* Get source session ID */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
