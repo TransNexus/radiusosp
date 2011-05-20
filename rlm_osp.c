@@ -3564,6 +3564,10 @@ static OSPE_PROTOCOL_NAME osp_parse_protocol(
         } else {
             switch (mapping->clienttype) {
             case OSP_CLIENT_GENBANDS3:
+                if (strstr(protocol, "H.323") || strstr(protocol, "h.323")) {
+                    name = OSPC_PROTNAME_Q931;
+                }
+            	break;
             case OSP_CLIENT_CISCO:
                 if (strstr(protocol, "CISCO") || strstr(protocol, "Cisco") || strstr(protocol, "cisco")) {
                     name = OSPC_PROTNAME_Q931;
