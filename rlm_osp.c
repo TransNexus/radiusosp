@@ -92,6 +92,8 @@ RCSID("$Id$")
 /*
  * Default RADIUS OSP mapping
  */
+#define OSP_MAP_IDITEM          NULL                            /* RADIUS record identity VSA name */
+#define OSP_MAP_IDVALUE         NULL                            /* RADIUS record identity VSA value */
 #define OSP_MAP_REPORT          "yes"                           /* Report Stop, Start or Interim-Update RADIUS records */
 #define OSP_MAP_CLIENTTYPE      "0"                             /* RADIUS client type, undefined */
 #define OSP_MAP_NETLIST         NULL                            /* Subnet list */
@@ -174,6 +176,8 @@ RCSID("$Id$")
 
 /* RADIUS OSP mapping parameter names */
 #define OSP_STR_MAPPING         "mapping"
+#define OSP_STR_IDITEM          "identityitem"
+#define OSP_STR_IDVALUE         "identityvalue"
 #define OSP_STR_REPORTSTART     "reportstart"
 #define OSP_STR_REPORTSTOP      "reportstop"
 #define OSP_STR_REPORTINTERIM   "reportinterim"
@@ -539,6 +543,8 @@ typedef struct {
  * OSP module mapping parameter structure.
  */
 typedef struct {
+    char* iditem;                       /* RADIUS record identity VSA name */
+    char* idvalue;                      /* RADIUS record identity VSA value */
     int reportstart;                    /* If to report RADIUS Start records */
     int reportstop;                     /* If to report RADIUS Stop records */
     int reportinterim;                  /* If to report RADIUS Interim-Update records */
@@ -1251,6 +1257,8 @@ static const CONF_PARSER mapping_config[] = {
      *
      *   All custom info must be listed to allow config parser to read them.
      */
+    { OSP_STR_IDITEM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.iditem), NULL, OSP_MAP_IDITEM },
+    { OSP_STR_IDVALUE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.idvalue), NULL, OSP_MAP_IDVALUE },
     { OSP_STR_REPORTSTART, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportstart), NULL, OSP_MAP_REPORT },
     { OSP_STR_REPORTSTOP, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportstop), NULL, OSP_MAP_REPORT },
     { OSP_STR_REPORTINTERIM, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportinterim), NULL, OSP_MAP_REPORT },
@@ -1607,6 +1615,12 @@ static int osp_check_mapping(
     char buffer[OSP_STRBUF_SIZE];
 
     DEBUG3("rlm_osp: osp_check_mapping start");
+
+    /* If identity VSA name is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_IDITEM, OSP_DEF_MAY, mapping->iditem);
+
+    /* Nothing to check for identity VSA value */
+    DEBUG2("rlm_osp: '%s' = '%s'", OSP_STR_IDVALUE, mapping->idvalue);
 
     /* Nothing to check for reportstart */
     DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_REPORTSTART, mapping->reportstart);
@@ -2207,6 +2221,17 @@ static int osp_accounting(
 
     DEBUG3("rlm_osp: osp_accounting start");
 
+    if (OSP_CHECK_STRING(mapping->iditem)) {
+        OSP_GET_STRING(request, TRUE, OSP_STR_IDITEM, OSP_DEF_MAY, mapping->iditem, buffer);
+        if ((buffer[0] == '\0') ||
+            (!OSP_CHECK_STRING(mapping->idvalue)) ||
+            (strcasecmp(mapping->idvalue, buffer)))
+        {
+            DEBUG2("rlm_osp: nothing to do for this request.");
+            return RLM_MODULE_NOOP;
+        }
+    }
+
     if ((vp = pairfind(request->packet->vps, PW_ACCT_STATUS_TYPE)) == NULL) {
         DEBUG("rlm_osp: failed to get accounting status type.");
         return RLM_MODULE_NOOP;
@@ -2792,7 +2817,7 @@ static int osp_get_usageinfo(
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
         OSP_GET_STRING(request, TRUE, OSP_STR_CALLORIGIN, OSP_DEF_MUST, mapping->origin, buffer);
-        if (!strcmp(buffer, OSP_CISCOCALL_TERM)) {
+        if (!strcasecmp(buffer, OSP_CISCOCALL_TERM)) {
             usage->origin = OSP_ORIGIN_TERM;
         } else {
             usage->origin = OSP_ORIGIN_INIT;
@@ -3697,31 +3722,31 @@ static int osp_cal_timeoffset(
 
     if (!OSP_CHECK_STRING(tzone)) {
         *toffset = OSP_TOFF_UTC;
-    } else if (!strcmp(tzone, OSP_TZ_UTC)) {
+    } else if (!strcasecmp(tzone, OSP_TZ_UTC)) {
         *toffset = OSP_TOFF_UTC;
-    } else if (!strcmp(tzone, OSP_TZ_GMT)) {
+    } else if (!strcasecmp(tzone, OSP_TZ_GMT)) {
         *toffset = OSP_TOFF_GMT;
-    } else if (!strcmp(tzone, OSP_TZ_EST)) {
+    } else if (!strcasecmp(tzone, OSP_TZ_EST)) {
         *toffset = OSP_TOFF_EST;
-    } else if (!strcmp(tzone, OSP_TZ_EDT)) {
+    } else if (!strcasecmp(tzone, OSP_TZ_EDT)) {
         *toffset = OSP_TOFF_EDT;
-    } else if (!strcmp(tzone, OSP_TZ_CST)) {
+    } else if (!strcasecmp(tzone, OSP_TZ_CST)) {
         *toffset = OSP_TOFF_CST;
-    } else if (!strcmp(tzone, OSP_TZ_CDT)) {
+    } else if (!strcasecmp(tzone, OSP_TZ_CDT)) {
         *toffset = OSP_TOFF_CDT;
-    } else if (!strcmp(tzone, OSP_TZ_MST)) {
+    } else if (!strcasecmp(tzone, OSP_TZ_MST)) {
         *toffset = OSP_TOFF_MST;
-    } else if (!strcmp(tzone, OSP_TZ_MDT)) {
+    } else if (!strcasecmp(tzone, OSP_TZ_MDT)) {
         *toffset = OSP_TOFF_MDT;
-    } else if (!strcmp(tzone, OSP_TZ_PST)) {
+    } else if (!strcasecmp(tzone, OSP_TZ_PST)) {
         *toffset = OSP_TOFF_PST;
-    } else if (!strcmp(tzone, OSP_TZ_PDT)) {
+    } else if (!strcasecmp(tzone, OSP_TZ_PDT)) {
         *toffset = OSP_TOFF_PDT;
-    } else if (!strcmp(tzone, OSP_TZ_HST)) {
+    } else if (!strcasecmp(tzone, OSP_TZ_HST)) {
         *toffset = OSP_TOFF_HST;
-    } else if (!strcmp(tzone, OSP_TZ_AKST)) {
+    } else if (!strcasecmp(tzone, OSP_TZ_AKST)) {
         *toffset = OSP_TOFF_AKST;
-    } else if (!strcmp(tzone, OSP_TZ_AKDT)) {
+    } else if (!strcasecmp(tzone, OSP_TZ_AKDT)) {
         *toffset = OSP_TOFF_AKDT;
     } else {
         /* Has checked string NULL */
