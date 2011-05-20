@@ -1620,7 +1620,11 @@ static int osp_check_mapping(
     OSP_CHECK_ITEMMAP(OSP_STR_IDITEM, OSP_DEF_MAY, mapping->iditem);
 
     /* Nothing to check for identity VSA value */
-    DEBUG2("rlm_osp: '%s' = '%s'", OSP_STR_IDVALUE, mapping->idvalue);
+    if (OSP_CHECK_STRING(mapping->idvalue)) {
+        DEBUG2("rlm_osp: '%s' = '%s'", OSP_STR_IDVALUE, mapping->idvalue);
+    } else {
+        DEBUG2("rlm_osp: '%s' = 'NULL'", OSP_STR_IDVALUE);
+    }
 
     /* Nothing to check for reportstart */
     DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_REPORTSTART, mapping->reportstart);
@@ -2224,8 +2228,7 @@ static int osp_accounting(
     if (OSP_CHECK_STRING(mapping->iditem)) {
         OSP_GET_STRING(request, TRUE, OSP_STR_IDITEM, OSP_DEF_MAY, mapping->iditem, buffer);
         if ((buffer[0] == '\0') ||
-            (!OSP_CHECK_STRING(mapping->idvalue)) ||
-            (strcasecmp(mapping->idvalue, buffer)))
+            (OSP_CHECK_STRING(mapping->idvalue) && (strcasecmp(mapping->idvalue, buffer))))
         {
             DEBUG2("rlm_osp: nothing to do for this request.");
             return RLM_MODULE_NOOP;
