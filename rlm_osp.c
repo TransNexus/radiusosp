@@ -756,7 +756,7 @@ typedef struct {
                     radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
                     return -1; \
                 } else { \
-                    radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", _map, _name); \
                     _val = _def; \
                 } \
             } else { \
@@ -804,7 +804,7 @@ typedef struct {
                     radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
                     return -1; \
                 } else { \
-                    radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", _map, _name); \
                     _val = _def; \
                 } \
             } else { \
@@ -849,7 +849,7 @@ typedef struct {
                     radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
                     return -1; \
                 } else { \
-                    radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", _map, _name); \
                     _val = _def; \
                 } \
             } else { \
@@ -891,7 +891,7 @@ typedef struct {
                    radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
                    return -1; \
                 } else { \
-                   radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                   DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", _map, _name); \
                 } \
             } \
         } else { \
@@ -935,7 +935,7 @@ typedef struct {
                     radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
                     return -1; \
                 } else { \
-                    radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", _map, _name); \
                     _val[0] = '\0'; \
                 } \
             } else  { \
@@ -1012,7 +1012,7 @@ typedef struct {
                     radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
                     return -1; \
                 } else { \
-                    radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", _map, _name); \
                     osp_create_device(_ip, _port, _val, sizeof(_val)); \
                 } \
             } else { \
@@ -1059,7 +1059,7 @@ typedef struct {
                     radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
                     return -1; \
                 } else { \
-                    radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", _map, _name); \
                     osp_create_device(_ip, _port, _val, sizeof(_val)); \
                 } \
             } else { \
@@ -1127,7 +1127,7 @@ typedef struct {
                     radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
                     return -1; \
                 } else { \
-                    radlog(L_INFO, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", _map, _name); \
                     _val = _def; \
                 } \
             } else { \
@@ -1898,9 +1898,7 @@ static int osp_parse_netlist(
             i++, subnet = strtok_r(NULL, OSP_LIST_DELIMITER, &tmplist))
         {
             if (((ipstr = strtok_r(subnet, OSP_NET_DELIMITER, &tmpnet)) == NULL) || (inet_pton(AF_INET, ipstr, &ip) != 1)) {
-                radlog(L_INFO,
-                    "rlm_osp: Failed to parse IP address from '%s'.",
-                    subnet);
+                DEBUG("rlm_osp: failed to parse IP address from '%s'.", subnet);
                 break;
             } else {
                 list->subnet[i].ip = ip.s_addr;
@@ -2991,10 +2989,7 @@ static int osp_get_usageinfo(
             radius_xlat(buffer, sizeof(buffer), mapping->duration, request, NULL);
             if (buffer[0] == '\0') {
                 /* Has checked string NULL */
-                radlog(L_INFO,
-                    "rlm_osp: Failed to parse '%s' in request for '%s'.",
-                    mapping->duration,
-                    OSP_STR_DURATION);
+                DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", mapping->duration, OSP_STR_DURATION);
                 usage->duration = difftime(usage->start, usage->end);
             } else {
                 usage->duration = atoi(buffer);
@@ -3023,10 +3018,7 @@ static int osp_get_usageinfo(
             radius_xlat(buffer, sizeof(buffer), mapping->release, request, NULL);
             if (buffer[0] == '\0') {
                 /* Has checked string NULL */
-                radlog(L_INFO,
-                    "rlm_osp: Failed to parse '%s' in request for '%s'.",
-                    mapping->release,
-                    OSP_STR_RELEASE);
+                DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", mapping->release, OSP_STR_RELEASE);
                 usage->release = OSP_TK_RELSRC;
             } else {
                 release = atoi(buffer);
