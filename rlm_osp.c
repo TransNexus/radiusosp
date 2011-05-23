@@ -37,12 +37,18 @@ RCSID("$Id$")
 /*
  * OSP module constants.
  */
+#define OSP_TZNAME_SIZE     16
 #define OSP_STRBUF_SIZE     256
 #define OSP_KEYBUF_SIZE     1024
 #define OSP_LOGBUF_SIZE     1024
 
 /* Module configurations */
 #define OSP_LOGLEVEL_DEF    "1"                         /* Mapping default log level, long */
+#define OSP_TZFILE_DEF      "${raddbdir}/timezone.conf" /* Time zone configuration file */
+#define OSP_TZ_DELIMITER    " \t"                       /* Time zone item delimiter */
+#define OSP_TZ_COMMENT      '#'                         /* Time zone file comment */
+#define OSP_TZ_MAX          512                         /* Max number of time zones */
+#define OSP_TZ_CACHE        8                           /* Time zone cache size */
 #define OSP_HWACCE_DEF      "no"                        /* Mapping default hardware accelerate flag */
 #define OSP_SECURITY_DEF    "no"                        /* Mapping default security flag */
 #define OSP_SPNUM_MAX       4                           /* OSP max number of service points */
@@ -141,6 +147,7 @@ RCSID("$Id$")
 /* OSP module running parameter names */
 #define OSP_STR_RUNNING         "running"
 #define OSP_STR_LOGLEVEL        "loglevel"
+#define OSP_STR_TZFILE          "timezonefile"
 
 /* OSP provider parameter names */
 #define OSP_STR_PROVIDER        "provider"
@@ -372,40 +379,6 @@ typedef enum {
 } osp_timestr_e;
 
 /*
- * Time zone strings
- */
-#define OSP_TZ_UTC  "UTC"   /* Universal Time, Coordinated */
-#define OSP_TZ_GMT  "GMT"   /* Greenwich Mean Time */
-#define OSP_TZ_EST  "EST"   /* Eastern Standard Time */
-#define OSP_TZ_EDT  "EDT"   /* Eastern Daylight Time */
-#define OSP_TZ_CST  "CST"   /* Central Standard Time */
-#define OSP_TZ_CDT  "CDT"   /* Central Daylight Time */
-#define OSP_TZ_MST  "MST"   /* Mountain Standard Time */
-#define OSP_TZ_MDT  "MDT"   /* Mountain Daylight Time */
-#define OSP_TZ_PST  "PST"   /* Pacific Standard Time */
-#define OSP_TZ_PDT  "PDT"   /* Pacific Daylight Time */
-#define OSP_TZ_HST  "HST"   /* Hawaii-Aleutian Standard Time */
-#define OSP_TZ_AKST "AKST"  /* Alaska Standard Time */
-#define OSP_TZ_AKDT "AKDT"  /* Alaska Daylight Time */
-
-/*
- * Time zone time offset
- */
-#define OSP_TOFF_UTC  0             /* Universal Time, Coordinated */
-#define OSP_TOFF_GMT  OSP_TOFF_UTC  /* Universal Time, Coordinated */
-#define OSP_TOFF_EST  (-5*60*60)    /* Eastern Standard Time */
-#define OSP_TOFF_EDT  (-4*60*60)    /* Eastern Daylight Time */
-#define OSP_TOFF_CST  (-6*60*60)    /* Central Standard Time */
-#define OSP_TOFF_CDT  (-5*60*60)    /* Central Daylight Time */
-#define OSP_TOFF_MST  (-7*60*60)    /* Mountain Standard Time */
-#define OSP_TOFF_MDT  (-6*60*60)    /* Mountain Daylight Time */
-#define OSP_TOFF_PST  (-8*60*60)    /* Pacific Standard Time */
-#define OSP_TOFF_PDT  (-7*60*60)    /* Pacific Daylight Time */
-#define OSP_TOFF_HST  (-10*60*60)   /* Hawaii-Aleutian Standard Time */
-#define OSP_TOFF_AKST (-9*60*60)    /* Alaska Standard Time */
-#define OSP_TOFF_AKDT (-8*60*60)    /* Alaska Daylight Time */
-
-/*
  * Calling/called number format types
  */
 typedef enum {
@@ -460,6 +433,7 @@ typedef char    osp_string_t[OSP_STRBUF_SIZE];
  */
 typedef struct {
     int loglevel;
+    char* tzfile;
 } osp_running_t;
 
 /*
@@ -501,6 +475,14 @@ typedef struct {
     int number;                             /* Number of subnets */
     osp_subnet_t subnet[OSP_SUBNET_MAX];    /* Subnets */
 } osp_netlist_t;
+
+/*
+ * Time zone
+ */
+typedef struct {
+    char name[OSP_TZNAME_SIZE];
+    int offset;
+} osp_timezone_t;
 
 typedef struct {
     char* pack;     /* Packets lost in packets mapping */
@@ -1171,6 +1153,7 @@ typedef struct {
  * Internal function prototype
  */
 static int osp_check_running(osp_running_t* running);
+static int osp_load_tz(char* tzfile);
 static int osp_check_provider(osp_provider_t* provider);
 static int osp_check_mapping(osp_mapping_t* mapping);
 static int osp_parse_netlist(char* liststr, osp_netlist_t* list);
@@ -1201,6 +1184,12 @@ static const char* B64LCert = "MIIBeTCCASMCEHqkOHVRRWr+1COq3CR/xsowDQYJKoZIhvcNA
 static const char* B64CACert = "MIIBYDCCAQoCAQEwDQYJKoZIhvcNAQEEBQAwOzElMCMGA1UEAxMcb3NwdGVzdHNlcnZlci50cmFuc25leHVzLmNvbTESMBAGA1UEChMJT1NQU2VydmVyMB4XDTAyMDIwNDE4MjU1MloXDTEyMDIwMzE4MjU1MlowOzElMCMGA1UEAxMcb3NwdGVzdHNlcnZlci50cmFuc25leHVzLmNvbTESMBAGA1UEChMJT1NQU2VydmVyMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAPGeGwV41EIhX0jEDFLRXQhDEr50OUQPq+f55VwQd0TQNts06BP29+UiNdRW3c3IRHdZcJdC1Cg68ME9cgeq0h8CAwEAATANBgkqhkiG9w0BAQQFAANBAGkzBSj1EnnmUxbaiG1N4xjIuLAWydun7o3bFk2tV8dBIhnuh445obYyk1EnQ27kI7eACCILBZqi2MHDOIMnoN0=";
 
 /*
+ * Time zones
+ */
+static int tzlist_size = 0;
+static osp_timezone_t tzlist[OSP_TZ_MAX];
+
+/*
  * A mapping of configuration file names to internal variables.
  *
  *   Note that the string is dynamically allocated, so it MUST
@@ -1212,6 +1201,7 @@ static const char* B64CACert = "MIIBYDCCAQoCAQEwDQYJKoZIhvcNAQEEBQAwOzElMCMGA1UE
 static const CONF_PARSER running_config[] = {
     /* OSP module running parameters */
     { OSP_STR_LOGLEVEL, PW_TYPE_INTEGER, offsetof(rlm_osp_t, running.loglevel), NULL, OSP_LOGLEVEL_DEF },
+    { OSP_STR_TZFILE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, running.tzfile), NULL, OSP_TZFILE_DEF },
     /* End */
     { NULL, -1, 0, NULL, NULL } /* end the list */
 };
@@ -1459,7 +1449,69 @@ static int osp_check_running(
     }
     DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_LOGLEVEL, running->loglevel);
 
+    /* If failed to load time zone configuration, then fail. */
+    if (osp_load_tz(running->tzfile) < 0) {
+        radlog(L_ERR, "rlm_osp: Failed to load time zone configuration.");
+        return -1;
+    }
+
     DEBUG3("rlm_osp: osp_check_running success");
+
+    return 0;
+}
+
+/*
+ * Load time zone configuration.
+ *
+ * param tzfile Time zone configuration file name
+ * return 0 success, -1 failure
+ */
+static int osp_load_tz(
+    char* tzfile)
+{
+    FILE* fp;
+    char buffer[OSP_STRBUF_SIZE];
+    char* start;
+    char* tmp;
+    char* token;
+    osp_timezone_t tz;
+
+    DEBUG3("rlm_osp: osp_load_tz start");
+
+    if (!(fp = fopen(tzfile, "r"))) {
+        radlog(L_ERR, "rlm_osp: Failed to open '%s'.", tzfile);
+        return -1;
+    }
+
+    while (fgets(buffer, OSP_STRBUF_SIZE, fp)) {
+        start = buffer;
+        while (*start == ' ') {
+            start++;
+        }
+        if ((tmp = strchr(start, OSP_TZ_COMMENT)) != NULL) {
+            *tmp = '\0';
+        }
+        if ((token = strtok_r(start, OSP_TZ_DELIMITER, &tmp)) != NULL) {
+            strncpy(tz.name, token, OSP_TZNAME_SIZE);
+            if ((token = strtok_r(NULL, OSP_TZ_DELIMITER, &tmp)) != NULL) {
+                tz.offset = atoi(token);
+                if (tzlist_size < OSP_TZ_MAX) {
+                    DEBUG2("rlm_osp: time zone '%s' offset '%d'", tz.name, tz.offset);
+                    tzlist[tzlist_size++] = tz;
+                } else {
+                    DEBUG("rlm_osp: time zone table too big");
+                    break;
+                }
+            } else {
+                DEBUG("rlm_osp: time zone '%s' offset undefined", tz.name);
+            }
+        }
+    }
+    fclose(fp);
+
+    DEBUG2("rlm_osp: time zone list size = '%d'", tzlist_size);
+
+    DEBUG3("rlm_osp: osp_load_tz success");
 
     return 0;
 }
@@ -3570,7 +3622,7 @@ static OSPE_PROTOCOL_NAME osp_parse_protocol(
                 if (strstr(protocol, "H.323") || strstr(protocol, "h.323")) {
                     name = OSPC_PROTNAME_Q931;
                 }
-            	break;
+                break;
             case OSP_CLIENT_CISCO:
                 if (strstr(protocol, "CISCO") || strstr(protocol, "Cisco") || strstr(protocol, "cisco")) {
                     name = OSPC_PROTNAME_Q931;
@@ -3723,47 +3775,39 @@ static int osp_cal_timeoffset(
     char* tzone,
     long int* toffset)
 {
+    int i, j;
+    osp_timezone_t tmp;
     int ret = 0;
 
     DEBUG3("rlm_osp: osp_get_timeoffset start");
 
     if (!OSP_CHECK_STRING(tzone)) {
-        *toffset = OSP_TOFF_UTC;
-    } else if (!strcasecmp(tzone, OSP_TZ_UTC)) {
-        *toffset = OSP_TOFF_UTC;
-    } else if (!strcasecmp(tzone, OSP_TZ_GMT)) {
-        *toffset = OSP_TOFF_GMT;
-    } else if (!strcasecmp(tzone, OSP_TZ_EST)) {
-        *toffset = OSP_TOFF_EST;
-    } else if (!strcasecmp(tzone, OSP_TZ_EDT)) {
-        *toffset = OSP_TOFF_EDT;
-    } else if (!strcasecmp(tzone, OSP_TZ_CST)) {
-        *toffset = OSP_TOFF_CST;
-    } else if (!strcasecmp(tzone, OSP_TZ_CDT)) {
-        *toffset = OSP_TOFF_CDT;
-    } else if (!strcasecmp(tzone, OSP_TZ_MST)) {
-        *toffset = OSP_TOFF_MST;
-    } else if (!strcasecmp(tzone, OSP_TZ_MDT)) {
-        *toffset = OSP_TOFF_MDT;
-    } else if (!strcasecmp(tzone, OSP_TZ_PST)) {
-        *toffset = OSP_TOFF_PST;
-    } else if (!strcasecmp(tzone, OSP_TZ_PDT)) {
-        *toffset = OSP_TOFF_PDT;
-    } else if (!strcasecmp(tzone, OSP_TZ_HST)) {
-        *toffset = OSP_TOFF_HST;
-    } else if (!strcasecmp(tzone, OSP_TZ_AKST)) {
-        *toffset = OSP_TOFF_AKST;
-    } else if (!strcasecmp(tzone, OSP_TZ_AKDT)) {
-        *toffset = OSP_TOFF_AKDT;
+        *toffset = 0;
     } else {
-        /* Has checked string NULL */
-        radlog(L_INFO,
-            "rlm_osp: Failed to calcaulte time offset for time zone '%s'.",
-            tzone);
-        *toffset = OSP_TOFF_UTC;
-        ret = -1;
+        for (i = 0; i < tzlist_size; i++) {
+            if (!strcmp(tzone, tzlist[i].name)) {
+                break;
+            }
+        }
+        if (i >= tzlist_size) {
+            /* Has checked string NULL */
+            radlog(L_INFO,
+                "rlm_osp: Failed to calculate time offset for time zone '%s'.",
+                tzone);
+            *toffset = 0;
+            ret = -1;
+        } else {
+            tmp = tzlist[i];
+            if (i > OSP_TZ_CACHE) {
+                for (j = i; j > 0; j--) {
+                    tzlist[j] = tzlist[j - 1];
+                }
+                tzlist[0] = tmp;
+            }
+            *toffset = tmp.offset * 60;
+       }
     }
-    DEBUG2("rlm_osp: time offset = '%ld'", *toffset);
+    DEBUG2("rlm_osp: time zine '%s' offset = '%ld'", tzone, *toffset);
 
     DEBUG3("rlm_osp: osp_get_timeoffset success");
 
