@@ -429,11 +429,21 @@ typedef enum {
 typedef char    osp_string_t[OSP_STRBUF_SIZE];
 
 /*
+ * Time zone
+ */
+typedef struct {
+    char name[OSP_TZNAME_SIZE];
+    int offset;
+} osp_timezone_t;
+
+/*
  * OSP module running parameter structure
  */
 typedef struct {
     int loglevel;
     char* tzfile;
+    int tzlist_size;
+    osp_timezone_t tzlist[OSP_TZ_MAX];
 } osp_running_t;
 
 /*
@@ -475,14 +485,6 @@ typedef struct {
     int number;                             /* Number of subnets */
     osp_subnet_t subnet[OSP_SUBNET_MAX];    /* Subnets */
 } osp_netlist_t;
-
-/*
- * Time zone
- */
-typedef struct {
-    char name[OSP_TZNAME_SIZE];
-    int offset;
-} osp_timezone_t;
 
 typedef struct {
     char* pack;     /* Packets lost in packets mapping */
@@ -1117,7 +1119,7 @@ typedef struct {
  * param _buf Buffer
  * param _val Time value
  */
-#define OSP_GET_TIME(_req, _flag, _name, _lev, _map, _type, _def, _buf, _val) { \
+#define OSP_GET_TIME(_req, _flag, _name, _lev, _run, _map, _type, _def, _buf, _val) { \
     if (_flag) { \
         if (OSP_CHECK_STRING(_map)) { \
             radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
@@ -1131,7 +1133,7 @@ typedef struct {
                     _val = _def; \
                 } \
             } else { \
-                _val = osp_format_time(_buf, _type); \
+                _val = osp_format_time(_run, _buf, _type); \
             } \
         } else { \
             if (_lev == OSP_DEF_MUST) { \
@@ -1153,7 +1155,7 @@ typedef struct {
  * Internal function prototype
  */
 static int osp_check_running(osp_running_t* running);
-static int osp_load_tz(char* tzfile);
+static int osp_load_tzlist(osp_running_t* running);
 static int osp_check_provider(osp_provider_t* provider);
 static int osp_check_mapping(osp_mapping_t* mapping);
 static int osp_parse_netlist(char* liststr, osp_netlist_t* list);
@@ -1170,9 +1172,9 @@ static void osp_format_device(char* device, char* buffer, int buffersize);
 static int osp_get_uriuser(char* uri, char* buffer, int buffersize);
 static int osp_get_urihost(char* uri, char* buffer, int buffersize);
 static OSPE_PROTOCOL_NAME osp_parse_protocol(osp_mapping_t* mapping, char* protocol);
-static time_t osp_format_time(char* timestamp, osp_timestr_e format);
-static int osp_remove_timezone(char* timestamp, char* buffer, int buffersize, long int* toffset);
-static int osp_cal_timeoffset(char* tzone, long int* toffset);
+static time_t osp_format_time(osp_running_t* running, char* timestamp, osp_timestr_e format);
+static int osp_remove_timezone(osp_running_t* running, char* timestamp, char* buffer, int buffersize, long int* toffset);
+static int osp_cal_timeoffset(osp_running_t* running, char* tzone, long int* toffset);
 static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
 
 /* OSP instance flag */
@@ -1182,12 +1184,6 @@ static int instance_count = 0;
 static const char* B64PKey = "MIIBOgIBAAJBAK8t5l+PUbTC4lvwlNxV5lpl+2dwSZGW46dowTe6y133XyVEwNiiRma2YNk3xKs/TJ3Wl9Wpns2SYEAJsFfSTukCAwEAAQJAPz13vCm2GmZ8Zyp74usTxLCqSJZNyMRLHQWBM0g44Iuy4wE3vpi7Wq+xYuSOH2mu4OddnxswCP4QhaXVQavTAQIhAOBVCKXtppEw9UaOBL4vW0Ed/6EA/1D8hDW6St0h7EXJAiEAx+iRmZKhJD6VT84dtX5ZYNVk3j3dAcIOovpzUj9a0CECIEduTCapmZQ5xqAEsLXuVlxRtQgLTUD4ZxDElPn8x0MhAiBE2HlcND0+qDbvtwJQQOUzDgqg5xk3w8capboVdzAlQQIhAMC+lDL7+gDYkNAft5Mu+NObJmQs4Cr+DkDFsKqoxqrm";
 static const char* B64LCert = "MIIBeTCCASMCEHqkOHVRRWr+1COq3CR/xsowDQYJKoZIhvcNAQEEBQAwOzElMCMGA1UEAxMcb3NwdGVzdHNlcnZlci50cmFuc25leHVzLmNvbTESMBAGA1UEChMJT1NQU2VydmVyMB4XDTA1MDYyMzAwMjkxOFoXDTA2MDYyNDAwMjkxOFowRTELMAkGA1UEBhMCQVUxEzARBgNVBAgTClNvbWUtU3RhdGUxITAfBgNVBAoTGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDBcMA0GCSqGSIb3DQEBAQUAA0sAMEgCQQCvLeZfj1G0wuJb8JTcVeZaZftncEmRluOnaME3ustd918lRMDYokZmtmDZN8SrP0yd1pfVqZ7NkmBACbBX0k7pAgMBAAEwDQYJKoZIhvcNAQEEBQADQQDnV8QNFVVJx/+7IselU0wsepqMurivXZzuxOmTEmTVDzCJx1xhA8jd3vGAj7XDIYiPub1PV23eY5a2ARJuw5w9";
 static const char* B64CACert = "MIIBYDCCAQoCAQEwDQYJKoZIhvcNAQEEBQAwOzElMCMGA1UEAxMcb3NwdGVzdHNlcnZlci50cmFuc25leHVzLmNvbTESMBAGA1UEChMJT1NQU2VydmVyMB4XDTAyMDIwNDE4MjU1MloXDTEyMDIwMzE4MjU1MlowOzElMCMGA1UEAxMcb3NwdGVzdHNlcnZlci50cmFuc25leHVzLmNvbTESMBAGA1UEChMJT1NQU2VydmVyMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAPGeGwV41EIhX0jEDFLRXQhDEr50OUQPq+f55VwQd0TQNts06BP29+UiNdRW3c3IRHdZcJdC1Cg68ME9cgeq0h8CAwEAATANBgkqhkiG9w0BAQQFAANBAGkzBSj1EnnmUxbaiG1N4xjIuLAWydun7o3bFk2tV8dBIhnuh445obYyk1EnQ27kI7eACCILBZqi2MHDOIMnoN0=";
-
-/*
- * Time zones
- */
-static int tzlist_size = 0;
-static osp_timezone_t tzlist[OSP_TZ_MAX];
 
 /*
  * A mapping of configuration file names to internal variables.
@@ -1450,7 +1446,7 @@ static int osp_check_running(
     DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_LOGLEVEL, running->loglevel);
 
     /* If failed to load time zone configuration, then fail. */
-    if (osp_load_tz(running->tzfile) < 0) {
+    if (osp_load_tzlist(running) < 0) {
         radlog(L_ERR, "rlm_osp: Failed to load time zone configuration.");
         return -1;
     }
@@ -1463,11 +1459,11 @@ static int osp_check_running(
 /*
  * Load time zone configuration.
  *
- * param tzfile Time zone configuration file name
+ * param running Running parameters
  * return 0 success, -1 failure
  */
-static int osp_load_tz(
-    char* tzfile)
+static int osp_load_tzlist(
+    osp_running_t* running)
 {
     FILE* fp;
     char buffer[OSP_STRBUF_SIZE];
@@ -1478,8 +1474,8 @@ static int osp_load_tz(
 
     DEBUG3("rlm_osp: osp_load_tz start");
 
-    if (!(fp = fopen(tzfile, "r"))) {
-        radlog(L_ERR, "rlm_osp: Failed to open '%s'.", tzfile);
+    if (!(fp = fopen(running->tzfile, "r"))) {
+        radlog(L_ERR, "rlm_osp: Failed to open '%s'.", running->tzfile);
         return -1;
     }
 
@@ -1495,9 +1491,9 @@ static int osp_load_tz(
             strncpy(tz.name, token, OSP_TZNAME_SIZE);
             if ((token = strtok_r(NULL, OSP_TZ_DELIMITER, &tmp)) != NULL) {
                 tz.offset = atoi(token);
-                if (tzlist_size < OSP_TZ_MAX) {
+                if (running->tzlist_size < OSP_TZ_MAX) {
                     DEBUG2("rlm_osp: time zone '%s' offset '%d'", tz.name, tz.offset);
-                    tzlist[tzlist_size++] = tz;
+                    running->tzlist[running->tzlist_size++] = tz;
                 } else {
                     DEBUG("rlm_osp: time zone table too big");
                     break;
@@ -1509,7 +1505,7 @@ static int osp_load_tz(
     }
     fclose(fp);
 
-    DEBUG2("rlm_osp: time zone list size = '%d'", tzlist_size);
+    DEBUG2("rlm_osp: time zone list size = '%d'", running->tzlist_size);
 
     DEBUG3("rlm_osp: osp_load_tz success");
 
@@ -2852,6 +2848,7 @@ static int osp_get_usageinfo(
     int type,
     osp_usage_t* usage)
 {
+    osp_running_t* running = &data->running;
     osp_provider_t* provider = &data->provider;
     osp_mapping_t* mapping = &data->mapping;
     char buffer[OSP_STRBUF_SIZE];
@@ -2969,19 +2966,19 @@ static int osp_get_usageinfo(
 
     /* Get call start time */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
-    OSP_GET_TIME(request, parse, OSP_STR_STARTTIME, OSP_DEF_MUST, mapping->start, mapping->timeformat, OSP_TIME_DEF, buffer, usage->start);
+    OSP_GET_TIME(request, parse, OSP_STR_STARTTIME, OSP_DEF_MUST, running, mapping->start, mapping->timeformat, OSP_TIME_DEF, buffer, usage->start);
 
     /* Get call alert time */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_TIME(request, parse, OSP_STR_ALERTTIME, OSP_DEF_MAY, mapping->alert, mapping->timeformat, OSP_TIME_DEF, buffer, usage->alert);
+    OSP_GET_TIME(request, parse, OSP_STR_ALERTTIME, OSP_DEF_MAY, running, mapping->alert, mapping->timeformat, OSP_TIME_DEF, buffer, usage->alert);
 
     /* Get call connect time */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
-    OSP_GET_TIME(request, parse, OSP_STR_CONNECTTIME, OSP_DEF_MAY, mapping->connect, mapping->timeformat, OSP_TIME_DEF, buffer, usage->connect);
+    OSP_GET_TIME(request, parse, OSP_STR_CONNECTTIME, OSP_DEF_MAY, running, mapping->connect, mapping->timeformat, OSP_TIME_DEF, buffer, usage->connect);
 
     /* Get call end time */
     parse = (type == PW_STATUS_STOP);
-    OSP_GET_TIME(request, parse, OSP_STR_ENDTIME, OSP_DEF_MUST, mapping->end, mapping->timeformat, OSP_TIME_DEF, buffer, usage->end);
+    OSP_GET_TIME(request, parse, OSP_STR_ENDTIME, OSP_DEF_MUST, running, mapping->end, mapping->timeformat, OSP_TIME_DEF, buffer, usage->end);
 
     /* Get call duration */
     if (type == PW_STATUS_STOP) {
@@ -3640,11 +3637,13 @@ static OSPE_PROTOCOL_NAME osp_parse_protocol(
 /*
  * Format time from time string
  *
+ * param running Running parameters
  * param timestr Time string
  * param format Time string format
  * return Time value
  */
 static time_t osp_format_time(
+    osp_running_t* running,
     char* timestamp,
     osp_timestr_e format)
 {
@@ -3664,14 +3663,14 @@ static time_t osp_format_time(
     case OSP_TIMESTR_C:
         /* WWW MMM DD hh:mm:ss YYYY, assume UTC */
         tzone = NULL;
-        if (osp_cal_timeoffset(tzone, &toffset) == 0) {
+        if (osp_cal_timeoffset(running, tzone, &toffset) == 0) {
             strptime(timestr, "%a %b %d %T %Y", &dt);
             osp_cal_elapsed(&dt, toffset, &tvalue);
         }
         break;
     case OSP_TIMESTR_ACME:
         /* hh:mm:ss.kkk ZON MMM DD YYYY */
-        if (osp_remove_timezone(timestr, buffer, sizeof(buffer), &toffset) == 0) {
+        if (osp_remove_timezone(running, timestr, buffer, sizeof(buffer), &toffset) == 0) {
             strptime(buffer, "%T %b %d %Y", &dt);
             osp_cal_elapsed(&dt, toffset, &tvalue);
         }
@@ -3688,7 +3687,7 @@ static time_t osp_format_time(
         }
     case OSP_TIMESTR_NTP:
         /* hh:mm:ss.kkk ZON WWW MMM DD YYYY */
-        if (osp_remove_timezone(timestr, buffer, sizeof(buffer), &toffset) == 0) {
+        if (osp_remove_timezone(running, timestr, buffer, sizeof(buffer), &toffset) == 0) {
             strptime(buffer, "%T %a %b %d %Y", &dt);
             osp_cal_elapsed(&dt, toffset, &tvalue);
         }
@@ -3706,6 +3705,7 @@ static time_t osp_format_time(
 /*
  * Remove time zone substring from timestamp and calculate time zone offset
  *
+ * param running Running parameters
  * param timestr Timestamp string
  * param buffer Buffer for timestamp string without time zone
  * param buffersize Buffer size
@@ -3713,6 +3713,7 @@ static time_t osp_format_time(
  * return 0 success, -1 failure
  */
 static int osp_remove_timezone(
+    osp_running_t* running,
     char* timestr,
     char* buffer,
     int buffersize,
@@ -3735,7 +3736,7 @@ static int osp_remove_timezone(
     buffer[i] = '\0';
     tzlen = i;
 
-    if (osp_cal_timeoffset(buffer, toffset) == 0) {
+    if (osp_cal_timeoffset(running, buffer, toffset) == 0) {
         size = buffersize - 1;
         snprintf(buffer, size, "%s", timestr);
         buffer[size] = '\0';
@@ -3759,11 +3760,13 @@ static int osp_remove_timezone(
 /*
  * Calculate time offset to GMT beased on time zone in USA
  *
+ * param running Running parameters
  * param tzone Time zone
  * param toffset Time offset in seconds
  * return 0 success, -1 failure
  */
 static int osp_cal_timeoffset(
+    osp_running_t* running,
     char* tzone,
     long int* toffset)
 {
@@ -3776,12 +3779,13 @@ static int osp_cal_timeoffset(
     if (!OSP_CHECK_STRING(tzone)) {
         *toffset = 0;
     } else {
-        for (i = 0; i < tzlist_size; i++) {
-            if (!strcmp(tzone, tzlist[i].name)) {
+        for (i = 0; i < running->tzlist_size; i++) {
+printf("SDS check point 0: tz = %s\n", running->tzlist[i].name);
+            if (!strcmp(tzone, running->tzlist[i].name)) {
                 break;
             }
         }
-        if (i >= tzlist_size) {
+        if (i >= running->tzlist_size) {
             /* Has checked string NULL */
             radlog(L_INFO,
                 "rlm_osp: Failed to calculate time offset for time zone '%s'.",
@@ -3789,12 +3793,12 @@ static int osp_cal_timeoffset(
             *toffset = 0;
             ret = -1;
         } else {
-            tmp = tzlist[i];
+            tmp = running->tzlist[i];
             if (i > OSP_TZ_CACHE) {
                 for (j = i; j > 0; j--) {
-                    tzlist[j] = tzlist[j - 1];
+                    running->tzlist[j] = running->tzlist[j - 1];
                 }
-                tzlist[0] = tmp;
+                running->tzlist[0] = tmp;
             }
             *toffset = tmp.offset * 60;
        }
