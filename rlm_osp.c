@@ -2642,10 +2642,10 @@ static void osp_report_statsinfo(
         /* Report RTP destiantion-to-reporter octets */
         if (stats->rtp_dest_rep_octets != OSP_STATSINT_DEF) {
             OSPPTransactionSetOctets(
-                transaction,                /* Transaction handle */
-                OSPC_SMETRIC_RTP,           /* Metric */
-                OSPC_SDIR_DESTREP,          /* Direction */
-                stats->rtp_src_rep_octets); /* Octets */
+                transaction,                    /* Transaction handle */
+                OSPC_SMETRIC_RTP,               /* Metric */
+                OSPC_SDIR_DESTREP,              /* Direction */
+                stats->rtp_dest_rep_octets);    /* Octets */
         }
 
         /* Report RTP source-to-reporter packets */
@@ -2663,7 +2663,7 @@ static void osp_report_statsinfo(
                 transaction,                    /* Transaction handle */
                 OSPC_SMETRIC_RTP,               /* Metric */
                 OSPC_SDIR_DESTREP,              /* Direction */
-                stats->rtp_src_rep_packets);    /* Packets */
+                stats->rtp_dest_rep_packets);   /* Packets */
         }
 
         /* Report RTP source-to-reporter lost packets */
