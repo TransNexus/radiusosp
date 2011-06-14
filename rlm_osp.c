@@ -3780,7 +3780,6 @@ static int osp_cal_timeoffset(
         *toffset = 0;
     } else {
         for (i = 0; i < running->tzlist_size; i++) {
-printf("SDS check point 0: tz = %s\n", running->tzlist[i].name);
             if (!strcmp(tzone, running->tzlist[i].name)) {
                 break;
             }
