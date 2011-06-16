@@ -384,7 +384,8 @@ typedef enum {
 typedef enum {
     OSP_CALLNUM_MIN = 0,
     OSP_CALLNUM_E164 = OSP_CALLNUM_MIN, /* E.164 */
-    OSP_CALLNUM_URI,                    /* URI */
+    OSP_CALLNUM_SIPURI,                 /* SIP URI */
+    OSP_CALLNUM_E164SIPURI,             /* E.164 or SIP URI */
     OSP_CALLNUM_CISCO,                  /* Cisco, ton:0~7,npi:0~15,pi:0~3,si:0~3,#:E.164 */
     OSP_CALLNUM_MAX = OSP_CALLNUM_CISCO,
     OSP_CALLNUM_NUMBER
@@ -943,16 +944,27 @@ typedef struct {
             } else  { \
                 _ptr = _buf; \
                 switch (_type) { \
-                case OSP_CALLNUM_URI: \
+                case OSP_CALLNUM_SIPURI: \
                     if (osp_get_uriuser(_buf, _val, sizeof(_val)) < 0) { \
                         /* Do not have to check string NULL */ \
                         if (_lev == OSP_DEF_MUST) { \
-                            radlog(L_ERR, "rlm_osp: Failed to get '%s' from URI '%s'.", _name,  _buf); \
+                            radlog(L_ERR, "rlm_osp: Failed to get '%s' from SIP URI '%s'.", _name,  _buf); \
                             return -1; \
                         } else { \
-                            radlog(L_INFO, "rlm_osp: Failed to get '%s' from URI '%s'.", _name,  _buf); \
+                            radlog(L_INFO, "rlm_osp: Failed to get '%s' from SIP URI '%s'.", _name,  _buf); \
                             _val[0] = '\0'; \
                         } \
+                    } else if ((_lev == OSP_DEF_MUST) && !OSP_CHECK_STRING(_val)) { \
+                        /* Number must be reported */ \
+                        radlog(L_ERR, "rlm_osp: Empty number."); \
+                        return -1; \
+                    } \
+                    break; \
+                case OSP_CALLNUM_E164SIPURI: \
+                    if (osp_get_uriuser(_buf, _val, sizeof(_val)) < 0) { \
+                        _size = sizeof(_val) - 1; \
+                        snprintf(_val, _size, "%s", _ptr); \
+                        _val[_size] = '\0'; \
                     } else if ((_lev == OSP_DEF_MUST) && !OSP_CHECK_STRING(_val)) { \
                         /* Number must be reported */ \
                         radlog(L_ERR, "rlm_osp: Empty number."); \
@@ -1039,7 +1051,7 @@ typedef struct {
 }
 
 /*
- * Get URI hostport
+ * Get hostport
  *
  * param _req FreeRADIUS request
  * param _flag Parse flag
@@ -1068,10 +1080,10 @@ typedef struct {
                 if (osp_get_urihost(_val, _buf, sizeof(_buf)) < 0) { \
                     /* Do not have to check string NULL */ \
                     if (_lev == OSP_DEF_MUST) { \
-                        radlog(L_ERR, "rlm_osp: Failed to get '%s' from URI '%s'.", _name,  _buf); \
+                        radlog(L_ERR, "rlm_osp: Failed to get '%s' from SIP URI '%s'.", _name,  _buf); \
                         return -1; \
                     } else { \
-                        radlog(L_INFO, "rlm_osp: Failed to get '%s' from URI '%s'.", _name,  _buf); \
+                        radlog(L_INFO, "rlm_osp: Failed to get '%s' from SIP URI '%s'.", _name,  _buf); \
                         osp_create_device(_ip, _port, _val, sizeof(_val)); \
                     } \
                 } else  { \
@@ -3467,7 +3479,7 @@ static void osp_format_device(
  * userinfo = ( user / telephone-subscriber ) [ ":" password ] "@"
  * hostport = host [ ":" port ]
  *
- * param uri Caller/callee URI
+ * param uri Caller/callee SIP URI
  * param buffer Userinfo buffer
  * param buffersize Userinfo buffer size
  * return 0 success, -1 failure
@@ -3484,40 +3496,32 @@ static int osp_get_uriuser(
 
     DEBUG3("rlm_osp: osp_get_uriuser start");
 
-    if ((start = strstr(uri, "sip:")) == NULL) {
+    if (((start = strstr(uri, "sip:")) == NULL) || ((end = strchr(start, '@')) == NULL)) {
         if (OSP_CHECK_STRING(uri)) {
             radlog(L_ERR,
-                "rlm_osp: URI '%s' format incorrect, without 'sip:'.",
+                "rlm_osp: SIP URI '%s' format incorrect.",
                 uri);
         } else {
-            radlog(L_ERR, "rlm_osp: URI format incorrect.");
+            radlog(L_ERR, "rlm_osp: SIP URI format incorrect.");
         }
         return -1;
-    } else {
-        start += 4;
     }
 
-    if ((end = strchr(start, '@')) == NULL) {
-        *buffer = '\0';
-    } else {
-        /* Check if there is a password */
-        if (((tmp = strchr(start, ':')) != NULL) && (tmp < end )) {
-            end = tmp;
-        }
+    start += 4;
 
-        /* Check if there is user part parameter, such as npdi */
-        if (((tmp = strchr(start, ';')) != NULL) && (tmp < end )) {
-            end = tmp;
-        }
-
-        size = end - start;
-        if (buffersize <= size) {
-            size = buffersize - 1;
-        }
-
-        memcpy(buffer, start, size);
-        buffer[size] = '\0';
+    /* Check if there is a parameter, a header or '>' */
+    if (((tmp = strpbrk(start, ":;")) != NULL) && (tmp < end)) {
+        end = tmp;
     }
+
+    size = end - start;
+    if (buffersize <= size) {
+        size = buffersize - 1;
+    }
+
+    memcpy(buffer, start, size);
+    buffer[size] = '\0';
+
     /* Do not have to check string NULL */
     DEBUG2("rlm_osp: uri userinfo = '%s'", buffer);
 
@@ -3533,7 +3537,7 @@ static int osp_get_uriuser(
  * userinfo = ( user / telephone-subscriber ) [ ":" password ] "@"
  * hostport = host [ ":" port ]
  *
- * param uri Caller/callee URI
+ * param uri Caller/callee SIP URI
  * param buffer Hostport buffer
  * param buffersize Hostport buffer size
  * return 0 success, -1 failure
@@ -3550,34 +3554,33 @@ static int osp_get_urihost(
 
     DEBUG3("rlm_osp: osp_get_urihost start");
 
-    if ((start = strstr(uri, "sip:")) == NULL) {
+    if (((start = strstr(uri, "sip:")) == NULL) || ((tmp = strchr(start, '@')) == NULL)) {
         if (OSP_CHECK_STRING(uri)) {
             radlog(L_ERR,
-                "rlm_osp: URI '%s' format incorrect, without 'sip:'.",
+                "rlm_osp: SIP URI '%s' format incorrect.",
                 uri);
         } else {
-            radlog(L_ERR, "rlm_osp: URI format incorrect.");
+            radlog(L_ERR, "rlm_osp: SIP URI format incorrect.");
         }
         return -1;
-    } else {
-        start += 4;
-
-        if (((tmp = strchr(start, '@')) != NULL) && (start < tmp)) {
-            start = tmp + 1;
-        }
     }
 
+    start = tmp + 1;
+
+    /* Check if there is a parameter, a header or '>' */
     if ((end = strpbrk(start, ";?>")) == NULL) {
-        *buffer = '\0';
+        size = strlen(start);
     } else {
         size = end - start;
-        if (buffersize <= size) {
-            size = buffersize - 1;
-        }
-
-        memcpy(buffer, start, size);
-        buffer[size] = '\0';
     }
+
+    if (buffersize <= size) {
+        size = buffersize - 1;
+    }
+
+    memcpy(buffer, start, size);
+    buffer[size] = '\0';
+
     /* Do not have to check string NULL */
     DEBUG2("rlm_osp: uri hostport = '%s'", buffer);
 
