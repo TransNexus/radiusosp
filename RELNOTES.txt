@@ -27,4 +27,7 @@ Version 1.1.0 - 2011-07-04
 *Added multiple mappings support.
 *Changed configuration.
 *Changed time zone implementation.
+----------------------------------------------------------------------
+
+Version 1.1.1 - 
 
