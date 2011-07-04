@@ -22,7 +22,7 @@ Version 1.0.3 - 2010-07-08
 *Changed OSP TCP port from 1080 to 5045.
 ----------------------------------------------------------------------
 
-Version 1.0.4 - 2011-
+Version 1.1.0 - 2011-07-04
 *Updated for OSP Toolkit 4.0.0.
 *Added multiple mappings support.
 *Changed configuration.
