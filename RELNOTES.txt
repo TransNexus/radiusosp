@@ -27,4 +27,9 @@ Version 1.1.0 - 2011-07-04
 *Added multiple mappings support.
 *Changed configuration.
 *Changed time zone implementation.
+----------------------------------------------------------------------
+
+Version 1.1.1 - 2011-12-14
+*Added alert-timepoint VSA of GBS3 SBC for AlertTime.
+----------------------------------------------------------------------
 
