@@ -3496,35 +3496,51 @@ static int osp_get_uriuser(
 
     DEBUG3("rlm_osp: osp_get_uriuser start");
 
-    if ((start = strstr(uri, "sip:")) == NULL) {
-        if (OSP_CHECK_STRING(uri)) {
-            radlog(L_ERR,
-                "rlm_osp: SIP URI '%s' format incorrect, without 'sip:'.",
-                uri);
+    if ((start = strstr(uri, "sip:")) != NULL) {
+        start += 4;
+        if ((end = strchr(start, '@')) == NULL) {
+            /* For example, "Bob <sip:127.0.0.1:5060>;tag=123456789" */
+            *buffer = '\0';
         } else {
-            radlog(L_ERR, "rlm_osp: SIP URI format incorrect.");
-        }
-        return -1;
-    }
+            /* Check if there is a password or a user parameter */
+            if (((tmp = strpbrk(start, ":;")) != NULL) && (tmp < end )) {
+                end = tmp;
+            }
 
-    start += 4;
-    if ((end = strchr(start, '@')) == NULL) {
-    	/* For example, "Bob <sip:127.0.0.1:5060>;tag=123456789" */
-        *buffer = '\0';
-    } else {
-        /* Check if there is a password or a user parameter */
-        if (((tmp = strpbrk(start, ":;")) != NULL) && (tmp < end )) {
-            end = tmp;
+            size = end - start;
+            if (buffersize <= size) {
+                size = buffersize - 1;
+            }
+
+            memcpy(buffer, start, size);
+            buffer[size] = '\0';
+        }
+    } else if ((start = strstr(uri, "tel:")) != NULL) {
+        start += 4;
+        /* Check if there is a parameter */
+        if ((end = strchr(start, ';')) != NULL) {
+            size = end - start;
+        } else {
+            size = strlen(start);
         }
 
-        size = end - start;
         if (buffersize <= size) {
             size = buffersize - 1;
         }
 
         memcpy(buffer, start, size);
         buffer[size] = '\0';
+    } else {
+        if (OSP_CHECK_STRING(uri)) {
+            radlog(L_ERR,
+                "rlm_osp: URI '%s' format incorrect, without 'sip:' or 'tel:'.",
+                uri);
+        } else {
+            radlog(L_ERR, "rlm_osp: URI format incorrect.");
+        }
+        return -1;
     }
+
     /* Do not have to check string NULL */
     DEBUG2("rlm_osp: uri userinfo = '%s'", buffer);
 
