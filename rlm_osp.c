@@ -35,7 +35,14 @@ RCSID("$Id$")
 #include "osp/ospb64.h"
 
 /*
- * OSP module constants.
+ * OSP module version
+ */
+#define OSP_MODULE_VERSION_MAJOR    1
+#define OSP_MODULE_VERSION_MINOR    1
+#define OSP_MODULE_VERSION_BUGFIX   3
+
+/*
+ * OSP module buffer size constants.
  */
 #define OSP_TZNAME_SIZE     16
 #define OSP_STRBUF_SIZE     256
