@@ -952,7 +952,7 @@ typedef struct {
                 _ptr = _buf; \
                 switch (_type) { \
                 case OSP_CALLNUM_SIPURI: \
-                    if (osp_get_uriuser(_buf, _val, sizeof(_val)) < 0) { \
+                    if (osp_get_uriuser(_buf, _val, sizeof(_val), TRUE) < 0) { \
                         /* Do not have to check string NULL */ \
                         if (_lev == OSP_DEF_MUST) { \
                             radlog(L_ERR, "rlm_osp: Failed to get '%s' from SIP URI '%s'.", _name,  _buf); \
@@ -968,7 +968,7 @@ typedef struct {
                     } \
                     break; \
                 case OSP_CALLNUM_E164SIPURI: \
-                    if (osp_get_uriuser(_buf, _val, sizeof(_val)) < 0) { \
+                    if (osp_get_uriuser(_buf, _val, sizeof(_val), FALSE) < 0) { \
                         _size = sizeof(_val) - 1; \
                         snprintf(_val, _size, "%s", _ptr); \
                         _val[_size] = '\0'; \
@@ -1188,7 +1188,7 @@ static int osp_get_statsinfo(osp_mapping_t* mapping, REQUEST* request, int type,
 static void osp_get_iphost(char* ip, char* buffer, int buffersize);
 static void osp_create_device(uint32_t ip, int port, char* buffer, int buffersize);
 static void osp_format_device(char* device, char* buffer, int buffersize);
-static int osp_get_uriuser(char* uri, char* buffer, int buffersize);
+static int osp_get_uriuser(char* uri, char* buffer, int buffersize, int logflag);
 static int osp_get_urihost(char* uri, char* buffer, int buffersize);
 static OSPE_PROTOCOL_NAME osp_parse_protocol(osp_mapping_t* mapping, char* protocol);
 static time_t osp_format_time(osp_running_t* running, char* timestamp, osp_timestr_e format);
@@ -3489,12 +3489,14 @@ static void osp_format_device(
  * param uri Caller/callee SIP URI
  * param buffer Userinfo buffer
  * param buffersize Userinfo buffer size
+ * param logflag If to log error message
  * return 0 success, -1 failure
  */
 static int osp_get_uriuser(
     char* uri,
     char* buffer,
-    int buffersize)
+    int buffersize,
+    int logflag)
 {
     char* start;
     char* end;
@@ -3538,12 +3540,14 @@ static int osp_get_uriuser(
         memcpy(buffer, start, size);
         buffer[size] = '\0';
     } else {
-        if (OSP_CHECK_STRING(uri)) {
-            radlog(L_ERR,
-                "rlm_osp: URI '%s' format incorrect, without 'sip:' or 'tel:'.",
-                uri);
-        } else {
-            radlog(L_ERR, "rlm_osp: URI format incorrect.");
+        if (logflag) {
+            if (OSP_CHECK_STRING(uri)) {
+                radlog(L_ERR,
+                    "rlm_osp: URI '%s' format incorrect, without 'sip:' or 'tel:'.",
+                    uri);
+            } else {
+                radlog(L_ERR, "rlm_osp: URI format incorrect.");
+            }
         }
         return -1;
     }
