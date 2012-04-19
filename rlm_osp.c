@@ -39,7 +39,7 @@ RCSID("$Id$")
  */
 #define OSP_MODULE_VERSION_MAJOR    1
 #define OSP_MODULE_VERSION_MINOR    1
-#define OSP_MODULE_VERSION_BUGFIX   3
+#define OSP_MODULE_VERSION_BUGFIX   4
 
 /*
  * OSP module buffer size constants.
