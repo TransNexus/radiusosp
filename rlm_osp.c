@@ -35,7 +35,14 @@ RCSID("$Id$")
 #include "osp/ospb64.h"
 
 /*
- * OSP module constants.
+ * OSP module version
+ */
+#define OSP_MODULE_VERSION_MAJOR    1
+#define OSP_MODULE_VERSION_MINOR    1
+#define OSP_MODULE_VERSION_BUGFIX   3
+
+/*
+ * OSP module buffer size constants.
  */
 #define OSP_TZNAME_SIZE     16
 #define OSP_STRBUF_SIZE     256
@@ -111,6 +118,9 @@ RCSID("$Id$")
 #define OSP_MAP_CALLING         "%{Calling-Station-Id}"         /* Calling number, RFC 2865 */
 #define OSP_MAP_CALLED          "%{Called-Station-Id}"          /* Called number, RFC 2865 */
 #define OSP_MAP_ASSERTEDID      NULL                            /* P-Asserted-Identity */
+#define OSP_MAP_REFERID         NULL                            /* REFER ID */
+#define OSP_MAP_REFERCALLING    NULL                            /* REFER calling number */
+#define OSP_MAP_REFERCALLED     NULL                            /* REFER called number */
 #define OSP_MAP_RPID            NULL                            /* Remote-Party-ID */
 #define OSP_MAP_SOURCE          "%{NAS-IP-Address}"             /* Source, RFC 2865 */
 #define OSP_MAP_PROXY           NULL                            /* Proxy */
@@ -196,9 +206,12 @@ RCSID("$Id$")
 #define OSP_STR_TRANSACTIONID   "transactionid"
 #define OSP_STR_CALLID          "callid"
 #define OSP_STR_CALLINGFORMAT   "callingnumberformat"
-#define OSP_STR_CALLINGNUMBER   "callingnumber"
 #define OSP_STR_CALLEDFORMAT    "callednumberformat"
+#define OSP_STR_CALLINGNUMBER   "callingnumber"
 #define OSP_STR_CALLEDNUMBER    "callednumber"
+#define OSP_STR_REFERID         "referid"
+#define OSP_STR_REFERCALLINGNUM "refercallingnumber"
+#define OSP_STR_REFERCALLEDNUM  "refercallednumber"
 #define OSP_STR_ASSERTEDID      "assertedid"
 #define OSP_STR_RPID            "remotepartyid"
 #define OSP_STR_SOURCE          "source"
@@ -542,9 +555,12 @@ typedef struct {
     char* transid;                      /* Transaction ID */
     char* callid;                       /* Call-ID */
     int callingformat;                  /* Calling number format */
-    char* calling;                      /* Calling number */
     int calledformat;                   /* Called number format */
+    char* calling;                      /* Calling number */
     char* called;                       /* Called number */
+    char* referid;                      /* Refer ID */
+    char* refercalling;                 /* Refer calling number */
+    char* refercalled;                  /* Refer called number */
     char* assertedid;                   /* P-Asserted-Identity */
     char* rpid;                         /* Remote-Party-ID */
     char* source;                       /* Source */
@@ -635,6 +651,7 @@ typedef struct {
     osp_string_t callid;                        /* Call-ID */
     osp_string_t calling;                       /* Calling number */
     osp_string_t called;                        /* Called number */
+    osp_string_t referid;                       /* Refer ID */
     osp_string_t assertedid;                    /* P-Asserted-Identity */
     osp_string_t rpid;                          /* Remote-Party-ID */
     osp_string_t source;                        /* Source */
@@ -945,7 +962,7 @@ typedef struct {
                 _ptr = _buf; \
                 switch (_type) { \
                 case OSP_CALLNUM_SIPURI: \
-                    if (osp_get_uriuser(_buf, _val, sizeof(_val)) < 0) { \
+                    if (osp_get_uriuser(_buf, _val, sizeof(_val), TRUE) < 0) { \
                         /* Do not have to check string NULL */ \
                         if (_lev == OSP_DEF_MUST) { \
                             radlog(L_ERR, "rlm_osp: Failed to get '%s' from SIP URI '%s'.", _name,  _buf); \
@@ -961,7 +978,7 @@ typedef struct {
                     } \
                     break; \
                 case OSP_CALLNUM_E164SIPURI: \
-                    if (osp_get_uriuser(_buf, _val, sizeof(_val)) < 0) { \
+                    if (osp_get_uriuser(_buf, _val, sizeof(_val), FALSE) < 0) { \
                         _size = sizeof(_val) - 1; \
                         snprintf(_val, _size, "%s", _ptr); \
                         _val[_size] = '\0'; \
@@ -1181,7 +1198,7 @@ static int osp_get_statsinfo(osp_mapping_t* mapping, REQUEST* request, int type,
 static void osp_get_iphost(char* ip, char* buffer, int buffersize);
 static void osp_create_device(uint32_t ip, int port, char* buffer, int buffersize);
 static void osp_format_device(char* device, char* buffer, int buffersize);
-static int osp_get_uriuser(char* uri, char* buffer, int buffersize);
+static int osp_get_uriuser(char* uri, char* buffer, int buffersize, int logflag);
 static int osp_get_urihost(char* uri, char* buffer, int buffersize);
 static OSPE_PROTOCOL_NAME osp_parse_protocol(osp_mapping_t* mapping, char* protocol);
 static time_t osp_format_time(osp_running_t* running, char* timestamp, osp_timestr_e format);
@@ -1268,9 +1285,12 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_TRANSACTIONID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transid), NULL, OSP_MAP_TRANSID },
     { OSP_STR_CALLID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.callid), NULL, OSP_MAP_CALLID },
     { OSP_STR_CALLINGFORMAT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.callingformat), NULL, OSP_MAP_NUMFORMAT },
-    { OSP_STR_CALLINGNUMBER, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.calling), NULL, OSP_MAP_CALLING },
     { OSP_STR_CALLEDFORMAT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.calledformat), NULL, OSP_MAP_NUMFORMAT },
+    { OSP_STR_CALLINGNUMBER, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.calling), NULL, OSP_MAP_CALLING },
     { OSP_STR_CALLEDNUMBER, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.called), NULL, OSP_MAP_CALLED },
+    { OSP_STR_REFERID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.referid), NULL, OSP_MAP_REFERID },
+    { OSP_STR_REFERCALLINGNUM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.refercalling), NULL, OSP_MAP_REFERCALLING },
+    { OSP_STR_REFERCALLEDNUM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.refercalled), NULL, OSP_MAP_REFERCALLED },
     { OSP_STR_ASSERTEDID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.assertedid), NULL, OSP_MAP_ASSERTEDID },
     { OSP_STR_RPID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.rpid), NULL, OSP_MAP_RPID },
     { OSP_STR_SOURCE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.source), NULL, OSP_MAP_SOURCE },
@@ -1732,14 +1752,32 @@ static int osp_check_mapping(
     /* If calling number format is incorrect, then fail. */
     OSP_CHECK_RANGE(OSP_STR_CALLINGFORMAT, mapping->callingformat, OSP_CALLNUM_MIN, OSP_CALLNUM_MAX);
 
-    /* If calling number is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP(OSP_STR_CALLINGNUMBER, OSP_DEF_MAY, mapping->calling);
-
     /* If called number format is incorrect, then fail. */
     OSP_CHECK_RANGE(OSP_STR_CALLEDFORMAT, mapping->calledformat, OSP_CALLNUM_MIN, OSP_CALLNUM_MAX);
 
+    /* If calling number is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_CALLINGNUMBER, OSP_DEF_MAY, mapping->calling);
+
     /* If called number is undefined, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_CALLEDNUMBER, OSP_DEF_MUST, mapping->called);
+
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    default:
+        /* If REFER ID is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_REFERID, OSP_DEF_MAY, mapping->referid);
+
+        /* If REFER calling number is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_REFERCALLINGNUM, OSP_DEF_MAY, mapping->refercalling);
+
+        /* If REFER called number is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_REFERCALLEDNUM, OSP_DEF_MAY, mapping->refercalled);
+        break;
+    }
 
     /* If asserted ID is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_ASSERTEDID, OSP_DEF_MAY, mapping->assertedid);
@@ -2067,25 +2105,9 @@ static int osp_check_itemmap (
         }
     }
 
-    if (*item != '%') {
-        radlog(L_ERR,
-            "rlm_osp: Failed to check mapping item '%s'.",
-            item);
-        return -1;
-    }
-
     last = strlen(item) - 1;
 
-    if ((item[1] != '{') && (last != 1)) {
-        radlog(L_ERR,
-            "rlm_osp: Failed to check mapping item '%s'.",
-            item);
-        return -1;
-    }
-
-    if (((item[1] == '{') && (item[last] != '}')) ||
-        ((item[1] != '{') && (item[last] == '}')))
-    {
+    if ((*item != '%') || (item[1] != '{') || (item[last] != '}') || (last == 2)) {
         radlog(L_ERR,
             "rlm_osp: Failed to check mapping item '%s'.",
             item);
@@ -2867,7 +2889,9 @@ static int osp_get_usageinfo(
     char tmphost[OSP_STRBUF_SIZE];
     char desthost[OSP_STRBUF_SIZE];
     char* ptr;
-    int parse, size, i;
+    char* referflagname = "referflag";
+    char* referflagmap = "%{Acme-Primary-Routing-Number}";
+    int refer, parse, size, i;
     osp_intstr_e format;
     int release;
     struct in_addr dest;
@@ -2906,11 +2930,48 @@ static int osp_get_usageinfo(
     /* Get Call-ID */
     OSP_GET_STRING(request, TRUE, OSP_STR_CALLID, OSP_DEF_MUST, mapping->callid, usage->callid);
 
-    /* Get calling number */
-    OSP_GET_CALLNUM(request, TRUE, OSP_STR_CALLINGNUMBER, OSP_DEF_MAY, mapping->calling, mapping->callingformat, buffer, ptr, size, usage->calling);
+    refer = FALSE;
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    default:
+        switch (type) {
+        case PW_STATUS_START:
+            /* This is a special case that Acme transferred call leg Start RADIUS record does not have Acme-Primary-Routing-Number */
+            OSP_GET_STRING(request, TRUE, referflagname, OSP_DEF_MAY, referflagmap, buffer);
+            if (!OSP_CHECK_STRING(buffer)) {
+                refer = TRUE;
+            }
+            break;
+        case PW_STATUS_STOP:
+            /* Get REFER ID */
+            OSP_GET_STRING(request, TRUE, OSP_STR_REFERID, OSP_DEF_MAY, mapping->referid, usage->referid);
+            if (OSP_CHECK_STRING(usage->referid)) {
+                refer = TRUE;
+            }
+            break;
+        case PW_STATUS_ALIVE:
+        default:
+            break;
+        }
+        break;
+    }
+    if (refer) {
+        /* Get calling number */
+        OSP_GET_CALLNUM(request, TRUE, OSP_STR_REFERCALLINGNUM, OSP_DEF_MAY, mapping->refercalling, mapping->callingformat, buffer, ptr, size, usage->calling);
 
-    /* Get called number */
-    OSP_GET_CALLNUM(request, TRUE, OSP_STR_CALLEDNUMBER, OSP_DEF_MUST, mapping->called, mapping->calledformat, buffer, ptr, size, usage->called);
+        /* Get called number */
+        OSP_GET_CALLNUM(request, TRUE, OSP_STR_REFERCALLEDNUM, OSP_DEF_MUST, mapping->refercalled, mapping->calledformat, buffer, ptr, size, usage->called);
+    } else {
+        /* Get calling number */
+        OSP_GET_CALLNUM(request, TRUE, OSP_STR_CALLINGNUMBER, OSP_DEF_MAY, mapping->calling, mapping->callingformat, buffer, ptr, size, usage->calling);
+
+        /* Get called number */
+        OSP_GET_CALLNUM(request, TRUE, OSP_STR_CALLEDNUMBER, OSP_DEF_MUST, mapping->called, mapping->calledformat, buffer, ptr, size, usage->called);
+    }
 
     /* Get asserted ID */
     OSP_GET_CALLNUM(request, TRUE, OSP_STR_ASSERTEDID, OSP_DEF_MAY, mapping->assertedid, OSPC_NFORMAT_URL, buffer, ptr, size, usage->assertedid);
@@ -3482,12 +3543,14 @@ static void osp_format_device(
  * param uri Caller/callee SIP URI
  * param buffer Userinfo buffer
  * param buffersize Userinfo buffer size
+ * param logflag If to log error message
  * return 0 success, -1 failure
  */
 static int osp_get_uriuser(
     char* uri,
     char* buffer,
-    int buffersize)
+    int buffersize,
+    int logflag)
 {
     char* start;
     char* end;
@@ -3531,12 +3594,14 @@ static int osp_get_uriuser(
         memcpy(buffer, start, size);
         buffer[size] = '\0';
     } else {
-        if (OSP_CHECK_STRING(uri)) {
-            radlog(L_ERR,
-                "rlm_osp: URI '%s' format incorrect, without 'sip:' or 'tel:'.",
-                uri);
-        } else {
-            radlog(L_ERR, "rlm_osp: URI format incorrect.");
+        if (logflag) {
+            if (OSP_CHECK_STRING(uri)) {
+                radlog(L_ERR,
+                    "rlm_osp: URI '%s' format incorrect, without 'sip:' or 'tel:'.",
+                    uri);
+            } else {
+                radlog(L_ERR, "rlm_osp: URI format incorrect.");
+            }
         }
         return -1;
     }

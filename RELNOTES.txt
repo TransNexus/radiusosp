@@ -37,3 +37,8 @@ Version 1.1.2 - 2012-01-09
 *Added Tel URI support.
 ----------------------------------------------------------------------
 
+Version 1.1.3 - 2012-04-19
+*Added OSP module version values.
+*Removed error message for E164SIPURI calling number parsing.
+*Added check for empty mapping.
+*Added support for Acme REFER call scenario.
