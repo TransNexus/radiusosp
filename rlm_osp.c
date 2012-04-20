@@ -2516,7 +2516,7 @@ static int osp_accounting(
         usage.srcrealm);    /* Source realm */
 
     /* Report destination realm */
-    OSPPTransactionSetSrcRealm(
+    OSPPTransactionSetDestRealm(
         transaction,        /* Transaction handle */
         usage.destrealm);   /* Destination realm */
 
