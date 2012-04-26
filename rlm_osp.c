@@ -3060,13 +3060,13 @@ static int osp_get_usageinfo(
             if (buffer[0] == '\0') {
                 /* Has checked string NULL */
                 DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", mapping->duration, OSP_STR_DURATION);
-                usage->duration = difftime(usage->start, usage->end);
+                usage->duration = difftime(usage->end, usage->start);
             } else {
                 usage->duration = atoi(buffer);
             }
         } else {
             DEBUG("rlm_osp: '%s' mapping undefined.", OSP_STR_DURATION);
-            usage->duration = difftime(usage->start, usage->end);
+            usage->duration = difftime(usage->end, usage->start);
         }
     } else {
         DEBUG2("rlm_osp: do not parse '%s'.", OSP_STR_DURATION);
