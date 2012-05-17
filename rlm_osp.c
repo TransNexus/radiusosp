@@ -3237,13 +3237,45 @@ static int osp_get_usageinfo(
             if (buffer[0] == '\0') {
                 /* Has checked string NULL */
                 DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", mapping->duration, OSP_STR_DURATION);
-                usage->duration = difftime(usage->end, usage->start);
+                if (usage->connect != OSP_TIME_DEF) {
+                    usage->duration = difftime(usage->end, usage->connect);
+                } else {
+                    switch (mapping->clienttype) {
+                    case OSP_CLIENT_BROADWORKS:
+                        /* This is a special case that BroadWorks does not report connect time for failed call attempt */
+                        usage->duration = 0;
+                        break;
+                    case OSP_CLIENT_UNDEF:
+                    case OSP_CLIENT_ACME:
+                    case OSP_CLIENT_GENBANDS3:
+                    case OSP_CLIENT_CISCO:
+                    default:
+                        usage->duration = difftime(usage->end, usage->start);
+                        break;
+                    }
+                }
             } else {
                 usage->duration = atoi(buffer);
             }
         } else {
             DEBUG("rlm_osp: '%s' mapping undefined.", OSP_STR_DURATION);
-            usage->duration = difftime(usage->end, usage->start);
+            if (usage->connect != OSP_TIME_DEF) {
+                usage->duration = difftime(usage->end, usage->connect);
+            } else {
+                switch (mapping->clienttype) {
+                case OSP_CLIENT_BROADWORKS:
+                    /* This is a special case that BroadWorks does not report connect time for failed call attempt */
+                    usage->duration = 0;
+                    break;
+                case OSP_CLIENT_UNDEF:
+                case OSP_CLIENT_ACME:
+                case OSP_CLIENT_GENBANDS3:
+                case OSP_CLIENT_CISCO:
+                default:
+                    usage->duration = difftime(usage->end, usage->start);
+                    break;
+                }
+            }
         }
     } else {
         DEBUG2("rlm_osp: do not parse '%s'.", OSP_STR_DURATION);
