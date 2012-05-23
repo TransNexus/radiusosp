@@ -105,6 +105,7 @@ RCSID("$Id$")
 /*
  * Default RADIUS OSP mapping
  */
+#define OSP_MAP_NULL            "NULL"                          /* Empty map */
 #define OSP_MAP_IDITEM          NULL                            /* RADIUS record identity VSA name */
 #define OSP_MAP_IDVALUE         NULL                            /* RADIUS record identity VSA value */
 #define OSP_MAP_REPORT          "yes"                           /* Report Stop, Start or Interim-Update RADIUS records */
@@ -781,6 +782,9 @@ typedef struct {
  */
 #define OSP_CHECK_ITEMMAP(_name, _lev, _map) { \
     DEBUG3("rlm_osp: check '%s' mapping", _name); \
+    if (OSP_CHECK_STRING(_map) && !strcasecmp(_map, OSP_MAP_NULL)) { \
+        _map = NULL; \
+    } \
     if (osp_check_itemmap(_map, _lev) < 0) { \
         if (OSP_CHECK_STRING(_map)) { \
             radlog(L_ERR, "rlm_osp: Incorrect '%s' mapping '%s'.", _name, _map); \
