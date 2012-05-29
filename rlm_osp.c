@@ -1553,7 +1553,7 @@ static int osp_load_tzlist(
     osp_running_t* running)
 {
     FILE* fp;
-    char buffer[OSP_STRBUF_SIZE];
+    osp_string_t buffer;
     char* start;
     char* tmp;
     char* token;
@@ -1610,7 +1610,7 @@ static int osp_check_provider(
 {
     int i;
     struct in_addr ip;
-    char buffer[OSP_STRBUF_SIZE];
+    osp_string_t buffer;
 
     DEBUG3("rlm_osp: osp_check_provider start");
 
@@ -1747,7 +1747,7 @@ static int osp_check_mapping(
     osp_mapping_t* mapping)
 {
     int i;
-    char buffer[OSP_STRBUF_SIZE];
+    osp_string_t buffer;
 
     DEBUG3("rlm_osp: osp_check_mapping start");
 
@@ -1857,15 +1857,15 @@ static int osp_check_mapping(
     /* If source is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_SOURCE, OSP_DEF_MAY, mapping->source);
 
-    /* If proxy is undefined for GENBAND S3 and Cisco, then fail. */
+    /* If proxy is undefined for GENBAND S3, Cisco and BroadWorks, then fail. */
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
+    case OSP_CLIENT_BROADWORKS:
         OSP_CHECK_ITEMMAP(OSP_STR_PROXY, OSP_DEF_MUST, mapping->proxy);
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
-    case OSP_CLIENT_BROADWORKS:
     default:
         break;
     }
@@ -2033,8 +2033,8 @@ static int osp_parse_netlist(
     char* liststr,
     osp_netlist_t* list)
 {
-    char listbuf[OSP_STRBUF_SIZE];
-    char buffer[OSP_STRBUF_SIZE];
+    osp_string_t listbuf;
+    osp_string_t buffer;
     struct in_addr ip;
     char* subnet;
     char* tmplist;
@@ -3024,9 +3024,10 @@ static int osp_get_usageinfo(
     osp_running_t* running = &data->running;
     osp_provider_t* provider = &data->provider;
     osp_mapping_t* mapping = &data->mapping;
-    char buffer[OSP_STRBUF_SIZE];
-    char tmphost[OSP_STRBUF_SIZE];
-    char desthost[OSP_STRBUF_SIZE];
+    osp_string_t buffer;
+    osp_string_t tmphost;
+    osp_string_t desthost;
+    osp_string_t proxy;
     char* ptr;
     char* referflagname = "referflag";
     char* referflagmap = "%{Acme-Primary-Routing-Number}";
@@ -3163,6 +3164,9 @@ static int osp_get_usageinfo(
         }
         break;
     case OSP_CLIENT_BROADWORKS:
+        /* Get proxy */
+        OSP_GET_IP(request, TRUE, OSP_STR_PROXY, OSP_DEF_MUST, mapping->proxy, OSP_IP_DEF, OSP_PORT_DEF, buffer, proxy, tmphost);
+
         if (usage->direction == OSP_DIRECTION_IN) {
             /* Get access device/source */
             /* Special case, BWAS-Access-Device-Address may not be reported */
@@ -3501,36 +3505,10 @@ static int osp_get_usageinfo(
 
     /* Get source realm */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
-    switch (mapping->clienttype) {
-    case OSP_CLIENT_BROADWORKS:
-        if (usage->direction == OSP_DIRECTION_OUT) {
-            parse = FALSE;
-        }
-        break;
-    case OSP_CLIENT_UNDEF:
-    case OSP_CLIENT_ACME:
-    case OSP_CLIENT_GENBANDS3:
-    case OSP_CLIENT_CISCO:
-    default:
-        break;
-    }
     OSP_GET_STRING(request, parse, OSP_STR_SRCREALM, OSP_DEF_MAY, mapping->srcrealm, usage->srcrealm);
 
     /* Get destination realm */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
-    switch (mapping->clienttype) {
-    case OSP_CLIENT_BROADWORKS:
-        if (usage->direction == OSP_DIRECTION_IN) {
-            parse = FALSE;
-        }
-        break;
-    case OSP_CLIENT_UNDEF:
-    case OSP_CLIENT_ACME:
-    case OSP_CLIENT_GENBANDS3:
-    case OSP_CLIENT_CISCO:
-    default:
-        break;
-    }
     OSP_GET_STRING(request, parse, OSP_STR_DESTREALM, OSP_DEF_MAY, mapping->destrealm, usage->destrealm);
 
     /* Get statistics */
@@ -3589,7 +3567,7 @@ static int osp_get_statsinfo(
     osp_statsmap_t* map = &mapping->stats;
     osp_stats_t* var = &usage->stats;
     int parse;
-    char buffer[OSP_STRBUF_SIZE];
+    osp_string_t buffer;
 
     DEBUG3("rlm_osp: osp_get_statsinfo start");
 
@@ -3740,7 +3718,7 @@ static void osp_create_device(
     int buffersize)
 {
     struct in_addr inp;
-    char tmpbuf[OSP_STRBUF_SIZE];
+    osp_string_t tmpbuf;
 
     DEBUG3("rlm_osp: osp_create_device start");
 
@@ -3776,7 +3754,7 @@ static void osp_format_device(
 {
     struct in_addr inp;
     int size;
-    char tmpbuf[OSP_STRBUF_SIZE];
+    osp_string_t tmpbuf;
     char* tmpptr;
 
     DEBUG3("rlm_osp: osp_format_device start");
@@ -4014,7 +3992,7 @@ static time_t osp_format_time(
 {
     struct tm dt;
     char* timestr = timestamp;
-    char buffer[OSP_STRBUF_SIZE];
+    osp_string_t buffer;
     char* tzone;
     long int toffset;
     time_t tvalue = 0;
