@@ -445,6 +445,7 @@ typedef enum {
     OSP_ACMEREL_UNDEF = 0,  /* Unknown */
     OSP_ACMEREL_SRC,        /* Source releases the call */
     OSP_ACMEREL_DEST,       /* Destination releases the call */
+    OSP_ACMEREL_INT,        /* Internal releases the call */
 } ospacmerelease_e;
 
 /*
@@ -3385,7 +3386,10 @@ static int osp_get_usageinfo(
     DEBUG2("rlm_osp: post dial delay = '%d'", usage->pdd);
 
     /* Get release source */
-    if (type == PW_STATUS_STOP) {
+    if (type == PW_STATUS_START) {
+        DEBUG2("rlm_osp: do not parse '%s'.", OSP_STR_RELEASE);
+        usage->release = OSPC_RELEASE_UNKNOWN;
+    } else if (type == PW_STATUS_STOP) {
         if (OSP_CHECK_STRING(mapping->release)) {
             radius_xlat(buffer, sizeof(buffer), mapping->release, request, NULL);
             if (buffer[0] == '\0') {
@@ -3410,12 +3414,14 @@ static int osp_get_usageinfo(
                     case OSP_CISCOREL_INTVOIP:
                     case OSP_CISCOREL_INTAPPL:
                     case OSP_CISCOREL_INTAAA:
+                        usage->release = OSPC_RELEASE_INTERNAL;
+                        break;
                     case OSP_CISCOREL_CONSOLE:
                     case OSP_CISCOREL_EXTRADIUS:
                     case OSP_CISCOREL_EXTAPPL:
                     case OSP_CISCOREL_EXTAGENT:
                     default:
-                        usage->release = OSPC_RELEASE_UNKNOWN;
+                        usage->release = OSPC_RELEASE_EXTERNAL;
                         break;
                     }
                     break;
@@ -3447,6 +3453,9 @@ static int osp_get_usageinfo(
                     case OSP_ACMEREL_DEST:
                         usage->release = OSPC_RELEASE_DESTINATION;
                         break;
+                    case OSP_ACMEREL_INT:
+                        usage->release = OSPC_RELEASE_INTERNAL;
+                        break;
                     case OSP_ACMEREL_UNDEF:
                     default:
                         usage->release = OSPC_RELEASE_UNKNOWN;
@@ -3459,12 +3468,20 @@ static int osp_get_usageinfo(
             DEBUG("rlm_osp: '%s' mapping undefined.", OSP_STR_RELEASE);
             usage->release = OSPC_RELEASE_UNKNOWN;
         }
-    } else if (type == PW_STATUS_START) {
-        DEBUG2("rlm_osp: do not parse '%s'.", OSP_STR_RELEASE);
-        usage->release = OSPC_RELEASE_UNKNOWN;
     } else {    /* PW_STATUS_ALIVE */
         DEBUG2("rlm_osp: do not parse '%s'.", OSP_STR_RELEASE);
-        usage->release = OSPC_RELEASE_DESTINATION;
+        switch (mapping->clienttype) {
+        case OSP_CLIENT_GENBANDS3:
+        case OSP_CLIENT_CISCO:
+        case OSP_CLIENT_BROADWORKS:
+            usage->release = OSPC_RELEASE_UNKNOWN;
+            break;
+        case OSP_CLIENT_UNDEF:
+        case OSP_CLIENT_ACME:
+        default:
+            usage->release = OSPC_RELEASE_DESTINATION;
+            break;
+        }
     }
     DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_RELEASE, usage->release);
 
@@ -3574,11 +3591,33 @@ static int osp_get_usageinfo(
     }
 
     /* Get source codec */
-    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE)) && (usage->direction == OSP_DIRECTION_IN);
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+    default:
+        parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
+        break;
+    }
     OSP_GET_STRING(request, parse, OSP_STR_SRCCODEC, OSP_DEF_MAY, mapping->srccodec, usage->srccodec);
 
     /* Get destination codec */
-    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE)) && (usage->direction == OSP_DIRECTION_OUT);
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+    default:
+        parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
+        break;
+    }
     OSP_GET_STRING(request, parse, OSP_STR_DESTCODEC, OSP_DEF_MAY, mapping->destcodec, usage->destcodec);
 
     /* Get conference ID */
@@ -3600,28 +3639,38 @@ static int osp_get_usageinfo(
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     OSP_GET_STRING(request, parse, OSP_STR_DESTREALM, OSP_DEF_MAY, mapping->destrealm, usage->destrealm);
 
-    /* Get calling party user name */
-    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+    /* Get calling party info */
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE)) && (usage->direction == OSP_DIRECTION_IN);
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+    default:
+        parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+        break;
+    }
     OSP_GET_STRING(request, parse, OSP_STR_CALLINGUSERNAME, OSP_DEF_MAY, mapping->callingusername, usage->callingusername);
-
-    /* Get calling party user ID */
-    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     OSP_GET_STRING(request, parse, OSP_STR_CALLINGUSERID, OSP_DEF_MAY, mapping->callinguserid, usage->callinguserid);
-
-    /* Get calling party user group */
-    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     OSP_GET_STRING(request, parse, OSP_STR_CALLINGUSERGROUP, OSP_DEF_MAY, mapping->callingusergroup, usage->callingusergroup);
 
-    /* Get called party user name */
-    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+    /* Get called party info */
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE)) && (usage->direction == OSP_DIRECTION_OUT);
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+    default:
+        parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+        break;
+    }
     OSP_GET_STRING(request, parse, OSP_STR_CALLEDUSERNAME, OSP_DEF_MAY, mapping->calledusername, usage->calledusername);
-
-    /* Get called party user ID */
-    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     OSP_GET_STRING(request, parse, OSP_STR_CALLEDUSERID, OSP_DEF_MAY, mapping->calleduserid, usage->calleduserid);
-
-    /* Get called party user group */
-    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     OSP_GET_STRING(request, parse, OSP_STR_CALLEDUSERGROUP, OSP_DEF_MAY, mapping->calledusergroup, usage->calledusergroup);
 
     /* Get statistics */
