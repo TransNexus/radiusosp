@@ -120,6 +120,7 @@ RCSID("$Id$")
 #define OSP_MAP_CALLING         "%{Calling-Station-Id}"         /* Calling number, RFC 2865 */
 #define OSP_MAP_CALLED          "%{Called-Station-Id}"          /* Called number, RFC 2865 */
 #define OSP_MAP_ASSERTEDID      NULL                            /* P-Asserted-Identity */
+#define OSP_MAP_PARSEREFER      "yes"                           /* Parse REFER VSAs in RADIUS records */
 #define OSP_MAP_REFERID         NULL                            /* REFER ID */
 #define OSP_MAP_REFERCALLING    NULL                            /* REFER calling number */
 #define OSP_MAP_REFERCALLED     NULL                            /* REFER called number */
@@ -214,6 +215,7 @@ RCSID("$Id$")
 #define OSP_STR_CALLEDFORMAT        "callednumberformat"
 #define OSP_STR_CALLINGNUMBER       "callingnumber"
 #define OSP_STR_CALLEDNUMBER        "callednumber"
+#define OSP_STR_PARSEREFER          "parserefer"
 #define OSP_STR_REFERID             "referid"
 #define OSP_STR_REFERCALLINGNUM     "refercallingnumber"
 #define OSP_STR_REFERCALLEDNUM      "refercallednumber"
@@ -596,6 +598,7 @@ typedef struct {
     int calledformat;                   /* Called number format */
     char* calling;                      /* Calling number */
     char* called;                       /* Called number */
+    int parserefer;                     /* If to parse REFER VSAs in RADIUS records */
     char* referid;                      /* Refer ID */
     char* refercalling;                 /* Refer calling number */
     char* refercalled;                  /* Refer called number */
@@ -1351,6 +1354,7 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_CALLEDFORMAT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.calledformat), NULL, OSP_MAP_NUMFORMAT },
     { OSP_STR_CALLINGNUMBER, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.calling), NULL, OSP_MAP_CALLING },
     { OSP_STR_CALLEDNUMBER, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.called), NULL, OSP_MAP_CALLED },
+    { OSP_STR_PARSEREFER, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.parserefer), NULL, OSP_MAP_PARSEREFER },
     { OSP_STR_REFERID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.referid), NULL, OSP_MAP_REFERID },
     { OSP_STR_REFERCALLINGNUM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.refercalling), NULL, OSP_MAP_REFERCALLING },
     { OSP_STR_REFERCALLEDNUM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.refercalled), NULL, OSP_MAP_REFERCALLED },
@@ -1857,14 +1861,18 @@ static int osp_check_mapping(
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
     default:
-        /* If REFER ID is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_REFERID, OSP_DEF_MAY, mapping->referid);
+        /* Nothing to check for parserefer */
+        DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_PARSEREFER, mapping->parserefer);
+        if (mapping->parserefer) {
+            /* If REFER ID is incorrect, then fail. */
+            OSP_CHECK_ITEMMAP(OSP_STR_REFERID, OSP_DEF_MAY, mapping->referid);
 
-        /* If REFER calling number is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_REFERCALLINGNUM, OSP_DEF_MAY, mapping->refercalling);
+            /* If REFER calling number is incorrect, then fail. */
+            OSP_CHECK_ITEMMAP(OSP_STR_REFERCALLINGNUM, OSP_DEF_MAY, mapping->refercalling);
 
-        /* If REFER called number is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_REFERCALLEDNUM, OSP_DEF_MAY, mapping->refercalled);
+            /* If REFER called number is incorrect, then fail. */
+            OSP_CHECK_ITEMMAP(OSP_STR_REFERCALLEDNUM, OSP_DEF_MAY, mapping->refercalled);
+        }
         break;
     }
 
@@ -3188,24 +3196,26 @@ static int osp_get_usageinfo(
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
     default:
-        switch (type) {
-        case PW_STATUS_START:
-            /* This is a special case that Acme transferred call leg Start RADIUS record does not have Acme-Primary-Routing-Number */
-            OSP_GET_STRING(request, TRUE, referflagname, OSP_DEF_MAY, referflagmap, buffer);
-            if (!OSP_CHECK_STRING(buffer)) {
-                refer = TRUE;
+        if (mapping->parserefer) {
+            switch (type) {
+            case PW_STATUS_START:
+                /* This is a special case that Acme transferred call leg Start RADIUS record does not have Acme-Primary-Routing-Number */
+                OSP_GET_STRING(request, TRUE, referflagname, OSP_DEF_MAY, referflagmap, buffer);
+                if (!OSP_CHECK_STRING(buffer)) {
+                    refer = TRUE;
+                }
+                break;
+            case PW_STATUS_STOP:
+                /* Get REFER ID */
+                OSP_GET_STRING(request, TRUE, OSP_STR_REFERID, OSP_DEF_MAY, mapping->referid, usage->referid);
+                if (OSP_CHECK_STRING(usage->referid)) {
+                    refer = TRUE;
+                }
+                break;
+            case PW_STATUS_ALIVE:
+            default:
+                break;
             }
-            break;
-        case PW_STATUS_STOP:
-            /* Get REFER ID */
-            OSP_GET_STRING(request, TRUE, OSP_STR_REFERID, OSP_DEF_MAY, mapping->referid, usage->referid);
-            if (OSP_CHECK_STRING(usage->referid)) {
-                refer = TRUE;
-            }
-            break;
-        case PW_STATUS_ALIVE:
-        default:
-            break;
         }
         break;
     }
