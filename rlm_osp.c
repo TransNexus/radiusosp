@@ -411,16 +411,6 @@ typedef enum {
 } osp_callnum_e;
 
 /*
- * BroadWorks sub status type
- */
-#define OSP_BWTYPE_START    "Start"         /* Start */
-#define OSP_BWTYPE_END      "End"           /* End */
-#define OSP_BWTYPE_DURATION "Long Diration" /* Long Duration */
-#define OSP_BWTYPE_NORMAL   "Normal"        /* Normal */
-#define OSP_BWTYPE_INTERIM  "Interim"       /* Interim */
-#define OSP_BWTYPE_FAILOVER "Failover"      /* Failover */
-
-/*
  * Cisco h323-call-origin value strings
  */
 #define OSP_CISCOCALL_IN    "answer"    /* Call answer, inbound */
@@ -475,6 +465,24 @@ typedef enum {
 #define OSP_BWREL_NONE      "none"
 #define OSP_BWREL_LOCAL     "local"
 #define OSP_BWREL_REMOTE    "remote"
+
+/*
+ * BroadWorks sub status type
+ */
+#define OSP_BWTYPE_START    "Start"         /* Start */
+#define OSP_BWTYPE_END      "End"           /* End */
+#define OSP_BWTYPE_DURATION "Long Diration" /* Long Duration */
+#define OSP_BWTYPE_NORMAL   "Normal"        /* Normal */
+#define OSP_BWTYPE_INTERIM  "Interim"       /* Interim */
+#define OSP_BWTYPE_FAILOVER "Failover"      /* Failover */
+
+/*
+ * BroadWorks special device names
+ */
+#define OSP_BWDEV_GROUP         "Group"
+#define OSP_BWDEV_ENTERPRISE    "Enterprise"
+#define OSP_BWDEV_UNCONFIRMED   "unconfirmed"
+#define OSP_BWDEV_UNAVAILABLE   "unavailable"
 
 /*
  * Normal string buffer type
@@ -1099,6 +1107,7 @@ typedef struct {
  * param _host Host of IP
  */
 #define OSP_GET_IP(_req, _flag, _name, _lev, _map, _ip, _port, _buf, _val, _host) { \
+    _host[0] = '\0'; \
     if (_flag) { \
         if (OSP_CHECK_STRING(_map)) { \
             radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
@@ -3271,13 +3280,50 @@ static int osp_get_usageinfo(
             /* Get route device/destination */
             /* Special case, BWAS-Route may not be reported */
             OSP_GET_IP(request, TRUE, OSP_STR_ROUTEDEVICE, OSP_DEF_MAY, mapping->routedev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination, desthost);
+            switch (type) {
+            case PW_STATUS_STOP:
+            case PW_STATUS_ALIVE:
+                if (!strcasecmp(usage->destination, OSP_BWDEV_GROUP) || !strcasecmp(usage->destination, OSP_BWDEV_ENTERPRISE)) {
+                    strncpy(usage->destination, proxy, sizeof(usage->destination));
+                } 
+                break;
+            case PW_STATUS_START:
+                if (usage->destination[0] == '\0') {
+                    strncpy(usage->destination, proxy, sizeof(usage->destination));
+                }
+                break;
+            default:
+                break;
+            }
         } else {
             /* Get route device/source*/
             OSP_GET_IP(request, TRUE, OSP_STR_ROUTEDEVICE, OSP_DEF_MUST, mapping->routedev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev, desthost);
+            switch (type) {
+            case PW_STATUS_START:
+            case PW_STATUS_STOP:
+            case PW_STATUS_ALIVE:
+                if (!strcasecmp(usage->srcdev, OSP_BWDEV_GROUP) || !strcasecmp(usage->srcdev, OSP_BWDEV_ENTERPRISE)) {
+                    strncpy(usage->srcdev, proxy, sizeof(usage->srcdev));
+                } 
+                break;
+            default:
+                break;
+            }
 
             /* Get access device/destination */
             /* Special case, BWAS-Access-Device-Address may not be reported */
             OSP_GET_IP(request, TRUE, OSP_STR_ACCESSDEVICE, OSP_DEF_MAY, mapping->accessdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination, tmphost);
+            switch (type) {
+            case PW_STATUS_START:
+            case PW_STATUS_STOP:
+            case PW_STATUS_ALIVE:
+                if (usage->destination[0] == '\0') {
+                    strncpy(usage->destination, proxy, sizeof(usage->destination));
+                } 
+                break;
+            default:
+                break;
+            }
         }
         break;
     case OSP_CLIENT_UNDEF:
