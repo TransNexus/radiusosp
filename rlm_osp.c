@@ -119,11 +119,12 @@ RCSID("$Id$")
 #define OSP_MAP_NUMFORMAT       "0"                             /* Calling/called number format, E.164 */
 #define OSP_MAP_CALLING         "%{Calling-Station-Id}"         /* Calling number, RFC 2865 */
 #define OSP_MAP_CALLED          "%{Called-Station-Id}"          /* Called number, RFC 2865 */
-#define OSP_MAP_ASSERTEDID      NULL                            /* P-Asserted-Identity */
 #define OSP_MAP_PARSEREFER      "yes"                           /* Parse REFER VSAs in RADIUS records */
 #define OSP_MAP_REFERID         NULL                            /* REFER ID */
 #define OSP_MAP_REFERCALLING    NULL                            /* REFER calling number */
 #define OSP_MAP_REFERCALLED     NULL                            /* REFER called number */
+#define OSP_MAP_ANSWERIND       NULL                            /* Answer indicator */
+#define OSP_MAP_ASSERTEDID      NULL                            /* P-Asserted-Identity */
 #define OSP_MAP_RPID            NULL                            /* Remote-Party-ID */
 #define OSP_MAP_SOURCE          "%{NAS-IP-Address}"             /* Source, RFC 2865 */
 #define OSP_MAP_PROXY           NULL                            /* Proxy */
@@ -141,7 +142,6 @@ RCSID("$Id$")
 #define OSP_MAP_CONNECT         NULL                            /* Call connect time */
 #define OSP_MAP_END             NULL                            /* Call end time */
 #define OSP_MAP_DURATION        "%{Acct-Session-Time}"          /* Call duration, RFC 2866 */
-#define OSP_MAP_ANSWERIND       NULL                            /* Answer indicator */
 #define OSP_MAP_PDDUNIT         "1"                             /* PDD unit, millisecond */
 #define OSP_MAP_PDD             NULL                            /* Post dial delay */
 #define OSP_MAP_RELEASE         NULL                            /* Release source */
@@ -220,6 +220,7 @@ RCSID("$Id$")
 #define OSP_STR_REFERID             "referid"
 #define OSP_STR_REFERCALLINGNUM     "refercallingnumber"
 #define OSP_STR_REFERCALLEDNUM      "refercallednumber"
+#define OSP_STR_ANSWERIND           "answerindicator"
 #define OSP_STR_ASSERTEDID          "assertedid"
 #define OSP_STR_RPID                "remotepartyid"
 #define OSP_STR_SOURCE              "source"
@@ -239,7 +240,6 @@ RCSID("$Id$")
 #define OSP_STR_ALERTTIME           "alerttime"
 #define OSP_STR_CONNECTTIME         "connecttime"
 #define OSP_STR_ENDTIME             "endtime"
-#define OSP_STR_ANSWERIND           "answerindictor"
 #define OSP_STR_DURATION            "duration"
 #define OSP_STR_PDDUNIT             "postdialdelayunit"
 #define OSP_STR_PDD                 "postdialdelay"
@@ -629,6 +629,7 @@ typedef struct {
     char* referid;                      /* Refer ID */
     char* refercalling;                 /* Refer calling number */
     char* refercalled;                  /* Refer called number */
+    char* answerind;                    /* Answer indicator */
     char* assertedid;                   /* P-Asserted-Identity */
     char* rpid;                         /* Remote-Party-ID */
     char* source;                       /* Source */
@@ -648,7 +649,6 @@ typedef struct {
     char* alert;                        /* Call alert time */
     char* connect;                      /* Call connect time */
     char* end;                          /* Call end time */
-    char* answerind;                    /* Answer indicator */
     char* duration;                     /* Call duration */
     int pddunit;                        /* Post dial delay unit */
     char* pdd;                          /* Post dial delay */
@@ -735,6 +735,7 @@ typedef struct {
     osp_string_t calling;                       /* Calling number */
     osp_string_t called;                        /* Called number */
     osp_string_t referid;                       /* Refer ID */
+    osp_bwanswer_t answerind;                   /* Answer indicator */
     osp_string_t assertedid;                    /* P-Asserted-Identity */
     osp_string_t rpid;                          /* Remote-Party-ID */
     osp_string_t source;                        /* Source */
@@ -750,7 +751,6 @@ typedef struct {
     time_t alert;                               /* Call alert time */
     time_t connect;                             /* Call connect time */
     time_t end;                                 /* Call end time */
-    osp_bwanswer_t answerind;                   /* Answer indicator */
     time_t duration;                            /* Length of call */
     int pdd;                                    /* Post Dial Delay, in milliseconds */
     int release;                                /* EP that released the call */
@@ -1390,6 +1390,7 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_REFERID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.referid), NULL, OSP_MAP_REFERID },
     { OSP_STR_REFERCALLINGNUM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.refercalling), NULL, OSP_MAP_REFERCALLING },
     { OSP_STR_REFERCALLEDNUM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.refercalled), NULL, OSP_MAP_REFERCALLED },
+    { OSP_STR_ANSWERIND, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.answerind), NULL, OSP_MAP_ANSWERIND },
     { OSP_STR_ASSERTEDID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.assertedid), NULL, OSP_MAP_ASSERTEDID },
     { OSP_STR_RPID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.rpid), NULL, OSP_MAP_RPID },
     { OSP_STR_SOURCE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.source), NULL, OSP_MAP_SOURCE },
@@ -1409,7 +1410,6 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_ALERTTIME, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.alert), NULL, OSP_MAP_ALERT },
     { OSP_STR_CONNECTTIME, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.connect), NULL, OSP_MAP_CONNECT },
     { OSP_STR_ENDTIME, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.end), NULL, OSP_MAP_END },
-    { OSP_STR_ANSWERIND, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.answerind), NULL, OSP_MAP_ANSWERIND },
     { OSP_STR_DURATION, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.duration), NULL, OSP_MAP_DURATION },
     { OSP_STR_PDDUNIT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.pddunit), NULL, OSP_MAP_PDDUNIT },
     { OSP_STR_PDD, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.pdd), NULL, OSP_MAP_PDD },
@@ -1890,7 +1890,10 @@ static int osp_check_mapping(
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
+        break;
     case OSP_CLIENT_BROADWORKS:
+        /* If call answer indicator is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_ANSWERIND, OSP_DEF_MAY, mapping->answerind);
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
@@ -1985,9 +1988,6 @@ static int osp_check_mapping(
 
     /* If call end time is undefined, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_ENDTIME, OSP_DEF_MUST, mapping->end);
-
-    /* If call answer indicator is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP(OSP_STR_ANSWERIND, OSP_DEF_MAY, mapping->answerind);
 
     /* If call duration is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_DURATION, OSP_DEF_MAY, mapping->duration);
@@ -3197,7 +3197,10 @@ static int osp_get_usageinfo(
         OSP_GET_STRING(request, TRUE, OSP_STR_SUBTYPE, OSP_DEF_MUST, mapping->subtype, usage->subtype);
         DEBUG2("rlm_osp: sub status type = '%s'", usage->subtype);
 
-        if (!strcasecmp(usage->subtype, OSP_BWTYPE_END) || !strcasecmp(usage->subtype, OSP_BWTYPE_FAILOVER)) {
+        if (!strcasecmp(usage->subtype, OSP_BWTYPE_START) || 
+            !strcasecmp(usage->subtype, OSP_BWTYPE_END) || 
+            !strcasecmp(usage->subtype, OSP_BWTYPE_FAILOVER))
+        {
             DEBUG2("rlm_osp: ignore sub status type '%s' record.", usage->subtype);
             return 1;
         }
@@ -3273,6 +3276,29 @@ static int osp_get_usageinfo(
 
         /* Get called number */
         OSP_GET_CALLNUM(request, TRUE, OSP_STR_CALLEDNUMBER, OSP_DEF_MUST, mapping->called, mapping->calledformat, buffer, ptr, size, usage->called);
+    }
+
+    /* Get answer indicator */
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        OSP_GET_STRING(request, TRUE, OSP_STR_ANSWERIND, OSP_DEF_MAY, mapping->answerind, buffer);
+        if (!strcasecmp(buffer, OSP_BWANSWER_STR_NO)) {
+            usage->answerind = OSP_BWANSWER_NO;
+        } else if (!strcasecmp(buffer, OSP_BWANSWER_STR_YES)) {
+            usage->answerind = OSP_BWANSWER_YES;
+        } else if (!strcasecmp(buffer, OSP_BWANSWER_STR_REDIR)) {
+            usage->answerind = OSP_BWANSWER_REDIR;
+        } else {
+            usage->answerind = OSP_BWANSWER_NO;
+        }
+        DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_ANSWERIND, usage->answerind);
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+    default:
+        break;
     }
 
     /* Get asserted ID */
@@ -3414,28 +3440,6 @@ static int osp_get_usageinfo(
     OSP_GET_TIME(request, parse, OSP_STR_ENDTIME, OSP_DEF_MUST, running, mapping->end, mapping->timeformat, OSP_TIME_DEF, buffer, usage->end);
 
     if (type == PW_STATUS_STOP) {
-        /* Get answer indicator */
-        switch (mapping->clienttype) {
-        case OSP_CLIENT_BROADWORKS:
-            OSP_GET_STRING(request, TRUE, OSP_STR_ANSWERIND, OSP_DEF_MAY, mapping->answerind, buffer);
-            if (!strcasecmp(buffer, OSP_BWANSWER_STR_NO)) {
-                usage->answerind = OSP_BWANSWER_NO;
-            } else if (!strcasecmp(buffer, OSP_BWANSWER_STR_YES)) {
-                usage->answerind = OSP_BWANSWER_YES;
-            } else if (!strcasecmp(buffer, OSP_BWANSWER_STR_REDIR)) {
-                usage->answerind = OSP_BWANSWER_REDIR;
-            } else {
-                usage->answerind = OSP_BWANSWER_NO;
-            }
-            break;
-        case OSP_CLIENT_UNDEF:
-        case OSP_CLIENT_ACME:
-        case OSP_CLIENT_GENBANDS3:
-        case OSP_CLIENT_CISCO:
-        default:
-            break;
-        }
-
         /* Get call duration */
         if (OSP_CHECK_STRING(mapping->duration)) {
             radius_xlat(buffer, sizeof(buffer), mapping->duration, request, NULL);
