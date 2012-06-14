@@ -735,7 +735,7 @@ typedef struct {
     osp_string_t calling;                       /* Calling number */
     osp_string_t called;                        /* Called number */
     osp_string_t referid;                       /* Refer ID */
-    osp_bwanswer_t answerind;                   /* Answer indicator */
+    OSPE_TRANSFER_STATUS transfer;              /* Transfer status */
     osp_string_t assertedid;                    /* P-Asserted-Identity */
     osp_string_t rpid;                          /* Remote-Party-ID */
     osp_string_t source;                        /* Source */
@@ -753,7 +753,7 @@ typedef struct {
     time_t end;                                 /* Call end time */
     time_t duration;                            /* Length of call */
     int pdd;                                    /* Post Dial Delay, in milliseconds */
-    int release;                                /* EP that released the call */
+    OSPE_RELEASE release;                       /* EP that released the call */
     int q850cause;                              /* Release reason, Q850 */
     int sipcause;                               /* Release reason, SIP */
     OSPE_PROTOCOL_NAME protocol;                /* Signaling protocol */
@@ -2501,7 +2501,7 @@ static int osp_accounting(
     if (OSP_CHECK_STRING(mapping->iditem)) {
         OSP_GET_STRING(request, TRUE, OSP_STR_IDITEM, OSP_DEF_MAY, mapping->iditem, buffer);
         if ((buffer[0] == '\0') ||
-            (OSP_CHECK_STRING(mapping->idvalue) && (strcasecmp(mapping->idvalue, buffer))))
+            (OSP_CHECK_STRING(mapping->idvalue) && strcasecmp(mapping->idvalue, buffer)))
         {
             DEBUG2("rlm_osp: nothing to do for this request.");
             return RLM_MODULE_NOOP;
@@ -2865,6 +2865,31 @@ static int osp_accounting(
         break;
     }
 
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+        break;
+    case OSP_CLIENT_BROADWORKS:
+        /* Report transfer status */
+        OSPPTransactionSetTransferStatus(
+            transaction,        /* Transaction handle */
+            usage.transfer);    /* Transfer status */
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    default:
+        /* Report transfer ID */
+        OSPPTransactionSetTransferId(
+            transaction,    /* Transaction handle */
+            usage.referid); /* Transfer ID */
+
+        /* Report transfer status */
+        OSPPTransactionSetTransferStatus(
+            transaction,        /* Transaction handle */
+            usage.transfer);    /* Transfer status */
+        break;
+    }
+
     /* Report source codec */
     OSPPTransactionSetCodec(
         transaction,        /* Transaction handle */
@@ -3173,6 +3198,7 @@ static int osp_get_usageinfo(
     DEBUG3("rlm_osp: osp_get_usageinfo start");
 
     memset(usage, 0, sizeof(*usage));
+    usage->transfer = OSPC_TSTATUS_UNKNOWN;
 
     /* Get call direction */
     switch (mapping->clienttype) {
@@ -3255,6 +3281,7 @@ static int osp_get_usageinfo(
                 OSP_GET_STRING(request, TRUE, OSP_STR_REFERID, OSP_DEF_MAY, mapping->referid, usage->referid);
                 if (OSP_CHECK_STRING(usage->referid)) {
                     refer = TRUE;
+                    usage->transfer = OSPC_TSTATUS_TRANSFERTO;
                 }
                 break;
             case PW_STATUS_ALIVE:
@@ -3282,16 +3309,11 @@ static int osp_get_usageinfo(
     switch (mapping->clienttype) {
     case OSP_CLIENT_BROADWORKS:
         OSP_GET_STRING(request, TRUE, OSP_STR_ANSWERIND, OSP_DEF_MAY, mapping->answerind, buffer);
-        if (!strcasecmp(buffer, OSP_BWANSWER_STR_NO)) {
-            usage->answerind = OSP_BWANSWER_NO;
-        } else if (!strcasecmp(buffer, OSP_BWANSWER_STR_YES)) {
-            usage->answerind = OSP_BWANSWER_YES;
-        } else if (!strcasecmp(buffer, OSP_BWANSWER_STR_REDIR)) {
-            usage->answerind = OSP_BWANSWER_REDIR;
+        if (!strcasecmp(buffer, OSP_BWANSWER_STR_REDIR)) {
+            usage->transfer = OSPC_TSTATUS_TRANSFERFROM;
         } else {
-            usage->answerind = OSP_BWANSWER_NO;
+            usage->transfer = OSPC_TSTATUS_UNKNOWN;
         }
-        DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_ANSWERIND, usage->answerind);
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
@@ -3541,13 +3563,13 @@ static int osp_get_usageinfo(
                     }
                     break;
                 case OSP_CLIENT_BROADWORKS:
-                    if (strcasecmp(buffer, OSP_BWREL_LOCAL)) {
+                    if (!strcasecmp(buffer, OSP_BWREL_LOCAL)) {
                         if (usage->direction == OSP_DIRECTION_IN) {
                             usage->release = OSPC_RELEASE_SOURCE;
                         } else {
                             usage->release = OSPC_RELEASE_DESTINATION;
                         }
-                    } else if (strcasecmp(buffer, OSP_BWREL_REMOTE)) {
+                    } else if (!strcasecmp(buffer, OSP_BWREL_REMOTE)) {
                         if (usage->direction == OSP_DIRECTION_IN) {
                             usage->release = OSPC_RELEASE_DESTINATION;
                         } else {
