@@ -119,10 +119,11 @@ RCSID("$Id$")
 #define OSP_MAP_NUMFORMAT       "0"                             /* Calling/called number format, E.164 */
 #define OSP_MAP_CALLING         "%{Calling-Station-Id}"         /* Calling number, RFC 2865 */
 #define OSP_MAP_CALLED          "%{Called-Station-Id}"          /* Called number, RFC 2865 */
-#define OSP_MAP_PARSEREFER      "yes"                           /* Parse REFER VSAs in RADIUS records */
-#define OSP_MAP_REFERID         NULL                            /* REFER ID */
-#define OSP_MAP_REFERCALLING    NULL                            /* REFER calling number */
-#define OSP_MAP_REFERCALLED     NULL                            /* REFER called number */
+#define OSP_MAP_PARSETRANSFER   "yes"                           /* Parse transfer VSAs in RADIUS records */
+#define OSP_MAP_TRANSFERCALLING NULL                            /* Transfer calling number */
+#define OSP_MAP_TRANSFERCALLED  NULL                            /* Transfer called called number */
+#define OSP_MAP_TRANSFERRET     NULL                            /* Transfer result */
+#define OSP_MAP_TRANSFERID      NULL                            /* Transfer ID */
 #define OSP_MAP_ANSWERIND       NULL                            /* Answer indicator */
 #define OSP_MAP_ASSERTEDID      NULL                            /* P-Asserted-Identity */
 #define OSP_MAP_RPID            NULL                            /* Remote-Party-ID */
@@ -216,11 +217,11 @@ RCSID("$Id$")
 #define OSP_STR_CALLEDFORMAT        "callednumberformat"
 #define OSP_STR_CALLINGNUMBER       "callingnumber"
 #define OSP_STR_CALLEDNUMBER        "callednumber"
-#define OSP_STR_PARSEREFER          "parserefer"
-#define OSP_STR_REFERID             "referid"
-#define OSP_STR_REFERCALLINGNUM     "refercallingnumber"
-#define OSP_STR_REFERCALLEDNUM      "refercallednumber"
-#define OSP_STR_ANSWERIND           "answerindicator"
+#define OSP_STR_PARSETRANSFER       "parsetransfer"
+#define OSP_STR_TRANSFERCALLINGNUM  "transfercallingnumber"
+#define OSP_STR_TRANSFERCALLEDNUM   "transfercallednumber"
+#define OSP_STR_TRANSFERRET         "transferresult"
+#define OSP_STR_TRANSFERID          "transferid"
 #define OSP_STR_ASSERTEDID          "assertedid"
 #define OSP_STR_RPID                "remotepartyid"
 #define OSP_STR_SOURCE              "source"
@@ -488,20 +489,10 @@ typedef enum {
 #define OSP_BWDEV_UNAVAILABLE   "unavailable"
 
 /*
- * BroadWorks answer indicator strings
+ * BroadWorks transfer results
  */
-#define OSP_BWANSWER_STR_NO     "No"
-#define OSP_BWANSWER_STR_YES    "Yes"
-#define OSP_BWANSWER_STR_REDIR  "Yes-PostRedirection"
-
-/*
- * BroadWorks answer indicator
- */
-typedef enum {
-    OSP_BWANSWER_NO = 0,
-    OSP_BWANSWER_YES,
-    OSP_BWANSWER_REDIR
-} osp_bwanswer_t;
+#define OSP_BWTRANSFERRET_FAILURE   "Failure"
+#define OSP_BWTRANSFERRET_SUCCESS   "Success"
 
 /*
  * Normal string buffer type
@@ -625,11 +616,11 @@ typedef struct {
     int calledformat;                   /* Called number format */
     char* calling;                      /* Calling number */
     char* called;                       /* Called number */
-    int parserefer;                     /* If to parse REFER VSAs in RADIUS records */
-    char* referid;                      /* Refer ID */
-    char* refercalling;                 /* Refer calling number */
-    char* refercalled;                  /* Refer called number */
-    char* answerind;                    /* Answer indicator */
+    int parsetransfer;                  /* If to parse transfer VSAs in RADIUS records */
+    char* transfercalling;              /* Transfer calling number */
+    char* transfercalled;               /* Transfer called number */
+    char* transferret;                  /* Transfer result */
+    char* transferid;                   /* Transfer ID */
     char* assertedid;                   /* P-Asserted-Identity */
     char* rpid;                         /* Remote-Party-ID */
     char* source;                       /* Source */
@@ -734,7 +725,7 @@ typedef struct {
     osp_string_t callid;                        /* Call-ID */
     osp_string_t calling;                       /* Calling number */
     osp_string_t called;                        /* Called number */
-    osp_string_t referid;                       /* Refer ID */
+    osp_string_t transferid;                    /* Transfer ID */
     OSPE_TRANSFER_STATUS transfer;              /* Transfer status */
     osp_string_t assertedid;                    /* P-Asserted-Identity */
     osp_string_t rpid;                          /* Remote-Party-ID */
@@ -1386,11 +1377,11 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_CALLEDFORMAT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.calledformat), NULL, OSP_MAP_NUMFORMAT },
     { OSP_STR_CALLINGNUMBER, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.calling), NULL, OSP_MAP_CALLING },
     { OSP_STR_CALLEDNUMBER, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.called), NULL, OSP_MAP_CALLED },
-    { OSP_STR_PARSEREFER, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.parserefer), NULL, OSP_MAP_PARSEREFER },
-    { OSP_STR_REFERID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.referid), NULL, OSP_MAP_REFERID },
-    { OSP_STR_REFERCALLINGNUM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.refercalling), NULL, OSP_MAP_REFERCALLING },
-    { OSP_STR_REFERCALLEDNUM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.refercalled), NULL, OSP_MAP_REFERCALLED },
-    { OSP_STR_ANSWERIND, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.answerind), NULL, OSP_MAP_ANSWERIND },
+    { OSP_STR_PARSETRANSFER, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.parsetransfer), NULL, OSP_MAP_PARSETRANSFER },
+    { OSP_STR_TRANSFERCALLINGNUM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transfercalling), NULL, OSP_MAP_TRANSFERCALLING },
+    { OSP_STR_TRANSFERCALLEDNUM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transfercalled), NULL, OSP_MAP_TRANSFERCALLED },
+    { OSP_STR_TRANSFERRET, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transferret), NULL, OSP_MAP_TRANSFERRET },
+    { OSP_STR_TRANSFERID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transferid), NULL, OSP_MAP_TRANSFERID },
     { OSP_STR_ASSERTEDID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.assertedid), NULL, OSP_MAP_ASSERTEDID },
     { OSP_STR_RPID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.rpid), NULL, OSP_MAP_RPID },
     { OSP_STR_SOURCE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.source), NULL, OSP_MAP_SOURCE },
@@ -1892,23 +1883,26 @@ static int osp_check_mapping(
     case OSP_CLIENT_CISCO:
         break;
     case OSP_CLIENT_BROADWORKS:
-        /* If call answer indicator is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_ANSWERIND, OSP_DEF_MAY, mapping->answerind);
+        /* If transfer result is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_TRANSFERRET, OSP_DEF_MAY, mapping->transferret);
+
+        /* If transfer ID is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_TRANSFERID, OSP_DEF_MAY, mapping->transferid);
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
     default:
-        /* Nothing to check for parserefer */
-        DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_PARSEREFER, mapping->parserefer);
-        if (mapping->parserefer) {
-            /* If REFER ID is incorrect, then fail. */
-            OSP_CHECK_ITEMMAP(OSP_STR_REFERID, OSP_DEF_MAY, mapping->referid);
+        /* Nothing to check for parsetransfer */
+        DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_PARSETRANSFER, mapping->parsetransfer);
+        if (mapping->parsetransfer) {
+            /* If transfer calling number is incorrect, then fail. */
+            OSP_CHECK_ITEMMAP(OSP_STR_TRANSFERCALLINGNUM, OSP_DEF_MAY, mapping->transfercalling);
 
-            /* If REFER calling number is incorrect, then fail. */
-            OSP_CHECK_ITEMMAP(OSP_STR_REFERCALLINGNUM, OSP_DEF_MAY, mapping->refercalling);
+            /* If transfer called number is incorrect, then fail. */
+            OSP_CHECK_ITEMMAP(OSP_STR_TRANSFERCALLEDNUM, OSP_DEF_MAY, mapping->transfercalled);
 
-            /* If REFER called number is incorrect, then fail. */
-            OSP_CHECK_ITEMMAP(OSP_STR_REFERCALLEDNUM, OSP_DEF_MAY, mapping->refercalled);
+            /* If transfer ID is incorrect, then fail. */
+            OSP_CHECK_ITEMMAP(OSP_STR_TRANSFERID, OSP_DEF_MAY, mapping->transferid);
         }
         break;
     }
@@ -2870,18 +2864,13 @@ static int osp_accounting(
     case OSP_CLIENT_CISCO:
         break;
     case OSP_CLIENT_BROADWORKS:
-        /* Report transfer status */
-        OSPPTransactionSetTransferStatus(
-            transaction,        /* Transaction handle */
-            usage.transfer);    /* Transfer status */
-        break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
     default:
         /* Report transfer ID */
         OSPPTransactionSetTransferId(
-            transaction,    /* Transaction handle */
-            usage.referid); /* Transfer ID */
+            transaction,        /* Transaction handle */
+            usage.transferid);  /* Transfer ID */
 
         /* Report transfer status */
         OSPPTransactionSetTransferStatus(
@@ -3188,9 +3177,9 @@ static int osp_get_usageinfo(
     osp_string_t desthost;
     osp_string_t proxy;
     char* ptr;
-    char* referflagname = "referflag";
-    char* referflagmap = "%{Acme-Primary-Routing-Number}";
-    int refer, parse, size, i;
+    char* transferflagname = "transferflag";
+    char* transferflagmap = "%{Acme-Primary-Routing-Number}";
+    int transferred, parse, size, i;
     osp_intstr_e format;
     int release;
     struct in_addr dest;
@@ -3258,29 +3247,42 @@ static int osp_get_usageinfo(
     /* Get Call-ID */
     OSP_GET_STRING(request, TRUE, OSP_STR_CALLID, OSP_DEF_MUST, mapping->callid, usage->callid);
 
-    refer = FALSE;
+    transferred = FALSE;
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
+        break;
     case OSP_CLIENT_BROADWORKS:
+        /* Get transfer result */
+        OSP_GET_STRING(request, TRUE, OSP_STR_TRANSFERRET, OSP_DEF_MAY, mapping->transferret, buffer);
+        if (OSP_CHECK_STRING(buffer) && !strcasecmp(buffer, OSP_BWTRANSFERRET_SUCCESS)) {
+            if (usage->direction == OSP_DIRECTION_IN) {
+                usage->transfer = OSPC_TSTATUS_TRANSFERTO;
+            } else {
+                usage->transfer = OSPC_TSTATUS_TRANSFERFROM;
+            }
+
+            /* Get transfer ID */
+            OSP_GET_STRING(request, TRUE, OSP_STR_TRANSFERID, OSP_DEF_MAY, mapping->transferid, usage->transferid);
+        }
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
     default:
-        if (mapping->parserefer) {
+        if (mapping->parsetransfer) {
             switch (type) {
             case PW_STATUS_START:
                 /* This is a special case that Acme transferred call leg Start RADIUS record does not have Acme-Primary-Routing-Number */
-                OSP_GET_STRING(request, TRUE, referflagname, OSP_DEF_MAY, referflagmap, buffer);
+                OSP_GET_STRING(request, TRUE, transferflagname, OSP_DEF_MAY, transferflagmap, buffer);
                 if (!OSP_CHECK_STRING(buffer)) {
-                    refer = TRUE;
+                    transferred = TRUE;
                 }
                 break;
             case PW_STATUS_STOP:
-                /* Get REFER ID */
-                OSP_GET_STRING(request, TRUE, OSP_STR_REFERID, OSP_DEF_MAY, mapping->referid, usage->referid);
-                if (OSP_CHECK_STRING(usage->referid)) {
-                    refer = TRUE;
+                /* Get transfer ID */
+                OSP_GET_STRING(request, TRUE, OSP_STR_TRANSFERID, OSP_DEF_MAY, mapping->transferid, usage->transferid);
+                if (OSP_CHECK_STRING(usage->transferid)) {
+                    transferred = TRUE;
                     usage->transfer = OSPC_TSTATUS_TRANSFERTO;
                 }
                 break;
@@ -3291,36 +3293,18 @@ static int osp_get_usageinfo(
         }
         break;
     }
-    if (refer) {
+    if (transferred) {
         /* Get calling number */
-        OSP_GET_CALLNUM(request, TRUE, OSP_STR_REFERCALLINGNUM, OSP_DEF_MAY, mapping->refercalling, mapping->callingformat, buffer, ptr, size, usage->calling);
+        OSP_GET_CALLNUM(request, TRUE, OSP_STR_TRANSFERCALLINGNUM, OSP_DEF_MAY, mapping->transfercalling, mapping->callingformat, buffer, ptr, size, usage->calling);
 
         /* Get called number */
-        OSP_GET_CALLNUM(request, TRUE, OSP_STR_REFERCALLEDNUM, OSP_DEF_MUST, mapping->refercalled, mapping->calledformat, buffer, ptr, size, usage->called);
+        OSP_GET_CALLNUM(request, TRUE, OSP_STR_TRANSFERCALLEDNUM, OSP_DEF_MUST, mapping->transfercalled, mapping->calledformat, buffer, ptr, size, usage->called);
     } else {
         /* Get calling number */
         OSP_GET_CALLNUM(request, TRUE, OSP_STR_CALLINGNUMBER, OSP_DEF_MAY, mapping->calling, mapping->callingformat, buffer, ptr, size, usage->calling);
 
         /* Get called number */
         OSP_GET_CALLNUM(request, TRUE, OSP_STR_CALLEDNUMBER, OSP_DEF_MUST, mapping->called, mapping->calledformat, buffer, ptr, size, usage->called);
-    }
-
-    /* Get answer indicator */
-    switch (mapping->clienttype) {
-    case OSP_CLIENT_BROADWORKS:
-        OSP_GET_STRING(request, TRUE, OSP_STR_ANSWERIND, OSP_DEF_MAY, mapping->answerind, buffer);
-        if (!strcasecmp(buffer, OSP_BWANSWER_STR_REDIR)) {
-            usage->transfer = OSPC_TSTATUS_TRANSFERFROM;
-        } else {
-            usage->transfer = OSPC_TSTATUS_UNKNOWN;
-        }
-        break;
-    case OSP_CLIENT_UNDEF:
-    case OSP_CLIENT_ACME:
-    case OSP_CLIENT_GENBANDS3:
-    case OSP_CLIENT_CISCO:
-    default:
-        break;
     }
 
     /* Get asserted ID */
