@@ -42,3 +42,7 @@ Version 1.1.3 - 2012-04-19
 *Removed error message for E164SIPURI calling number parsing.
 *Added check for empty mapping.
 *Added support for Acme REFER call scenario.
+----------------------------------------------------------------------
+
+Version 2.0.0 - 
+*Added BroadWorks support.

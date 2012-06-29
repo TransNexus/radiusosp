@@ -37,9 +37,9 @@ RCSID("$Id$")
 /*
  * OSP module version
  */
-#define OSP_MODULE_VERSION_MAJOR    1
-#define OSP_MODULE_VERSION_MINOR    1
-#define OSP_MODULE_VERSION_BUGFIX   3
+#define OSP_MODULE_VERSION_MAJOR    2
+#define OSP_MODULE_VERSION_MINOR    0
+#define OSP_MODULE_VERSION_BUGFIX   0
 
 /*
  * OSP module buffer size constants.
@@ -105,22 +105,27 @@ RCSID("$Id$")
 /*
  * Default RADIUS OSP mapping
  */
+#define OSP_MAP_NULL            "NULL"                          /* Empty map */
 #define OSP_MAP_IDITEM          NULL                            /* RADIUS record identity VSA name */
 #define OSP_MAP_IDVALUE         NULL                            /* RADIUS record identity VSA value */
 #define OSP_MAP_REPORT          "yes"                           /* Report Stop, Start or Interim-Update RADIUS records */
 #define OSP_MAP_CLIENTTYPE      "0"                             /* RADIUS client type, undefined */
 #define OSP_MAP_NETLIST         NULL                            /* Subnet list */
-#define OSP_MAP_ORIGIN          NULL                            /* Call origin */
-#define OSP_MAP_IGNORERAD       "no"                            /* Ingore answer or originate RADIUS records */
+#define OSP_MAP_SUBTYPE         NULL                            /* Sub status type */
+#define OSP_MAP_DIRECTION       NULL                            /* Call direction */
+#define OSP_MAP_IGNORERAD       "no"                            /* Ingore inbound or outbound RADIUS records */
 #define OSP_MAP_TRANSID         NULL                            /* Transaction ID */
 #define OSP_MAP_CALLID          "%{Acct-Session-Id}"            /* Call-ID, RFC 2866 */
 #define OSP_MAP_NUMFORMAT       "0"                             /* Calling/called number format, E.164 */
 #define OSP_MAP_CALLING         "%{Calling-Station-Id}"         /* Calling number, RFC 2865 */
 #define OSP_MAP_CALLED          "%{Called-Station-Id}"          /* Called number, RFC 2865 */
+#define OSP_MAP_PARSETRANSFER   "yes"                           /* Parse transfer VSAs in RADIUS records */
+#define OSP_MAP_TRANSFERCALLING NULL                            /* Transfer calling number */
+#define OSP_MAP_TRANSFERCALLED  NULL                            /* Transfer called called number */
+#define OSP_MAP_TRANSFERRET     NULL                            /* Transfer result */
+#define OSP_MAP_TRANSFERID      NULL                            /* Transfer ID */
+#define OSP_MAP_ANSWERIND       NULL                            /* Answer indicator */
 #define OSP_MAP_ASSERTEDID      NULL                            /* P-Asserted-Identity */
-#define OSP_MAP_REFERID         NULL                            /* REFER ID */
-#define OSP_MAP_REFERCALLING    NULL                            /* REFER calling number */
-#define OSP_MAP_REFERCALLED     NULL                            /* REFER called number */
 #define OSP_MAP_RPID            NULL                            /* Remote-Party-ID */
 #define OSP_MAP_SOURCE          "%{NAS-IP-Address}"             /* Source, RFC 2865 */
 #define OSP_MAP_PROXY           NULL                            /* Proxy */
@@ -128,6 +133,7 @@ RCSID("$Id$")
 #define OSP_MAP_DESTINATION     NULL                            /* Destination */
 #define OSP_MAP_DESTDEV         NULL                            /* Destination device */
 #define OSP_MAP_DESTCOUNT       NULL                            /* Destination count */
+#define OSP_MAP_DEVICE          NULL                            /* General device */
 #define OSP_MAP_NETWORKID       NULL                            /* Network ID */
 #define OSP_MAP_DIVUSER         NULL                            /* Diversion user */
 #define OSP_MAP_DIVHOST         NULL                            /* Diversion host */
@@ -148,6 +154,7 @@ RCSID("$Id$")
 #define OSP_MAP_CONFID          NULL                            /* Conference ID */
 #define OSP_MAP_CUSTOMINFO      NULL                            /* User-defined info */
 #define OSP_MAP_REALM           NULL                            /* Realm */
+#define OSP_MAP_CALLPARTYINFO   NULL                            /* Call party info */
 #define OSP_MAP_STATS           NULL                            /* Statistics */
 #define OSP_MAP_SCALE           "4"                             /* Scale, 1 */
 
@@ -192,69 +199,85 @@ RCSID("$Id$")
 #define OSP_STR_DEVICEPORT      "deviceport"
 
 /* RADIUS OSP mapping parameter names */
-#define OSP_STR_MAPPING         "mapping"
-#define OSP_STR_IDITEM          "identityitem"
-#define OSP_STR_IDVALUE         "identityvalue"
-#define OSP_STR_REPORTSTART     "reportstart"
-#define OSP_STR_REPORTSTOP      "reportstop"
-#define OSP_STR_REPORTINTERIM   "reportinterim"
-#define OSP_STR_CLIENTTYPE      "clienttype"
-#define OSP_STR_IGNOREDDESTLIST "ignoreddestinationlist"
-#define OSP_STR_CALLORIGIN      "callorigin"
-#define OSP_STR_IGNOREANSWER    "ignoreanswer"
-#define OSP_STR_IGNOREORIGINATE "ignoreoriginate"
-#define OSP_STR_TRANSACTIONID   "transactionid"
-#define OSP_STR_CALLID          "callid"
-#define OSP_STR_CALLINGFORMAT   "callingnumberformat"
-#define OSP_STR_CALLEDFORMAT    "callednumberformat"
-#define OSP_STR_CALLINGNUMBER   "callingnumber"
-#define OSP_STR_CALLEDNUMBER    "callednumber"
-#define OSP_STR_REFERID         "referid"
-#define OSP_STR_REFERCALLINGNUM "refercallingnumber"
-#define OSP_STR_REFERCALLEDNUM  "refercallednumber"
-#define OSP_STR_ASSERTEDID      "assertedid"
-#define OSP_STR_RPID            "remotepartyid"
-#define OSP_STR_SOURCE          "source"
-#define OSP_STR_PROXY           "proxy"
-#define OSP_STR_SRCDEVICE       "sourcedevice"
-#define OSP_STR_DESTINATION     "destination"
-#define OSP_STR_DESTDEVICE      "destinationdevice"
-#define OSP_STR_DESTCOUNT       "destinationcount"
-#define OSP_STR_SRCNETWORKID    "sourcenetworkid"
-#define OSP_STR_DESTNETWORKID   "destinationnetworkid"
-#define OSP_STR_DIVERSIONUSER   "diversionuser"
-#define OSP_STR_DIVERSIONHOST   "diversionhost"
-#define OSP_STR_TIMEFORMAT      "timestringformat"
-#define OSP_STR_STARTTIME       "starttime"
-#define OSP_STR_ALERTTIME       "alerttime"
-#define OSP_STR_CONNECTTIME     "connecttime"
-#define OSP_STR_ENDTIME         "endtime"
-#define OSP_STR_DURATION        "duration"
-#define OSP_STR_PDDUNIT         "postdialdelayunit"
-#define OSP_STR_PDD             "postdialdelay"
-#define OSP_STR_RELEASE         "releasesource"
-#define OSP_STR_Q850CAUSE       "q850releasecause"
-#define OSP_STR_SIPCAUSE        "sipreleasecause"
-#define OSP_STR_PROTOCOL        "signalingprotocol"
-#define OSP_STR_SRCPROTOCOL     "sourceprotocol"
-#define OSP_STR_DESTPROTOCOL    "destinationprotocol"
-#define OSP_STR_SRCSESSIONID    "sourcesessionid"
-#define OSP_STR_DESTSESSIONID   "destinationsessionid"
-#define OSP_STR_CORRSESSIONID   "correlationsessionid"
-#define OSP_STR_SRCCODEC        "sourcecodec"
-#define OSP_STR_DESTCODEC       "destinationcodec"
-#define OSP_STR_CONFID          "conferenceid"
-#define OSP_STR_CUSTOMINFO      "custominfo"
-#define OSP_STR_CUSTOMINFO1     "custominfo1"
-#define OSP_STR_CUSTOMINFO2     "custominfo2"
-#define OSP_STR_CUSTOMINFO3     "custominfo3"
-#define OSP_STR_CUSTOMINFO4     "custominfo4"
-#define OSP_STR_CUSTOMINFO5     "custominfo5"
-#define OSP_STR_CUSTOMINFO6     "custominfo6"
-#define OSP_STR_CUSTOMINFO7     "custominfo7"
-#define OSP_STR_CUSTOMINFO8     "custominfo8"
-#define OSP_STR_SRCREALM        "sourcerealm"
-#define OSP_STR_DESTREALM       "destinationrealm"
+#define OSP_STR_MAPPING             "mapping"
+#define OSP_STR_IDITEM              "identityitem"
+#define OSP_STR_IDVALUE             "identityvalue"
+#define OSP_STR_REPORTSTART         "reportstart"
+#define OSP_STR_REPORTSTOP          "reportstop"
+#define OSP_STR_REPORTINTERIM       "reportinterim"
+#define OSP_STR_CLIENTTYPE          "clienttype"
+#define OSP_STR_SUBTYPE             "substatustype"
+#define OSP_STR_IGNOREDDESTLIST     "ignoreddestinationlist"
+#define OSP_STR_DIRECTION           "calldirection"
+#define OSP_STR_IGNOREIN            "ignoreinbound"
+#define OSP_STR_IGNOREOUT           "ignoreoutbound"
+#define OSP_STR_TRANSACTIONID       "transactionid"
+#define OSP_STR_CALLID              "callid"
+#define OSP_STR_CALLINGFORMAT       "callingnumberformat"
+#define OSP_STR_CALLEDFORMAT        "callednumberformat"
+#define OSP_STR_CALLINGNUMBER       "callingnumber"
+#define OSP_STR_CALLEDNUMBER        "callednumber"
+#define OSP_STR_PARSETRANSFER       "parsetransfer"
+#define OSP_STR_TRANSFERCALLINGNUM  "transfercallingnumber"
+#define OSP_STR_TRANSFERCALLEDNUM   "transfercallednumber"
+#define OSP_STR_TRANSFERRET         "transferresult"
+#define OSP_STR_TRANSFERID          "transferid"
+#define OSP_STR_ASSERTEDID          "assertedid"
+#define OSP_STR_RPID                "remotepartyid"
+#define OSP_STR_SOURCE              "source"
+#define OSP_STR_PROXY               "proxy"
+#define OSP_STR_SRCDEVICE           "sourcedevice"
+#define OSP_STR_DESTINATION         "destination"
+#define OSP_STR_DESTDEVICE          "destinationdevice"
+#define OSP_STR_DESTCOUNT           "destinationcount"
+#define OSP_STR_ACCESSDEVICE        "accessdevice"
+#define OSP_STR_ROUTEDEVICE         "routedevice"
+#define OSP_STR_SRCNETWORKID        "sourcenetworkid"
+#define OSP_STR_DESTNETWORKID       "destinationnetworkid"
+#define OSP_STR_DIVERSIONUSER       "diversionuser"
+#define OSP_STR_DIVERSIONHOST       "diversionhost"
+#define OSP_STR_TIMEFORMAT          "timestringformat"
+#define OSP_STR_STARTTIME           "starttime"
+#define OSP_STR_ALERTTIME           "alerttime"
+#define OSP_STR_CONNECTTIME         "connecttime"
+#define OSP_STR_ENDTIME             "endtime"
+#define OSP_STR_DURATION            "duration"
+#define OSP_STR_PDDUNIT             "postdialdelayunit"
+#define OSP_STR_PDD                 "postdialdelay"
+#define OSP_STR_RELEASE             "releasesource"
+#define OSP_STR_Q850CAUSE           "q850releasecause"
+#define OSP_STR_SIPCAUSE            "sipreleasecause"
+#define OSP_STR_PROTOCOL            "signalingprotocol"
+#define OSP_STR_SRCPROTOCOL         "sourceprotocol"
+#define OSP_STR_DESTPROTOCOL        "destinationprotocol"
+#define OSP_STR_SRCSESSIONID        "sourcesessionid"
+#define OSP_STR_DESTSESSIONID       "destinationsessionid"
+#define OSP_STR_CORRSESSIONID       "correlationsessionid"
+#define OSP_STR_ACCESSCALLID        "accesscallid"
+#define OSP_STR_ROUTECALLID         "routecallid"
+#define OSP_STR_LOCALCALLID         "localcallid"
+#define OSP_STR_REMOTECALLID        "remotecallid"
+#define OSP_STR_SRCCODEC            "sourcecodec"
+#define OSP_STR_DESTCODEC           "destinationcodec"
+#define OSP_STR_CONFID              "conferenceid"
+#define OSP_STR_CUSTOMINFO          "custominfo"
+#define OSP_STR_CUSTOMINFO1         "custominfo1"
+#define OSP_STR_CUSTOMINFO2         "custominfo2"
+#define OSP_STR_CUSTOMINFO3         "custominfo3"
+#define OSP_STR_CUSTOMINFO4         "custominfo4"
+#define OSP_STR_CUSTOMINFO5         "custominfo5"
+#define OSP_STR_CUSTOMINFO6         "custominfo6"
+#define OSP_STR_CUSTOMINFO7         "custominfo7"
+#define OSP_STR_CUSTOMINFO8         "custominfo8"
+#define OSP_STR_SRCREALM            "sourcerealm"
+#define OSP_STR_DESTREALM           "destinationrealm"
+#define OSP_STR_OTHERPARTY          "otherpartyinfo"
+#define OSP_STR_CALLINGUSERNAME     "callingpartyusername"
+#define OSP_STR_CALLINGUSERID       "callingpartyuserid"
+#define OSP_STR_CALLINGUSERGROUP    "callingpartyusergroup"
+#define OSP_STR_CALLEDUSERNAME      "calledpartyusername"
+#define OSP_STR_CALLEDUSERID        "calledpartyuserid"
+#define OSP_STR_CALLEDUSERGROUP     "calledpartyusergroup"
 
 /* Statistics parameter names */
 #define OSP_STR_REPORTSTATS            "reportstatistics"
@@ -350,21 +373,6 @@ typedef enum {
 } osp_intstr_e;
 
 /*
- * OSP Toolkit release source
- */
-#define OSP_TK_RELSRC   0
-#define OSP_TK_RELDST   1
-
-/*
- * OSP release source
- */
-typedef enum {
-    OSP_RELEASE_UNDEF = 0,  /* Unknown */
-    OSP_RELEASE_SRC,        /* Source releases the call */
-    OSP_RELEASE_DEST,       /* Destination releases the call */
-} osp_release_e;
-
-/*
  * RADIUS client types
  */
 typedef enum {
@@ -373,7 +381,8 @@ typedef enum {
     OSP_CLIENT_ACME,                    /* Acme */
     OSP_CLIENT_GENBANDS3,               /* GENBAND S3 */
     OSP_CLIENT_CISCO,                   /* Cisco */
-    OSP_CLIENT_MAX = OSP_CLIENT_CISCO,
+    OSP_CLIENT_BROADWORKS,              /* BroadWorks */
+    OSP_CLIENT_MAX = OSP_CLIENT_BROADWORKS,
     OSP_CLIENT_NUMBER
 } osp_client_e;
 
@@ -383,11 +392,12 @@ typedef enum {
 typedef enum {
     OSP_TIMESTR_MIN = 0,
     OSP_TIMESTR_T = OSP_TIMESTR_MIN,    /* time_t, integer string */
-    OSP_TIMESTR_C,                      /* ctime, WWW MMM DD HH:MM:SS YYYY */
-    OSP_TIMESTR_ACME,                   /* Acme, HH:MM:SS.MMM ZON MMM DD YYYY */
-    OSP_TIMESTR_NTP ,                   /* NTP, HH:MM:SS.MMM ZON WWW MMM DD YYYY */
-    OSP_TIMESTR_CISCO ,                 /* NTP, {'*'|'.'}HH:MM:SS.MMM ZON WWW MMM DD YYYY */
-    OSP_TIMESTR_MAX = OSP_TIMESTR_CISCO,
+    OSP_TIMESTR_C,                      /* ctime, WWW MMM DD hh:mm:ss YYYY */
+    OSP_TIMESTR_ACME,                   /* Acme, hh:mm:ss.kkk ZON MMM DD YYYY */
+    OSP_TIMESTR_NTP,                    /* NTP, hh:mm:ss.kkk ZON WWW MMM DD YYYY */
+    OSP_TIMESTR_CISCO,                  /* NTP, {'*'|'.'}hh:mm:ss.kkk ZON WWW MMM DD YYYY */
+    OSP_TIMESTR_BW,                     /* BroadWorks, YYYYMMDDhhmmss.kkk */
+    OSP_TIMESTR_MAX = OSP_TIMESTR_BW,
     OSP_TIMESTR_NUMBER
 } osp_timestr_e;
 
@@ -407,16 +417,32 @@ typedef enum {
 /*
  * Cisco h323-call-origin value strings
  */
-#define OSP_CISCOCALL_TERM  "answer"    /* Call answer, inbound */
-#define OSP_CISCOCALL_INIT  "originate" /* Call originate, outbound */
+#define OSP_CISCOCALL_IN    "answer"    /* Call answer, inbound */
+#define OSP_CISCOCALL_OUT   "originate" /* Call originate, outbound */
 
 /*
- * Call origin types
+ * BroadWorks BWAS-Direction value strings
+ */
+#define OSP_BWCALL_IN   "Originating"   /* Call originating, inbound */
+#define OSP_BWCALL_OUT  "Terminating"   /* Call termianting, outbound */
+
+/*
+ * Call direction types
  */
 typedef enum {
-    OSP_ORIGIN_TERM = 0,    /* Terminating, inbound */
-    OSP_ORIGIN_INIT,        /* Initiating, outbound */
-} osp_origin_e;
+    OSP_DIRECTION_IN = 0,   /* Inbound */
+    OSP_DIRECTION_OUT,      /* Outbound */
+} osp_direction_e;
+
+/* 
+ * Acme release source 
+ */
+typedef enum {
+    OSP_ACMEREL_UNDEF = 0,  /* Unknown */
+    OSP_ACMEREL_SRC,        /* Source releases the call */
+    OSP_ACMEREL_DEST,       /* Destination releases the call */
+    OSP_ACMEREL_INT,        /* Internal releases the call */
+} osp_acmerelease_e;
 
 /*
  * Cisco release source
@@ -436,6 +462,37 @@ typedef enum {
     OSP_CISCOREL_EXTAPPL,
     OSP_CISCOREL_EXTAGENT
 } osp_ciscorelease_e;
+
+/*
+ * BroadWorks release source
+ */
+#define OSP_BWREL_NONE      "none"
+#define OSP_BWREL_LOCAL     "local"
+#define OSP_BWREL_REMOTE    "remote"
+
+/*
+ * BroadWorks sub status type
+ */
+#define OSP_BWTYPE_START    "Start"         /* Start */
+#define OSP_BWTYPE_END      "End"           /* End */
+#define OSP_BWTYPE_DURATION "Long Diration" /* Long Duration */
+#define OSP_BWTYPE_NORMAL   "Normal"        /* Normal */
+#define OSP_BWTYPE_INTERIM  "Interim"       /* Interim */
+#define OSP_BWTYPE_FAILOVER "Failover"      /* Failover */
+
+/*
+ * BroadWorks special device names
+ */
+#define OSP_BWDEV_GROUP         "Group"
+#define OSP_BWDEV_ENTERPRISE    "Enterprise"
+#define OSP_BWDEV_UNCONFIRMED   "unconfirmed"
+#define OSP_BWDEV_UNAVAILABLE   "unavailable"
+
+/*
+ * BroadWorks transfer results
+ */
+#define OSP_BWTRANSFERRET_FAILURE   "Failure"
+#define OSP_BWTRANSFERRET_SUCCESS   "Success"
 
 /*
  * Normal string buffer type
@@ -547,20 +604,23 @@ typedef struct {
     int reportstop;                     /* If to report RADIUS Stop records */
     int reportinterim;                  /* If to report RADIUS Interim-Update records */
     int clienttype;                     /* RADIUS client type */
+    char* subtype;                      /* Sub status type */
     char* ignoreddeststr;               /* Ignored destination subnet list string */
     osp_netlist_t ignoreddestlist;      /* Ignored destination subnet list */
-    char* origin;                       /* Call origin */
-    int ignoreterm;                     /* Ignore answer records */
-    int ignoreinit;                     /* Ignore originate records */
+    char* direction;                    /* Call direction */
+    int ignorein;                       /* Ignore inbound records */
+    int ignoreout;                      /* Ignore outbound records */
     char* transid;                      /* Transaction ID */
     char* callid;                       /* Call-ID */
     int callingformat;                  /* Calling number format */
     int calledformat;                   /* Called number format */
     char* calling;                      /* Calling number */
     char* called;                       /* Called number */
-    char* referid;                      /* Refer ID */
-    char* refercalling;                 /* Refer calling number */
-    char* refercalled;                  /* Refer called number */
+    int parsetransfer;                  /* If to parse transfer VSAs in RADIUS records */
+    char* transfercalling;              /* Transfer calling number */
+    char* transfercalled;               /* Transfer called number */
+    char* transferret;                  /* Transfer result */
+    char* transferid;                   /* Transfer ID */
     char* assertedid;                   /* P-Asserted-Identity */
     char* rpid;                         /* Remote-Party-ID */
     char* source;                       /* Source */
@@ -569,6 +629,8 @@ typedef struct {
     char* destination;                  /* Destination */
     char* destdev;                      /* Destination device */
     char* destcount;                    /* Destination count */
+    char* accessdev;                    /* Access device */
+    char* routedev;                     /* Route device */
     char* srcnid;                       /* Source network ID */
     char* destnid;                      /* Destination network ID */
     char* divuser;                      /* Diversion user */
@@ -590,12 +652,23 @@ typedef struct {
     char* srcsessionid;                 /* Source sessionID */
     char* destsessionid;                /* Destination session ID */
     char* corrsessionid;                /* Correlation session ID */
+    char* accesscallid;                 /* Access call ID */
+    char* routecallid;                  /* Route call ID */
+    char* localcallid;                  /* Local call ID */
+    char* remotecallid;                 /* Remote call ID */
     char* srccodec;                     /* Source codec */
     char* destcodec;                    /* Destination codec */
     char* confid;                       /* Conference ID */
     char* custinfo[OSP_CUSTOMINFO_MAX]; /* Custom info */
     char* srcrealm;                     /* Source realm */
     char* destrealm;                    /* Destination realm */
+    char* otherparty;                   /* Other party info */
+    char* callingusername;              /* Calling party user name */
+    char* callinguserid;                /* Calling party user ID */
+    char* callingusergroup;             /* Calling party user group */
+    char* calledusername;               /* Called party user name */
+    char* calleduserid;                 /* Called party user ID */
+    char* calledusergroup;              /* Called party user group */
     osp_statsmap_t stats;               /* Statistics */
 } osp_mapping_t;
 
@@ -646,12 +719,14 @@ typedef struct {
  * Usage information structure.
  */
 typedef struct {
-    int origin;                                 /* Call origin */
+    osp_string_t subtype;                       /* Sub status type */
+    int direction;                              /* Call direction */
     OSPTUINT64 transid;                         /* Transaction ID */
     osp_string_t callid;                        /* Call-ID */
     osp_string_t calling;                       /* Calling number */
     osp_string_t called;                        /* Called number */
-    osp_string_t referid;                       /* Refer ID */
+    osp_string_t transferid;                    /* Transfer ID */
+    OSPE_TRANSFER_STATUS transfer;              /* Transfer status */
     osp_string_t assertedid;                    /* P-Asserted-Identity */
     osp_string_t rpid;                          /* Remote-Party-ID */
     osp_string_t source;                        /* Source */
@@ -669,7 +744,7 @@ typedef struct {
     time_t end;                                 /* Call end time */
     time_t duration;                            /* Length of call */
     int pdd;                                    /* Post Dial Delay, in milliseconds */
-    int release;                                /* EP that released the call */
+    OSPE_RELEASE release;                       /* EP that released the call */
     int q850cause;                              /* Release reason, Q850 */
     int sipcause;                               /* Release reason, SIP */
     OSPE_PROTOCOL_NAME protocol;                /* Signaling protocol */
@@ -678,12 +753,21 @@ typedef struct {
     osp_string_t srcsessionid;                  /* Source session ID */
     osp_string_t destsessionid;                 /* Destination session ID */
     osp_string_t corrsessionid;                 /* Correlation session ID */
+    osp_string_t localcallid;                   /* Local call ID */
+    osp_string_t remotecallid;                  /* Remote call ID */
     osp_string_t srccodec;                      /* Source codec */
     osp_string_t destcodec;                     /* Destination codec */
     osp_string_t confid;                        /* Conference ID */
     osp_string_t custinfo[OSP_CUSTOMINFO_MAX];  /* Custom info */
     osp_string_t srcrealm;                      /* Source realm */
     osp_string_t destrealm;                     /* Destination realm */
+    osp_string_t otherparty;                    /* Other party info */
+    osp_string_t callingusername;               /* Calling party user name */
+    osp_string_t callinguserid;                 /* Calling party user ID */
+    osp_string_t callingusergroup;              /* Calling party user group */
+    osp_string_t calledusername;                /* Called party user name */
+    osp_string_t calleduserid;                  /* Called party user ID */
+    osp_string_t calledusergroup;               /* Called party user group */
     osp_stats_t stats;                          /* Statistics */
 } osp_usage_t;
 
@@ -737,6 +821,9 @@ typedef struct {
  */
 #define OSP_CHECK_ITEMMAP(_name, _lev, _map) { \
     DEBUG3("rlm_osp: check '%s' mapping", _name); \
+    if (OSP_CHECK_STRING(_map) && !strcasecmp(_map, OSP_MAP_NULL)) { \
+        _map = NULL; \
+    } \
     if (osp_check_itemmap(_map, _lev) < 0) { \
         if (OSP_CHECK_STRING(_map)) { \
             radlog(L_ERR, "rlm_osp: Incorrect '%s' mapping '%s'.", _name, _map); \
@@ -1034,6 +1121,7 @@ typedef struct {
  * param _host Host of IP
  */
 #define OSP_GET_IP(_req, _flag, _name, _lev, _map, _ip, _port, _buf, _val, _host) { \
+    _host[0] = '\0'; \
     if (_flag) { \
         if (OSP_CHECK_STRING(_map)) { \
             radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
@@ -1278,19 +1366,22 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_REPORTSTOP, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportstop), NULL, OSP_MAP_REPORT },
     { OSP_STR_REPORTINTERIM, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.reportinterim), NULL, OSP_MAP_REPORT },
     { OSP_STR_CLIENTTYPE, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.clienttype), NULL, OSP_MAP_CLIENTTYPE },
+    { OSP_STR_SUBTYPE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.subtype), NULL, OSP_MAP_SUBTYPE },
     { OSP_STR_IGNOREDDESTLIST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.ignoreddeststr), NULL, OSP_MAP_NETLIST },
-    { OSP_STR_CALLORIGIN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.origin), NULL, OSP_MAP_ORIGIN },
-    { OSP_STR_IGNOREANSWER, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.ignoreterm), NULL, OSP_MAP_IGNORERAD },
-    { OSP_STR_IGNOREORIGINATE, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.ignoreinit), NULL, OSP_MAP_IGNORERAD },
+    { OSP_STR_DIRECTION, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.direction), NULL, OSP_MAP_DIRECTION},
+    { OSP_STR_IGNOREIN, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.ignorein), NULL, OSP_MAP_IGNORERAD },
+    { OSP_STR_IGNOREOUT, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.ignoreout), NULL, OSP_MAP_IGNORERAD },
     { OSP_STR_TRANSACTIONID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transid), NULL, OSP_MAP_TRANSID },
     { OSP_STR_CALLID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.callid), NULL, OSP_MAP_CALLID },
     { OSP_STR_CALLINGFORMAT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.callingformat), NULL, OSP_MAP_NUMFORMAT },
     { OSP_STR_CALLEDFORMAT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.calledformat), NULL, OSP_MAP_NUMFORMAT },
     { OSP_STR_CALLINGNUMBER, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.calling), NULL, OSP_MAP_CALLING },
     { OSP_STR_CALLEDNUMBER, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.called), NULL, OSP_MAP_CALLED },
-    { OSP_STR_REFERID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.referid), NULL, OSP_MAP_REFERID },
-    { OSP_STR_REFERCALLINGNUM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.refercalling), NULL, OSP_MAP_REFERCALLING },
-    { OSP_STR_REFERCALLEDNUM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.refercalled), NULL, OSP_MAP_REFERCALLED },
+    { OSP_STR_PARSETRANSFER, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mapping.parsetransfer), NULL, OSP_MAP_PARSETRANSFER },
+    { OSP_STR_TRANSFERCALLINGNUM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transfercalling), NULL, OSP_MAP_TRANSFERCALLING },
+    { OSP_STR_TRANSFERCALLEDNUM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transfercalled), NULL, OSP_MAP_TRANSFERCALLED },
+    { OSP_STR_TRANSFERRET, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transferret), NULL, OSP_MAP_TRANSFERRET },
+    { OSP_STR_TRANSFERID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.transferid), NULL, OSP_MAP_TRANSFERID },
     { OSP_STR_ASSERTEDID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.assertedid), NULL, OSP_MAP_ASSERTEDID },
     { OSP_STR_RPID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.rpid), NULL, OSP_MAP_RPID },
     { OSP_STR_SOURCE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.source), NULL, OSP_MAP_SOURCE },
@@ -1299,6 +1390,8 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_DESTINATION, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destination), NULL, OSP_MAP_DESTINATION },
     { OSP_STR_DESTDEVICE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destdev), NULL, OSP_MAP_DESTDEV },
     { OSP_STR_DESTCOUNT, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destcount), NULL, OSP_MAP_DESTCOUNT },
+    { OSP_STR_ACCESSDEVICE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.accessdev), NULL, OSP_MAP_DEVICE },
+    { OSP_STR_ROUTEDEVICE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.routedev), NULL, OSP_MAP_DEVICE },
     { OSP_STR_SRCNETWORKID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcnid), NULL, OSP_MAP_NETWORKID },
     { OSP_STR_DESTNETWORKID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destnid), NULL, OSP_MAP_NETWORKID },
     { OSP_STR_DIVERSIONUSER, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.divuser), NULL, OSP_MAP_DIVUSER },
@@ -1320,6 +1413,10 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_SRCSESSIONID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcsessionid), NULL, OSP_MAP_SESSIONID },
     { OSP_STR_DESTSESSIONID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destsessionid), NULL, OSP_MAP_SESSIONID },
     { OSP_STR_CORRSESSIONID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.corrsessionid), NULL, OSP_MAP_SESSIONID },
+    { OSP_STR_ACCESSCALLID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.accesscallid), NULL, OSP_MAP_SESSIONID },
+    { OSP_STR_ROUTECALLID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.routecallid), NULL, OSP_MAP_SESSIONID },
+    { OSP_STR_LOCALCALLID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.localcallid), NULL, OSP_MAP_SESSIONID },
+    { OSP_STR_REMOTECALLID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.remotecallid), NULL, OSP_MAP_SESSIONID },
     { OSP_STR_SRCCODEC, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srccodec), NULL, OSP_MAP_CODEC },
     { OSP_STR_DESTCODEC, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destcodec), NULL, OSP_MAP_CODEC },
     { OSP_STR_CONFID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.confid), NULL, OSP_MAP_CONFID },
@@ -1333,6 +1430,13 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_CUSTOMINFO8, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[7]), NULL, OSP_MAP_CUSTOMINFO },
     { OSP_STR_SRCREALM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcrealm), NULL, OSP_MAP_REALM },
     { OSP_STR_DESTREALM, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destrealm), NULL, OSP_MAP_REALM },
+    { OSP_STR_OTHERPARTY, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.otherparty), NULL, OSP_MAP_CALLPARTYINFO },
+    { OSP_STR_CALLINGUSERNAME, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.callingusername), NULL, OSP_MAP_CALLPARTYINFO },
+    { OSP_STR_CALLINGUSERID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.callinguserid), NULL, OSP_MAP_CALLPARTYINFO },
+    { OSP_STR_CALLINGUSERGROUP, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.callingusergroup), NULL, OSP_MAP_CALLPARTYINFO },
+    { OSP_STR_CALLEDUSERNAME, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.calledusername), NULL, OSP_MAP_CALLPARTYINFO },
+    { OSP_STR_CALLEDUSERID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.calleduserid), NULL, OSP_MAP_CALLPARTYINFO },
+    { OSP_STR_CALLEDUSERGROUP, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.calledusergroup), NULL, OSP_MAP_CALLPARTYINFO },
     /* Statistics mapping */
 #define mSMAP   mapping.stats
     { OSP_STR_REPORTSTATS, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mSMAP.reportstats), NULL, OSP_MAP_REPORT },
@@ -1498,7 +1602,7 @@ static int osp_load_tzlist(
     osp_running_t* running)
 {
     FILE* fp;
-    char buffer[OSP_STRBUF_SIZE];
+    osp_string_t buffer;
     char* start;
     char* tmp;
     char* token;
@@ -1555,7 +1659,7 @@ static int osp_check_provider(
 {
     int i;
     struct in_addr ip;
-    char buffer[OSP_STRBUF_SIZE];
+    osp_string_t buffer;
 
     DEBUG3("rlm_osp: osp_check_provider start");
 
@@ -1692,7 +1796,7 @@ static int osp_check_mapping(
     osp_mapping_t* mapping)
 {
     int i;
-    char buffer[OSP_STRBUF_SIZE];
+    osp_string_t buffer;
 
     DEBUG3("rlm_osp: osp_check_mapping start");
 
@@ -1724,18 +1828,31 @@ static int osp_check_mapping(
     /* If RADIUS client type is wrong, then fail. */
     OSP_CHECK_RANGE(OSP_STR_CLIENTTYPE, mapping->clienttype, OSP_CLIENT_MIN, OSP_CLIENT_MAX);
 
-    /* If call origin is undefined for GENBAND S3 and Cisco, then fail. */
+    /* If sub status type is undefined for BroadWorks, then fail. */
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        OSP_CHECK_ITEMMAP(OSP_STR_SUBTYPE, OSP_DEF_MUST, mapping->subtype);
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+    default:
+        break;
+    }
+
+    /* If call direction is undefined for GENBAND S3, Cisco and BroadWorks, then fail. */
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
-        OSP_CHECK_ITEMMAP(OSP_STR_CALLORIGIN, OSP_DEF_MUST, mapping->origin);
+    case OSP_CLIENT_BROADWORKS:
+        OSP_CHECK_ITEMMAP(OSP_STR_DIRECTION, OSP_DEF_MUST, mapping->direction);
 
-        /* Nothing to check for ignore answer */
-        DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_IGNOREANSWER, mapping->ignoreterm);
+        /* Nothing to check for ignore inbound */
+        DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_IGNOREIN, mapping->ignorein);
 
-        /* Nothing to check for ignore originate */
-        DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_IGNOREORIGINATE, mapping->ignoreinit);
-
+        /* Nothing to check for ignore outbound */
+        DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_IGNOREOUT, mapping->ignoreout);
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
@@ -1765,17 +1882,28 @@ static int osp_check_mapping(
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
         break;
+    case OSP_CLIENT_BROADWORKS:
+        /* If transfer result is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_TRANSFERRET, OSP_DEF_MAY, mapping->transferret);
+
+        /* If transfer ID is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_TRANSFERID, OSP_DEF_MAY, mapping->transferid);
+        break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
     default:
-        /* If REFER ID is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_REFERID, OSP_DEF_MAY, mapping->referid);
+        /* Nothing to check for parsetransfer */
+        DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_PARSETRANSFER, mapping->parsetransfer);
+        if (mapping->parsetransfer) {
+            /* If transfer calling number is incorrect, then fail. */
+            OSP_CHECK_ITEMMAP(OSP_STR_TRANSFERCALLINGNUM, OSP_DEF_MAY, mapping->transfercalling);
 
-        /* If REFER calling number is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_REFERCALLINGNUM, OSP_DEF_MAY, mapping->refercalling);
+            /* If transfer called number is incorrect, then fail. */
+            OSP_CHECK_ITEMMAP(OSP_STR_TRANSFERCALLEDNUM, OSP_DEF_MAY, mapping->transfercalled);
 
-        /* If REFER called number is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_REFERCALLEDNUM, OSP_DEF_MAY, mapping->refercalled);
+            /* If transfer ID is incorrect, then fail. */
+            OSP_CHECK_ITEMMAP(OSP_STR_TRANSFERID, OSP_DEF_MAY, mapping->transferid);
+        }
         break;
     }
 
@@ -1788,10 +1916,11 @@ static int osp_check_mapping(
     /* If source is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_SOURCE, OSP_DEF_MAY, mapping->source);
 
-    /* If proxy is undefined for GENBAND S3 and Cisco, then fail. */
+    /* If proxy is undefined for GENBAND S3, Cisco and BroadWorks, then fail. */
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
+    case OSP_CLIENT_BROADWORKS:
         OSP_CHECK_ITEMMAP(OSP_STR_PROXY, OSP_DEF_MUST, mapping->proxy);
         break;
     case OSP_CLIENT_UNDEF:
@@ -1800,11 +1929,26 @@ static int osp_check_mapping(
         break;
     }
 
-    /* If source device is undefined, then fail. */
-    OSP_CHECK_ITEMMAP(OSP_STR_SRCDEVICE, OSP_DEF_MUST, mapping->srcdev);
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        /* If access device is undefined, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_ACCESSDEVICE, OSP_DEF_MUST, mapping->accessdev);
 
-    /* If destination is undefined, then fail. */
-    OSP_CHECK_ITEMMAP(OSP_STR_DESTINATION, OSP_DEF_MUST, mapping->destination);
+        /* If route device is undefined, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_ROUTEDEVICE, OSP_DEF_MUST, mapping->routedev);
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+    default:
+        /* If source device is undefined, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_SRCDEVICE, OSP_DEF_MUST, mapping->srcdev);
+
+        /* If destination is undefined, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_DESTINATION, OSP_DEF_MUST, mapping->destination);
+        break;
+    }
 
     /* If destination device is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_DESTDEVICE, OSP_DEF_MAY, mapping->destdev);
@@ -1860,12 +2004,12 @@ static int osp_check_mapping(
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
+    case OSP_CLIENT_BROADWORKS:
         /* If source protocol is incorrect, then fail. */
         OSP_CHECK_ITEMMAP(OSP_STR_SRCPROTOCOL, OSP_DEF_MAY, mapping->srcprotocol);
 
         /* If destination protocol is incorrect, then fail. */
         OSP_CHECK_ITEMMAP(OSP_STR_DESTPROTOCOL, OSP_DEF_MAY, mapping->destprotocol);
-
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
@@ -1883,6 +2027,28 @@ static int osp_check_mapping(
 
     /* If correlation session ID is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_CORRSESSIONID, OSP_DEF_MAY, mapping->corrsessionid);
+
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        /* If access call ID is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_ACCESSCALLID, OSP_DEF_MAY, mapping->accesscallid);
+
+        /* If route call ID is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_ROUTECALLID, OSP_DEF_MAY, mapping->routecallid);
+
+        /* If local call ID is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_LOCALCALLID, OSP_DEF_MAY, mapping->localcallid);
+
+        /* If remote call ID is incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_REMOTECALLID, OSP_DEF_MAY, mapping->remotecallid);
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+    default:
+        break;
+    }
 
     /* If source codec is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_SRCCODEC, OSP_DEF_MAY, mapping->srccodec);
@@ -1905,6 +2071,27 @@ static int osp_check_mapping(
     /* If destination realm is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_DESTREALM, OSP_DEF_MAY, mapping->destrealm);
 
+    /* If other party info is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_OTHERPARTY, OSP_DEF_MAY, mapping->otherparty);
+
+    /* If calling party user name is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_CALLINGUSERNAME, OSP_DEF_MAY, mapping->callingusername);
+
+    /* If calling party user ID is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_CALLINGUSERID, OSP_DEF_MAY, mapping->callinguserid);
+
+    /* If calling party user group is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_CALLINGUSERGROUP, OSP_DEF_MAY, mapping->callingusergroup);
+
+    /* If called party user name is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_CALLEDUSERNAME, OSP_DEF_MAY, mapping->calledusername);
+
+    /* If called party user ID is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_CALLEDUSERID, OSP_DEF_MAY, mapping->calleduserid);
+
+    /* If called party user group is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_CALLEDUSERGROUP, OSP_DEF_MAY, mapping->calledusergroup);
+
     /* If statistics are incorrect, then fail. */
     if (osp_check_statsmap(&mapping->stats) < 0) {
         return -1;
@@ -1926,8 +2113,8 @@ static int osp_parse_netlist(
     char* liststr,
     osp_netlist_t* list)
 {
-    char listbuf[OSP_STRBUF_SIZE];
-    char buffer[OSP_STRBUF_SIZE];
+    osp_string_t listbuf;
+    osp_string_t buffer;
     struct in_addr ip;
     char* subnet;
     char* tmplist;
@@ -2308,7 +2495,7 @@ static int osp_accounting(
     if (OSP_CHECK_STRING(mapping->iditem)) {
         OSP_GET_STRING(request, TRUE, OSP_STR_IDITEM, OSP_DEF_MAY, mapping->iditem, buffer);
         if ((buffer[0] == '\0') ||
-            (OSP_CHECK_STRING(mapping->idvalue) && (strcasecmp(mapping->idvalue, buffer))))
+            (OSP_CHECK_STRING(mapping->idvalue) && strcasecmp(mapping->idvalue, buffer)))
         {
             DEBUG2("rlm_osp: nothing to do for this request.");
             return RLM_MODULE_NOOP;
@@ -2424,7 +2611,7 @@ static int osp_accounting(
         rolevendor = OSPC_RVENDOR_ACME;
         break;
     case OSP_CLIENT_GENBANDS3:
-        if (usage.origin == OSP_ORIGIN_TERM) {
+        if (usage.direction == OSP_DIRECTION_IN) {
             switch (type) {
             case PW_STATUS_START:
                 rolestate = OSPC_RSTATE_START1;
@@ -2452,6 +2639,36 @@ static int osp_accounting(
             }
         }
         rolevendor = OSPC_RVENDOR_GENBANDS3;
+        break;
+    case OSP_CLIENT_BROADWORKS:
+        if (usage.direction == OSP_DIRECTION_IN) {
+            switch (type) {
+            case PW_STATUS_START:
+                rolestate = OSPC_RSTATE_START1;
+                break;
+            case PW_STATUS_ALIVE:   /* Interim-Update */
+                rolestate = OSPC_RSTATE_INTERIM1;
+                break;
+            case PW_STATUS_STOP:
+            default:
+                rolestate = OSPC_RSTATE_STOP1;
+                break;
+            }
+        } else {
+            switch (type) {
+            case PW_STATUS_START:
+                rolestate = OSPC_RSTATE_START2;
+                break;
+            case PW_STATUS_ALIVE:   /* Interim-Update */
+                rolestate = OSPC_RSTATE_INTERIM2;
+                break;
+            case PW_STATUS_STOP:
+            default:
+                rolestate = OSPC_RSTATE_STOP2;
+                break;
+            }
+        }
+        rolevendor = OSPC_RVENDOR_BROADWORKS;
         break;
     default:
         rolevendor = OSPC_RVENDOR_UNDEFINED;
@@ -2516,9 +2733,25 @@ static int osp_accounting(
         usage.srcrealm);    /* Source realm */
 
     /* Report destination realm */
-    OSPPTransactionSetSrcRealm(
+    OSPPTransactionSetDestRealm(
         transaction,        /* Transaction handle */
         usage.destrealm);   /* Destination realm */
+
+    /* Report calling party info */
+    OSPPTransactionSetCallPartyInfo(
+        transaction,                /* Transaction handle */
+        OSPC_CPARTY_SOURCE,         /* Calling party */
+        usage.callingusername,      /* Calling party user name */
+        usage.callinguserid,        /* Calling party user ID */
+        usage.callingusergroup);    /* Calling party user group */
+
+    /* Report called party info */
+    OSPPTransactionSetCallPartyInfo(
+        transaction,                /* Transaction handle */
+        OSPC_CPARTY_DESTINATION,    /* Called party */
+        usage.calledusername,       /* Called party user name */
+        usage.calleduserid,         /* Called party user ID */
+        usage.calledusergroup);     /* Called party user group */
 
     /* Report Q850 release code */
     if (usage.q850cause != OSP_CAUSE_UNKNOWN) {
@@ -2590,6 +2823,60 @@ static int osp_accounting(
                 sessionid);                 /* Correlation session ID */
             OSPPCallIdDelete(&sessionid);
         }
+    }
+
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        /* Report local call ID */
+        if (usage.localcallid[0] != '\0') {
+            sessionid = OSPPCallIdNew(strlen(usage.localcallid), (const unsigned char *)usage.localcallid);
+            if (sessionid != NULL) {
+                OSPPTransactionSetSessionId(
+                    transaction,                /* Transaction handle */
+                    OSPC_SESSIONID_LOCAL,       /* Local */
+                    sessionid);                 /* Local session ID */
+                OSPPCallIdDelete(&sessionid);
+            }
+        }
+    
+        /* Report remote call ID */
+        if (usage.remotecallid[0] != '\0') {
+            sessionid = OSPPCallIdNew(strlen(usage.remotecallid), (const unsigned char *)usage.remotecallid);
+            if (sessionid != NULL) {
+                OSPPTransactionSetSessionId(
+                    transaction,                /* Transaction handle */
+                    OSPC_SESSIONID_REMOTE,      /* Remote */
+                    sessionid);                 /* Remote session ID */
+                OSPPCallIdDelete(&sessionid);
+            }
+        }
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+    default:
+        break;
+    }
+
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+        break;
+    case OSP_CLIENT_BROADWORKS:
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    default:
+        /* Report transfer ID */
+        OSPPTransactionSetTransferId(
+            transaction,        /* Transaction handle */
+            usage.transferid);  /* Transfer ID */
+
+        /* Report transfer status */
+        OSPPTransactionSetTransferStatus(
+            transaction,        /* Transaction handle */
+            usage.transfer);    /* Transfer status */
+        break;
     }
 
     /* Report source codec */
@@ -2885,39 +3172,69 @@ static int osp_get_usageinfo(
     osp_running_t* running = &data->running;
     osp_provider_t* provider = &data->provider;
     osp_mapping_t* mapping = &data->mapping;
-    char buffer[OSP_STRBUF_SIZE];
-    char tmphost[OSP_STRBUF_SIZE];
-    char desthost[OSP_STRBUF_SIZE];
+    osp_string_t buffer;
+    osp_string_t tmphost;
+    osp_string_t desthost;
+    osp_string_t proxy;
     char* ptr;
-    char* referflagname = "referflag";
-    char* referflagmap = "%{Acme-Primary-Routing-Number}";
-    int refer, parse, size, i;
+    char* transferflagname = "transferflag";
+    char* transferflagmap = "%{Acme-Primary-Routing-Number}";
+    int transferred, parse, size, i;
     osp_intstr_e format;
     int release;
     struct in_addr dest;
 
     DEBUG3("rlm_osp: osp_get_usageinfo start");
 
-    /* Get call origin */
+    memset(usage, 0, sizeof(*usage));
+    usage->transfer = OSPC_TSTATUS_UNKNOWN;
+
+    /* Get call direction */
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
-        OSP_GET_STRING(request, TRUE, OSP_STR_CALLORIGIN, OSP_DEF_MUST, mapping->origin, buffer);
-        if (!strcasecmp(buffer, OSP_CISCOCALL_TERM)) {
-            usage->origin = OSP_ORIGIN_TERM;
+        OSP_GET_STRING(request, TRUE, OSP_STR_DIRECTION, OSP_DEF_MUST, mapping->direction, buffer);
+        if (!strcasecmp(buffer, OSP_CISCOCALL_IN)) {
+            usage->direction = OSP_DIRECTION_IN;
         } else {
-            usage->origin = OSP_ORIGIN_INIT;
+            usage->direction = OSP_DIRECTION_OUT;
         }
-        DEBUG2("rlm_osp: call origin type = '%d'", usage->origin);
+        DEBUG2("rlm_osp: call direction = '%d'", usage->direction);
 
-        if (((usage->origin == OSP_ORIGIN_TERM) && (mapping->ignoreterm)) ||
-            ((usage->origin == OSP_ORIGIN_INIT) && (mapping->ignoreinit)))
+        if (((usage->direction == OSP_DIRECTION_IN) && (mapping->ignorein)) ||
+            ((usage->direction == OSP_DIRECTION_OUT) && (mapping->ignoreout)))
         {
             DEBUG2("rlm_osp: ignore '%s' record.", buffer);
             return 1;
-        } else {
-            break;
         }
+        break;
+    case OSP_CLIENT_BROADWORKS:
+        OSP_GET_STRING(request, TRUE, OSP_STR_SUBTYPE, OSP_DEF_MUST, mapping->subtype, usage->subtype);
+        DEBUG2("rlm_osp: sub status type = '%s'", usage->subtype);
+
+        if (!strcasecmp(usage->subtype, OSP_BWTYPE_START) || 
+            !strcasecmp(usage->subtype, OSP_BWTYPE_END) || 
+            !strcasecmp(usage->subtype, OSP_BWTYPE_FAILOVER))
+        {
+            DEBUG2("rlm_osp: ignore sub status type '%s' record.", usage->subtype);
+            return 1;
+        }
+
+        OSP_GET_STRING(request, TRUE, OSP_STR_DIRECTION, OSP_DEF_MUST, mapping->direction, buffer);
+        if (!strcasecmp(buffer, OSP_BWCALL_IN)) {
+            usage->direction = OSP_DIRECTION_IN;
+        } else {
+            usage->direction = OSP_DIRECTION_OUT;
+        }
+        DEBUG2("rlm_osp: call direction = '%d'", usage->direction);
+
+        if (((usage->direction == OSP_DIRECTION_IN) && (mapping->ignorein)) ||
+            ((usage->direction == OSP_DIRECTION_OUT) && (mapping->ignoreout)))
+        {
+            DEBUG2("rlm_osp: ignore '%s' record.", buffer);
+            return 1;
+        }
+        break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
     default:
@@ -2930,41 +3247,58 @@ static int osp_get_usageinfo(
     /* Get Call-ID */
     OSP_GET_STRING(request, TRUE, OSP_STR_CALLID, OSP_DEF_MUST, mapping->callid, usage->callid);
 
-    refer = FALSE;
+    transferred = FALSE;
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
         break;
+    case OSP_CLIENT_BROADWORKS:
+        /* Get transfer result */
+        OSP_GET_STRING(request, TRUE, OSP_STR_TRANSFERRET, OSP_DEF_MAY, mapping->transferret, buffer);
+        if (OSP_CHECK_STRING(buffer) && !strcasecmp(buffer, OSP_BWTRANSFERRET_SUCCESS)) {
+            if (usage->direction == OSP_DIRECTION_IN) {
+                usage->transfer = OSPC_TSTATUS_TRANSFERTO;
+            } else {
+                usage->transfer = OSPC_TSTATUS_TRANSFERFROM;
+            }
+
+            /* Get transfer ID */
+            OSP_GET_STRING(request, TRUE, OSP_STR_TRANSFERID, OSP_DEF_MAY, mapping->transferid, usage->transferid);
+        }
+        break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
     default:
-        switch (type) {
-        case PW_STATUS_START:
-            /* This is a special case that Acme transferred call leg Start RADIUS record does not have Acme-Primary-Routing-Number */
-            OSP_GET_STRING(request, TRUE, referflagname, OSP_DEF_MAY, referflagmap, buffer);
-            if (!OSP_CHECK_STRING(buffer)) {
-                refer = TRUE;
+        if (mapping->parsetransfer) {
+            switch (type) {
+            case PW_STATUS_START:
+                /* This is a special case that Acme transferred call leg Start RADIUS record does not have Acme-Primary-Routing-Number */
+                OSP_GET_STRING(request, TRUE, transferflagname, OSP_DEF_MAY, transferflagmap, buffer);
+                if (!OSP_CHECK_STRING(buffer)) {
+                    transferred = TRUE;
+                }
+                break;
+            case PW_STATUS_STOP:
+                /* Get transfer ID */
+                OSP_GET_STRING(request, TRUE, OSP_STR_TRANSFERID, OSP_DEF_MAY, mapping->transferid, usage->transferid);
+                if (OSP_CHECK_STRING(usage->transferid)) {
+                    transferred = TRUE;
+                    usage->transfer = OSPC_TSTATUS_TRANSFERTO;
+                }
+                break;
+            case PW_STATUS_ALIVE:
+            default:
+                break;
             }
-            break;
-        case PW_STATUS_STOP:
-            /* Get REFER ID */
-            OSP_GET_STRING(request, TRUE, OSP_STR_REFERID, OSP_DEF_MAY, mapping->referid, usage->referid);
-            if (OSP_CHECK_STRING(usage->referid)) {
-                refer = TRUE;
-            }
-            break;
-        case PW_STATUS_ALIVE:
-        default:
-            break;
         }
         break;
     }
-    if (refer) {
+    if (transferred) {
         /* Get calling number */
-        OSP_GET_CALLNUM(request, TRUE, OSP_STR_REFERCALLINGNUM, OSP_DEF_MAY, mapping->refercalling, mapping->callingformat, buffer, ptr, size, usage->calling);
+        OSP_GET_CALLNUM(request, TRUE, OSP_STR_TRANSFERCALLINGNUM, OSP_DEF_MAY, mapping->transfercalling, mapping->callingformat, buffer, ptr, size, usage->calling);
 
         /* Get called number */
-        OSP_GET_CALLNUM(request, TRUE, OSP_STR_REFERCALLEDNUM, OSP_DEF_MUST, mapping->refercalled, mapping->calledformat, buffer, ptr, size, usage->called);
+        OSP_GET_CALLNUM(request, TRUE, OSP_STR_TRANSFERCALLEDNUM, OSP_DEF_MUST, mapping->transfercalled, mapping->calledformat, buffer, ptr, size, usage->called);
     } else {
         /* Get calling number */
         OSP_GET_CALLNUM(request, TRUE, OSP_STR_CALLINGNUMBER, OSP_DEF_MAY, mapping->calling, mapping->callingformat, buffer, ptr, size, usage->calling);
@@ -2985,7 +3319,7 @@ static int osp_get_usageinfo(
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
-        if (usage->origin == OSP_ORIGIN_TERM) {
+        if (usage->direction == OSP_DIRECTION_IN) {
             /* Get source device */
             OSP_GET_IP(request, TRUE, OSP_STR_SRCDEVICE, OSP_DEF_MUST, mapping->srcdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev, tmphost);
 
@@ -2997,6 +3331,64 @@ static int osp_get_usageinfo(
 
             /* Get destination */
             OSP_GET_IP(request, TRUE, OSP_STR_DESTINATION, OSP_DEF_MUST, mapping->destination, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination, desthost);
+        }
+        break;
+    case OSP_CLIENT_BROADWORKS:
+        /* Get proxy */
+        OSP_GET_IP(request, TRUE, OSP_STR_PROXY, OSP_DEF_MUST, mapping->proxy, OSP_IP_DEF, OSP_PORT_DEF, buffer, proxy, tmphost);
+
+        if (usage->direction == OSP_DIRECTION_IN) {
+            /* Get access device/source */
+            /* Special case, BWAS-Access-Device-Address may not be reported */
+            OSP_GET_IP(request, TRUE, OSP_STR_ACCESSDEVICE, OSP_DEF_MAY, mapping->accessdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev, tmphost);
+
+            /* Get route device/destination */
+            /* Special case, BWAS-Route may not be reported */
+            OSP_GET_IP(request, TRUE, OSP_STR_ROUTEDEVICE, OSP_DEF_MAY, mapping->routedev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination, desthost);
+            switch (type) {
+            case PW_STATUS_STOP:
+            case PW_STATUS_ALIVE:
+                if (!strcasecmp(usage->destination, OSP_BWDEV_GROUP) || !strcasecmp(usage->destination, OSP_BWDEV_ENTERPRISE)) {
+                    strncpy(usage->destination, proxy, sizeof(usage->destination));
+                } 
+                break;
+            case PW_STATUS_START:
+                if (usage->destination[0] == '\0') {
+                    strncpy(usage->destination, proxy, sizeof(usage->destination));
+                }
+                break;
+            default:
+                break;
+            }
+        } else {
+            /* Get route device/source*/
+            OSP_GET_IP(request, TRUE, OSP_STR_ROUTEDEVICE, OSP_DEF_MUST, mapping->routedev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev, desthost);
+            switch (type) {
+            case PW_STATUS_START:
+            case PW_STATUS_STOP:
+            case PW_STATUS_ALIVE:
+                if (!strcasecmp(usage->srcdev, OSP_BWDEV_GROUP) || !strcasecmp(usage->srcdev, OSP_BWDEV_ENTERPRISE)) {
+                    strncpy(usage->srcdev, proxy, sizeof(usage->srcdev));
+                } 
+                break;
+            default:
+                break;
+            }
+
+            /* Get access device/destination */
+            /* Special case, BWAS-Access-Device-Address may not be reported */
+            OSP_GET_IP(request, TRUE, OSP_STR_ACCESSDEVICE, OSP_DEF_MAY, mapping->accessdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination, tmphost);
+            switch (type) {
+            case PW_STATUS_START:
+            case PW_STATUS_STOP:
+            case PW_STATUS_ALIVE:
+                if (usage->destination[0] == '\0') {
+                    strncpy(usage->destination, proxy, sizeof(usage->destination));
+                } 
+                break;
+            default:
+                break;
+            }
         }
         break;
     case OSP_CLIENT_UNDEF:
@@ -3053,20 +3445,52 @@ static int osp_get_usageinfo(
     parse = (type == PW_STATUS_STOP);
     OSP_GET_TIME(request, parse, OSP_STR_ENDTIME, OSP_DEF_MUST, running, mapping->end, mapping->timeformat, OSP_TIME_DEF, buffer, usage->end);
 
-    /* Get call duration */
     if (type == PW_STATUS_STOP) {
+        /* Get call duration */
         if (OSP_CHECK_STRING(mapping->duration)) {
             radius_xlat(buffer, sizeof(buffer), mapping->duration, request, NULL);
             if (buffer[0] == '\0') {
                 /* Has checked string NULL */
                 DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", mapping->duration, OSP_STR_DURATION);
-                usage->duration = difftime(usage->start, usage->end);
+                if (usage->connect != OSP_TIME_DEF) {
+                    usage->duration = difftime(usage->end, usage->connect);
+                } else {
+                    switch (mapping->clienttype) {
+                    case OSP_CLIENT_BROADWORKS:
+                        /* This is a special case that BroadWorks does not report connect time for failed call attempt */
+                        usage->duration = 0;
+                        break;
+                    case OSP_CLIENT_UNDEF:
+                    case OSP_CLIENT_ACME:
+                    case OSP_CLIENT_GENBANDS3:
+                    case OSP_CLIENT_CISCO:
+                    default:
+                        usage->duration = difftime(usage->end, usage->start);
+                        break;
+                    }
+                }
             } else {
                 usage->duration = atoi(buffer);
             }
         } else {
             DEBUG("rlm_osp: '%s' mapping undefined.", OSP_STR_DURATION);
-            usage->duration = difftime(usage->start, usage->end);
+            if (usage->connect != OSP_TIME_DEF) {
+                usage->duration = difftime(usage->end, usage->connect);
+            } else {
+                switch (mapping->clienttype) {
+                case OSP_CLIENT_BROADWORKS:
+                    /* This is a special case that BroadWorks does not report connect time for failed call attempt */
+                    usage->duration = 0;
+                    break;
+                case OSP_CLIENT_UNDEF:
+                case OSP_CLIENT_ACME:
+                case OSP_CLIENT_GENBANDS3:
+                case OSP_CLIENT_CISCO:
+                default:
+                    usage->duration = difftime(usage->end, usage->start);
+                    break;
+                }
+            }
         }
     } else {
         DEBUG2("rlm_osp: do not parse '%s'.", OSP_STR_DURATION);
@@ -3083,49 +3507,79 @@ static int osp_get_usageinfo(
     DEBUG2("rlm_osp: post dial delay = '%d'", usage->pdd);
 
     /* Get release source */
-    if (type == PW_STATUS_STOP) {
+    if (type == PW_STATUS_START) {
+        DEBUG2("rlm_osp: do not parse '%s'.", OSP_STR_RELEASE);
+        usage->release = OSPC_RELEASE_UNKNOWN;
+    } else if (type == PW_STATUS_STOP) {
         if (OSP_CHECK_STRING(mapping->release)) {
             radius_xlat(buffer, sizeof(buffer), mapping->release, request, NULL);
             if (buffer[0] == '\0') {
                 /* Has checked string NULL */
                 DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", mapping->release, OSP_STR_RELEASE);
-                usage->release = OSP_TK_RELSRC;
+                usage->release = OSPC_RELEASE_UNKNOWN;
             } else {
-                release = atoi(buffer);
                 switch (mapping->clienttype) {
                 case OSP_CLIENT_GENBANDS3:
                 case OSP_CLIENT_CISCO:
+                    release = atoi(buffer);
                     switch (release) {
                     case OSP_CISCOREL_CALLEDPSTN:
                     case OSP_CISCOREL_CALLEDVOIP:
-                        usage->release = OSP_TK_RELDST;
+                        usage->release = OSPC_RELEASE_DESTINATION;
                         break;
                     case OSP_CISCOREL_CALLINGPSTN:
                     case OSP_CISCOREL_CALLINGVOIP:
+                        usage->release = OSPC_RELEASE_SOURCE;
+                        break;
                     case OSP_CISCOREL_INTPOST:
                     case OSP_CISCOREL_INTVOIP:
                     case OSP_CISCOREL_INTAPPL:
                     case OSP_CISCOREL_INTAAA:
+                        usage->release = OSPC_RELEASE_INTERNAL;
+                        break;
                     case OSP_CISCOREL_CONSOLE:
                     case OSP_CISCOREL_EXTRADIUS:
                     case OSP_CISCOREL_EXTAPPL:
                     case OSP_CISCOREL_EXTAGENT:
                     default:
-                        usage->release = OSP_TK_RELSRC;
+                        usage->release = OSPC_RELEASE_EXTERNAL;
                         break;
+                    }
+                    break;
+                case OSP_CLIENT_BROADWORKS:
+                    if (!strcasecmp(buffer, OSP_BWREL_LOCAL)) {
+                        if (usage->direction == OSP_DIRECTION_IN) {
+                            usage->release = OSPC_RELEASE_SOURCE;
+                        } else {
+                            usage->release = OSPC_RELEASE_DESTINATION;
+                        }
+                    } else if (!strcasecmp(buffer, OSP_BWREL_REMOTE)) {
+                        if (usage->direction == OSP_DIRECTION_IN) {
+                            usage->release = OSPC_RELEASE_DESTINATION;
+                        } else {
+                            usage->release = OSPC_RELEASE_SOURCE;
+                        }
+                    } else {
+                        usage->release = OSPC_RELEASE_UNKNOWN;
                     }
                     break;
                 case OSP_CLIENT_UNDEF:
                 case OSP_CLIENT_ACME:
                 default:
+                    release = atoi(buffer);
                     switch (release) {
-                    case OSP_RELEASE_DEST:
-                        usage->release = OSP_TK_RELDST;
+                    case OSP_ACMEREL_SRC:
+                        usage->release = OSPC_RELEASE_SOURCE;
                         break;
-                    case OSP_RELEASE_UNDEF:
-                    case OSP_RELEASE_SRC:
+                    case OSP_ACMEREL_DEST:
+                        usage->release = OSPC_RELEASE_DESTINATION;
+                        break;
+                    case OSP_ACMEREL_INT:
+                        usage->release = OSPC_RELEASE_INTERNAL;
+                        break;
+                    case OSP_ACMEREL_UNDEF:
                     default:
-                        usage->release = OSP_TK_RELSRC;
+                        usage->release = OSPC_RELEASE_UNKNOWN;
                         break;
                     }
                     break;
@@ -3133,27 +3587,40 @@ static int osp_get_usageinfo(
             }
         } else {
             DEBUG("rlm_osp: '%s' mapping undefined.", OSP_STR_RELEASE);
-            usage->release = OSP_TK_RELSRC;
+            usage->release = OSPC_RELEASE_UNKNOWN;
         }
-    } else if (type == PW_STATUS_START) {
-        DEBUG2("rlm_osp: do not parse '%s'.", OSP_STR_RELEASE);
-        usage->release = OSP_TK_RELSRC;
     } else {    /* PW_STATUS_ALIVE */
         DEBUG2("rlm_osp: do not parse '%s'.", OSP_STR_RELEASE);
-        usage->release = OSP_TK_RELDST;
+        switch (mapping->clienttype) {
+        case OSP_CLIENT_GENBANDS3:
+        case OSP_CLIENT_CISCO:
+        case OSP_CLIENT_BROADWORKS:
+            usage->release = OSPC_RELEASE_UNKNOWN;
+            break;
+        case OSP_CLIENT_UNDEF:
+        case OSP_CLIENT_ACME:
+        default:
+            usage->release = OSPC_RELEASE_DESTINATION;
+            break;
+        }
     }
     DEBUG2("rlm_osp: '%s' = '%d'", OSP_STR_RELEASE, usage->release);
 
     /* Get release causes */
-    parse = ((type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
+        parse = ((type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
         format = OSP_INTSTR_HEX;
+        break;
+    case OSP_CLIENT_BROADWORKS:
+        parse = (type == PW_STATUS_STOP);
+        format = OSP_INTSTR_DEC;
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
     default:
+        parse = ((type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
         format = OSP_INTSTR_DEC;
         break;
     }
@@ -3164,9 +3631,10 @@ static int osp_get_usageinfo(
     switch (mapping->clienttype) {
     case OSP_CLIENT_GENBANDS3:
     case OSP_CLIENT_CISCO:
+    case OSP_CLIENT_BROADWORKS:
         usage->protocol = OSPC_PROTNAME_UNKNOWN;
 
-        if (usage->origin == OSP_ORIGIN_TERM) {
+        if (usage->direction == OSP_DIRECTION_IN) {
             /* Get source protocol */
             parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
             OSP_GET_STRING(request, parse, OSP_STR_SRCPROTOCOL, OSP_DEF_MAY, mapping->srcprotocol, buffer);
@@ -3196,48 +3664,81 @@ static int osp_get_usageinfo(
         break;
     }
 
-    /* Get source session ID */
+    /* Get source/destination session ID */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     switch (mapping->clienttype) {
     case OSP_CLIENT_CISCO:
-        if (usage->origin == OSP_ORIGIN_INIT) {
-            parse = FALSE;
+        if (usage->direction == OSP_DIRECTION_IN) {
+            OSP_GET_STRING(request, parse, OSP_STR_SRCSESSIONID, OSP_DEF_MAY, mapping->srcsessionid, usage->srcsessionid);
+        } else {
+            OSP_GET_STRING(request, parse, OSP_STR_DESTSESSIONID, OSP_DEF_MAY, mapping->destsessionid, usage->destsessionid);
+        }
+        break;
+    case OSP_CLIENT_BROADWORKS:
+        if (usage->direction == OSP_DIRECTION_IN) {
+            OSP_GET_STRING(request, parse, OSP_STR_ACCESSCALLID, OSP_DEF_MAY, mapping->accesscallid, usage->srcsessionid);
+            OSP_GET_STRING(request, parse, OSP_STR_ROUTECALLID, OSP_DEF_MAY, mapping->routecallid, usage->destsessionid);
+        } else {
+            OSP_GET_STRING(request, parse, OSP_STR_ROUTECALLID, OSP_DEF_MAY, mapping->routecallid, usage->srcsessionid);
+            OSP_GET_STRING(request, parse, OSP_STR_ACCESSCALLID, OSP_DEF_MAY, mapping->accesscallid, usage->destsessionid);
         }
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
     case OSP_CLIENT_GENBANDS3:
     default:
+        OSP_GET_STRING(request, parse, OSP_STR_SRCSESSIONID, OSP_DEF_MAY, mapping->srcsessionid, usage->srcsessionid);
+        OSP_GET_STRING(request, parse, OSP_STR_DESTSESSIONID, OSP_DEF_MAY, mapping->destsessionid, usage->destsessionid);
         break;
     }
-    OSP_GET_STRING(request, parse, OSP_STR_SRCSESSIONID, OSP_DEF_MAY, mapping->srcsessionid, usage->srcsessionid);
-
-    /* Get destination session ID */
-    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
-    switch (mapping->clienttype) {
-    case OSP_CLIENT_CISCO:
-        if (usage->origin == OSP_ORIGIN_TERM) {
-            parse = FALSE;
-        }
-        break;
-    case OSP_CLIENT_UNDEF:
-    case OSP_CLIENT_ACME:
-    case OSP_CLIENT_GENBANDS3:
-    default:
-        break;
-    }
-    OSP_GET_STRING(request, parse, OSP_STR_DESTSESSIONID, OSP_DEF_MAY, mapping->destsessionid, usage->destsessionid);
 
     /* Get correlation session ID */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     OSP_GET_STRING(request, parse, OSP_STR_CORRSESSIONID, OSP_DEF_MAY, mapping->corrsessionid, usage->corrsessionid);
 
+    /* Get local/remote call ID */
+    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        OSP_GET_STRING(request, parse, OSP_STR_LOCALCALLID, OSP_DEF_MAY, mapping->localcallid, usage->localcallid);
+        OSP_GET_STRING(request, parse, OSP_STR_REMOTECALLID, OSP_DEF_MAY, mapping->remotecallid, usage->remotecallid);
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+    default:
+        break;
+    }
+
     /* Get source codec */
-    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE)) && (usage->direction == OSP_DIRECTION_IN);
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+    default:
+        parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
+        break;
+    }
     OSP_GET_STRING(request, parse, OSP_STR_SRCCODEC, OSP_DEF_MAY, mapping->srccodec, usage->srccodec);
 
     /* Get destination codec */
-    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE)) && (usage->direction == OSP_DIRECTION_OUT);
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+    default:
+        parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
+        break;
+    }
     OSP_GET_STRING(request, parse, OSP_STR_DESTCODEC, OSP_DEF_MAY, mapping->destcodec, usage->destcodec);
 
     /* Get conference ID */
@@ -3258,6 +3759,78 @@ static int osp_get_usageinfo(
     /* Get destination realm */
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     OSP_GET_STRING(request, parse, OSP_STR_DESTREALM, OSP_DEF_MAY, mapping->destrealm, usage->destrealm);
+
+    /* Get other party info */
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+        OSP_GET_STRING(request, parse, OSP_STR_OTHERPARTY, OSP_DEF_MAY, mapping->otherparty, usage->otherparty);
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+    default:
+        break;
+    }
+
+    /* Get call party info */
+    parse = (type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE);
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        if (usage->direction == OSP_DIRECTION_IN) {
+            OSP_GET_STRING(request, parse, OSP_STR_CALLINGUSERNAME, OSP_DEF_MAY, mapping->callingusername, usage->callingusername);
+            OSP_GET_STRING(request, parse, OSP_STR_CALLINGUSERID, OSP_DEF_MAY, mapping->callinguserid, usage->callinguserid);
+            OSP_GET_STRING(request, parse, OSP_STR_CALLINGUSERGROUP, OSP_DEF_MAY, mapping->callingusergroup, usage->callingusergroup);
+
+            if (OSP_CHECK_STRING(usage->otherparty)) {
+                strncpy(buffer, usage->otherparty, sizeof(buffer));
+                if ((ptr = strchr(buffer, ' ')) != NULL) {
+                    *ptr = '\0';
+                    ptr++;
+                    strncpy(usage->calleduserid, buffer, sizeof(usage->calleduserid));
+                    DEBUG2("rlm_osp: '%s' = '%s'", OSP_STR_CALLEDUSERID, usage->calleduserid);
+                    strncpy(usage->calledusergroup, ptr, sizeof(usage->calledusergroup));
+                    DEBUG2("rlm_osp: '%s' = '%s'", OSP_STR_CALLEDUSERGROUP, usage->calledusergroup);
+                } else {
+                    strncpy(usage->calleduserid, buffer, sizeof(usage->calleduserid));
+                    DEBUG2("rlm_osp: '%s' = '%s'", OSP_STR_CALLEDUSERID, usage->calleduserid);
+                }
+            }
+        } else if (usage->direction == OSP_DIRECTION_OUT) {
+            if (OSP_CHECK_STRING(usage->otherparty)) {
+                strncpy(buffer, usage->otherparty, sizeof(buffer));
+                if ((ptr = strchr(buffer, ' ')) != NULL) {
+                    *ptr = '\0';
+                    ptr++;
+                    strncpy(usage->callinguserid, buffer, sizeof(usage->callinguserid));
+                    DEBUG2("rlm_osp: '%s' = '%s'", OSP_STR_CALLINGUSERID, usage->callinguserid);
+                    strncpy(usage->callingusergroup, ptr, sizeof(usage->callingusergroup));
+                    DEBUG2("rlm_osp: '%s' = '%s'", OSP_STR_CALLINGUSERGROUP, usage->callingusergroup);
+                } else {
+                    strncpy(usage->callinguserid, buffer, sizeof(usage->callinguserid));
+                    DEBUG2("rlm_osp: '%s' = '%s'", OSP_STR_CALLINGUSERID, usage->callinguserid);
+                }
+            }
+
+            OSP_GET_STRING(request, parse, OSP_STR_CALLEDUSERNAME, OSP_DEF_MAY, mapping->calledusername, usage->calledusername);
+            OSP_GET_STRING(request, parse, OSP_STR_CALLEDUSERID, OSP_DEF_MAY, mapping->calleduserid, usage->calleduserid);
+            OSP_GET_STRING(request, parse, OSP_STR_CALLEDUSERGROUP, OSP_DEF_MAY, mapping->calledusergroup, usage->calledusergroup);
+        }
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+    default:
+        OSP_GET_STRING(request, parse, OSP_STR_CALLINGUSERNAME, OSP_DEF_MAY, mapping->callingusername, usage->callingusername);
+        OSP_GET_STRING(request, parse, OSP_STR_CALLINGUSERID, OSP_DEF_MAY, mapping->callinguserid, usage->callinguserid);
+        OSP_GET_STRING(request, parse, OSP_STR_CALLINGUSERGROUP, OSP_DEF_MAY, mapping->callingusergroup, usage->callingusergroup);
+        OSP_GET_STRING(request, parse, OSP_STR_CALLEDUSERNAME, OSP_DEF_MAY, mapping->calledusername, usage->calledusername);
+        OSP_GET_STRING(request, parse, OSP_STR_CALLEDUSERID, OSP_DEF_MAY, mapping->calleduserid, usage->calleduserid);
+        OSP_GET_STRING(request, parse, OSP_STR_CALLEDUSERGROUP, OSP_DEF_MAY, mapping->calledusergroup, usage->calledusergroup);
+        break;
+    }
 
     /* Get statistics */
     osp_get_statsinfo(mapping, request, type, usage);
@@ -3315,7 +3888,7 @@ static int osp_get_statsinfo(
     osp_statsmap_t* map = &mapping->stats;
     osp_stats_t* var = &usage->stats;
     int parse;
-    char buffer[OSP_STRBUF_SIZE];
+    osp_string_t buffer;
 
     DEBUG3("rlm_osp: osp_get_statsinfo start");
 
@@ -3466,7 +4039,7 @@ static void osp_create_device(
     int buffersize)
 {
     struct in_addr inp;
-    char tmpbuf[OSP_STRBUF_SIZE];
+    osp_string_t tmpbuf;
 
     DEBUG3("rlm_osp: osp_create_device start");
 
@@ -3502,7 +4075,7 @@ static void osp_format_device(
 {
     struct in_addr inp;
     int size;
-    char tmpbuf[OSP_STRBUF_SIZE];
+    osp_string_t tmpbuf;
     char* tmpptr;
 
     DEBUG3("rlm_osp: osp_format_device start");
@@ -3709,6 +4282,7 @@ static OSPE_PROTOCOL_NAME osp_parse_protocol(
                 break;
             case OSP_CLIENT_UNDEF:
             case OSP_CLIENT_ACME:
+            case OSP_CLIENT_BROADWORKS:
             default:
                 if (strstr(protocol, "H323") || strstr(protocol, "h323")) {
                     name = OSPC_PROTNAME_Q931;
@@ -3739,7 +4313,7 @@ static time_t osp_format_time(
 {
     struct tm dt;
     char* timestr = timestamp;
-    char buffer[OSP_STRBUF_SIZE];
+    osp_string_t buffer;
     char* tzone;
     long int toffset;
     time_t tvalue = 0;
@@ -3779,6 +4353,14 @@ static time_t osp_format_time(
         /* hh:mm:ss.kkk ZON WWW MMM DD YYYY */
         if (osp_remove_timezone(running, timestr, buffer, sizeof(buffer), &toffset) == 0) {
             strptime(buffer, "%T %a %b %d %Y", &dt);
+            osp_cal_elapsed(&dt, toffset, &tvalue);
+        }
+        break;
+    case OSP_TIMESTR_BW:
+        /* YYYYMMDDhhmmss.kkk */
+        tzone = NULL;
+        if (osp_cal_timeoffset(running, tzone, &toffset) == 0) {
+            strptime(timestr, "%Y%m%d%H%M%S.", &dt);
             osp_cal_elapsed(&dt, toffset, &tvalue);
         }
         break;
