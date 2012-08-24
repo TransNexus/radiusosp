@@ -39,13 +39,14 @@ fi
  
 cd $RADIUS_HOME/utils
 
-## Uncomment the next line if using the SINGLE_PACKAGE 
+## Uncomment the next lines if using the SINGLE_PACKAGE 
 cd ../var/log/radius
-
-## Uncomment the next line if using the SINGLE_PACKAGE 
-mv ../var/log/radius/radius.log $BACKUP_LOG_FILE_NAME
+mv radius.log $BACKUP_LOG_FILE_NAME
+touch radius.log
 
 ## Uncomment the next line if using stand alone Radius
-# mv /usr/local/var/log/radius/radius.log $BACKUP_LOG_FILE_NAME
+# cd /usr/local/var/log/radius
+# mv radius.log $BACKUP_LOG_FILE_NAME
+# touch radius.log
  
 gzip $BACKUP_LOG_FILE_NAME
