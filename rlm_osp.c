@@ -155,6 +155,8 @@ RCSID("$Id$")
 #define OSP_MAP_CUSTOMINFO      NULL                            /* User-defined info */
 #define OSP_MAP_REALM           NULL                            /* Realm */
 #define OSP_MAP_CALLPARTYINFO   NULL                            /* Call party info */
+#define OSP_MAP_NETTRANSCALLED  NULL                            /* Network translated called number */
+#define OSP_MAP_SVCPROVIDERID   NULL                            /* Service provider ID */
 #define OSP_MAP_STATS           NULL                            /* Statistics */
 #define OSP_MAP_SCALE           "4"                             /* Scale, 1 */
 
@@ -199,85 +201,88 @@ RCSID("$Id$")
 #define OSP_STR_DEVICEPORT      "deviceport"
 
 /* RADIUS OSP mapping parameter names */
-#define OSP_STR_MAPPING             "mapping"
-#define OSP_STR_IDITEM              "identityitem"
-#define OSP_STR_IDVALUE             "identityvalue"
-#define OSP_STR_REPORTSTART         "reportstart"
-#define OSP_STR_REPORTSTOP          "reportstop"
-#define OSP_STR_REPORTINTERIM       "reportinterim"
-#define OSP_STR_CLIENTTYPE          "clienttype"
-#define OSP_STR_SUBTYPE             "substatustype"
-#define OSP_STR_IGNOREDDESTLIST     "ignoreddestinationlist"
-#define OSP_STR_DIRECTION           "calldirection"
-#define OSP_STR_IGNOREIN            "ignoreinbound"
-#define OSP_STR_IGNOREOUT           "ignoreoutbound"
-#define OSP_STR_TRANSACTIONID       "transactionid"
-#define OSP_STR_CALLID              "callid"
-#define OSP_STR_CALLINGFORMAT       "callingnumberformat"
-#define OSP_STR_CALLEDFORMAT        "callednumberformat"
-#define OSP_STR_CALLINGNUMBER       "callingnumber"
-#define OSP_STR_CALLEDNUMBER        "callednumber"
-#define OSP_STR_PARSETRANSFER       "parsetransfer"
-#define OSP_STR_TRANSFERCALLINGNUM  "transfercallingnumber"
-#define OSP_STR_TRANSFERCALLEDNUM   "transfercallednumber"
-#define OSP_STR_TRANSFERRET         "transferresult"
-#define OSP_STR_TRANSFERID          "transferid"
-#define OSP_STR_ASSERTEDID          "assertedid"
-#define OSP_STR_RPID                "remotepartyid"
-#define OSP_STR_SOURCE              "source"
-#define OSP_STR_PROXY               "proxy"
-#define OSP_STR_SRCDEVICE           "sourcedevice"
-#define OSP_STR_DESTINATION         "destination"
-#define OSP_STR_DESTDEVICE          "destinationdevice"
-#define OSP_STR_DESTCOUNT           "destinationcount"
-#define OSP_STR_ACCESSDEVICE        "accessdevice"
-#define OSP_STR_ROUTEDEVICE         "routedevice"
-#define OSP_STR_SRCNETWORKID        "sourcenetworkid"
-#define OSP_STR_DESTNETWORKID       "destinationnetworkid"
-#define OSP_STR_DIVERSIONUSER       "diversionuser"
-#define OSP_STR_DIVERSIONHOST       "diversionhost"
-#define OSP_STR_TIMEFORMAT          "timestringformat"
-#define OSP_STR_STARTTIME           "starttime"
-#define OSP_STR_ALERTTIME           "alerttime"
-#define OSP_STR_CONNECTTIME         "connecttime"
-#define OSP_STR_ENDTIME             "endtime"
-#define OSP_STR_DURATION            "duration"
-#define OSP_STR_PDDUNIT             "postdialdelayunit"
-#define OSP_STR_PDD                 "postdialdelay"
-#define OSP_STR_RELEASE             "releasesource"
-#define OSP_STR_Q850CAUSE           "q850releasecause"
-#define OSP_STR_SIPCAUSE            "sipreleasecause"
-#define OSP_STR_PROTOCOL            "signalingprotocol"
-#define OSP_STR_SRCPROTOCOL         "sourceprotocol"
-#define OSP_STR_DESTPROTOCOL        "destinationprotocol"
-#define OSP_STR_SRCSESSIONID        "sourcesessionid"
-#define OSP_STR_DESTSESSIONID       "destinationsessionid"
-#define OSP_STR_CORRSESSIONID       "correlationsessionid"
-#define OSP_STR_ACCESSCALLID        "accesscallid"
-#define OSP_STR_ROUTECALLID         "routecallid"
-#define OSP_STR_LOCALCALLID         "localcallid"
-#define OSP_STR_REMOTECALLID        "remotecallid"
-#define OSP_STR_SRCCODEC            "sourcecodec"
-#define OSP_STR_DESTCODEC           "destinationcodec"
-#define OSP_STR_CONFID              "conferenceid"
-#define OSP_STR_CUSTOMINFO          "custominfo"
-#define OSP_STR_CUSTOMINFO1         "custominfo1"
-#define OSP_STR_CUSTOMINFO2         "custominfo2"
-#define OSP_STR_CUSTOMINFO3         "custominfo3"
-#define OSP_STR_CUSTOMINFO4         "custominfo4"
-#define OSP_STR_CUSTOMINFO5         "custominfo5"
-#define OSP_STR_CUSTOMINFO6         "custominfo6"
-#define OSP_STR_CUSTOMINFO7         "custominfo7"
-#define OSP_STR_CUSTOMINFO8         "custominfo8"
-#define OSP_STR_SRCREALM            "sourcerealm"
-#define OSP_STR_DESTREALM           "destinationrealm"
-#define OSP_STR_OTHERPARTY          "otherpartyinfo"
-#define OSP_STR_CALLINGUSERNAME     "callingpartyusername"
-#define OSP_STR_CALLINGUSERID       "callingpartyuserid"
-#define OSP_STR_CALLINGUSERGROUP    "callingpartyusergroup"
-#define OSP_STR_CALLEDUSERNAME      "calledpartyusername"
-#define OSP_STR_CALLEDUSERID        "calledpartyuserid"
-#define OSP_STR_CALLEDUSERGROUP     "calledpartyusergroup"
+#define OSP_STR_MAPPING                 "mapping"
+#define OSP_STR_IDITEM                  "identityitem"
+#define OSP_STR_IDVALUE                 "identityvalue"
+#define OSP_STR_REPORTSTART             "reportstart"
+#define OSP_STR_REPORTSTOP              "reportstop"
+#define OSP_STR_REPORTINTERIM           "reportinterim"
+#define OSP_STR_CLIENTTYPE              "clienttype"
+#define OSP_STR_SUBTYPE                 "substatustype"
+#define OSP_STR_IGNOREDDESTLIST         "ignoreddestinationlist"
+#define OSP_STR_DIRECTION               "calldirection"
+#define OSP_STR_IGNOREIN                "ignoreinbound"
+#define OSP_STR_IGNOREOUT               "ignoreoutbound"
+#define OSP_STR_TRANSACTIONID           "transactionid"
+#define OSP_STR_CALLID                  "callid"
+#define OSP_STR_CALLINGFORMAT           "callingnumberformat"
+#define OSP_STR_CALLEDFORMAT            "callednumberformat"
+#define OSP_STR_CALLINGNUMBER           "callingnumber"
+#define OSP_STR_CALLEDNUMBER            "callednumber"
+#define OSP_STR_PARSETRANSFER           "parsetransfer"
+#define OSP_STR_TRANSFERCALLINGNUM      "transfercallingnumber"
+#define OSP_STR_TRANSFERCALLEDNUM       "transfercallednumber"
+#define OSP_STR_TRANSFERRET             "transferresult"
+#define OSP_STR_TRANSFERID              "transferid"
+#define OSP_STR_ASSERTEDID              "assertedid"
+#define OSP_STR_RPID                    "remotepartyid"
+#define OSP_STR_SOURCE                  "source"
+#define OSP_STR_PROXY                   "proxy"
+#define OSP_STR_SRCDEVICE               "sourcedevice"
+#define OSP_STR_DESTINATION             "destination"
+#define OSP_STR_DESTDEVICE              "destinationdevice"
+#define OSP_STR_DESTCOUNT               "destinationcount"
+#define OSP_STR_ACCESSDEVICE            "accessdevice"
+#define OSP_STR_ROUTEDEVICE             "routedevice"
+#define OSP_STR_SRCNETWORKID            "sourcenetworkid"
+#define OSP_STR_DESTNETWORKID           "destinationnetworkid"
+#define OSP_STR_DIVERSIONUSER           "diversionuser"
+#define OSP_STR_DIVERSIONHOST           "diversionhost"
+#define OSP_STR_TIMEFORMAT              "timestringformat"
+#define OSP_STR_STARTTIME               "starttime"
+#define OSP_STR_ALERTTIME               "alerttime"
+#define OSP_STR_CONNECTTIME             "connecttime"
+#define OSP_STR_ENDTIME                 "endtime"
+#define OSP_STR_DURATION                "duration"
+#define OSP_STR_PDDUNIT                 "postdialdelayunit"
+#define OSP_STR_PDD                     "postdialdelay"
+#define OSP_STR_RELEASE                 "releasesource"
+#define OSP_STR_Q850CAUSE               "q850releasecause"
+#define OSP_STR_SIPCAUSE                "sipreleasecause"
+#define OSP_STR_PROTOCOL                "signalingprotocol"
+#define OSP_STR_SRCPROTOCOL             "sourceprotocol"
+#define OSP_STR_DESTPROTOCOL            "destinationprotocol"
+#define OSP_STR_SRCSESSIONID            "sourcesessionid"
+#define OSP_STR_DESTSESSIONID           "destinationsessionid"
+#define OSP_STR_CORRSESSIONID           "correlationsessionid"
+#define OSP_STR_ACCESSCALLID            "accesscallid"
+#define OSP_STR_ROUTECALLID             "routecallid"
+#define OSP_STR_LOCALCALLID             "localcallid"
+#define OSP_STR_REMOTECALLID            "remotecallid"
+#define OSP_STR_SRCCODEC                "sourcecodec"
+#define OSP_STR_DESTCODEC               "destinationcodec"
+#define OSP_STR_CONFID                  "conferenceid"
+#define OSP_STR_CUSTOMINFO              "custominfo"
+#define OSP_STR_CUSTOMINFO1             "custominfo1"
+#define OSP_STR_CUSTOMINFO2             "custominfo2"
+#define OSP_STR_CUSTOMINFO3             "custominfo3"
+#define OSP_STR_CUSTOMINFO4             "custominfo4"
+#define OSP_STR_CUSTOMINFO5             "custominfo5"
+#define OSP_STR_CUSTOMINFO6             "custominfo6"
+#define OSP_STR_CUSTOMINFO7             "custominfo7"
+#define OSP_STR_CUSTOMINFO8             "custominfo8"
+#define OSP_STR_SRCREALM                "sourcerealm"
+#define OSP_STR_DESTREALM               "destinationrealm"
+#define OSP_STR_OTHERPARTY              "otherpartyinfo"
+#define OSP_STR_CALLINGUSERNAME         "callingpartyusername"
+#define OSP_STR_CALLINGUSERID           "callingpartyuserid"
+#define OSP_STR_CALLINGUSERGROUP        "callingpartyusergroup"
+#define OSP_STR_CALLEDUSERNAME          "calledpartyusername"
+#define OSP_STR_CALLEDUSERID            "calledpartyuserid"
+#define OSP_STR_CALLEDUSERGROUP         "calledpartyusergroup"
+#define OSP_STR_NETTRANSCALLEDFORMAT    "networktranslatedcallednumberformat"
+#define OSP_STR_NETTRANSCALLED          "networktranslatedcallednumber"
+#define OSP_STR_SVCPROVIDERID           "serviceproviderid"
 
 /* Statistics parameter names */
 #define OSP_STR_REPORTSTATS            "reportstatistics"
@@ -434,8 +439,8 @@ typedef enum {
     OSP_DIRECTION_OUT,      /* Outbound */
 } osp_direction_e;
 
-/* 
- * Acme release source 
+/*
+ * Acme release source
  */
 typedef enum {
     OSP_ACMEREL_UNDEF = 0,  /* Unknown */
@@ -669,6 +674,9 @@ typedef struct {
     char* calledusername;               /* Called party user name */
     char* calleduserid;                 /* Called party user ID */
     char* calledusergroup;              /* Called party user group */
+    int nettranscalledformat;           /* Network translated called number format */
+    char* nettranscalled;               /* Network translated called number */
+    char* svcproviderid;                /* Service provider ID */
     osp_statsmap_t stats;               /* Statistics */
 } osp_mapping_t;
 
@@ -768,6 +776,8 @@ typedef struct {
     osp_string_t calledusername;                /* Called party user name */
     osp_string_t calleduserid;                  /* Called party user ID */
     osp_string_t calledusergroup;               /* Called party user group */
+    osp_string_t nettranscalled;                /* Network translated called number */
+    osp_string_t svcproviderid;                 /* Service provider ID */
     osp_stats_t stats;                          /* Statistics */
 } osp_usage_t;
 
@@ -1437,6 +1447,9 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_CALLEDUSERNAME, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.calledusername), NULL, OSP_MAP_CALLPARTYINFO },
     { OSP_STR_CALLEDUSERID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.calleduserid), NULL, OSP_MAP_CALLPARTYINFO },
     { OSP_STR_CALLEDUSERGROUP, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.calledusergroup), NULL, OSP_MAP_CALLPARTYINFO },
+    { OSP_STR_NETTRANSCALLEDFORMAT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.nettranscalledformat), NULL, OSP_MAP_NUMFORMAT },
+    { OSP_STR_NETTRANSCALLED, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.nettranscalled), NULL, OSP_MAP_NETTRANSCALLED },
+    { OSP_STR_SVCPROVIDERID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.svcproviderid), NULL, OSP_MAP_SVCPROVIDERID },
     /* Statistics mapping */
 #define mSMAP   mapping.stats
     { OSP_STR_REPORTSTATS, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mSMAP.reportstats), NULL, OSP_MAP_REPORT },
@@ -2091,6 +2104,15 @@ static int osp_check_mapping(
 
     /* If called party user group is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_CALLEDUSERGROUP, OSP_DEF_MAY, mapping->calledusergroup);
+
+    /* If network translated called number format is incorrect, then fail. */
+    OSP_CHECK_RANGE(OSP_STR_NETTRANSCALLEDFORMAT, mapping->nettranscalledformat, OSP_CALLNUM_MIN, OSP_CALLNUM_MAX);
+
+    /* If network translated called number is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_NETTRANSCALLED, OSP_DEF_MAY, mapping->nettranscalled);
+
+    /* If service provider ID is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_SVCPROVIDERID, OSP_DEF_MAY, mapping->svcproviderid);
 
     /* If statistics are incorrect, then fail. */
     if (osp_check_statsmap(&mapping->stats) < 0) {
@@ -2753,6 +2775,17 @@ static int osp_accounting(
         usage.calleduserid,         /* Called party user ID */
         usage.calledusergroup);     /* Called party user group */
 
+    /* Report network translated called number */
+    OSPPTransactionSetNetworkTranslatedCalledNumber(
+        transaction,            /* Transaction handle */
+        OSPC_NFORMAT_E164,      /* Format */
+        usage.nettranscalled);  /* Network translated called number */
+
+    /* Report service provider ID */
+    OSPPTransactionSetServiceProviderId(
+        transaction,            /* Transaction handle */
+        usage.svcproviderid);   /* Service provider ID */
+
     /* Report Q850 release code */
     if (usage.q850cause != OSP_CAUSE_UNKNOWN) {
         OSPPTransactionSetTermCause(
@@ -2838,7 +2871,7 @@ static int osp_accounting(
                 OSPPCallIdDelete(&sessionid);
             }
         }
-    
+
         /* Report remote call ID */
         if (usage.remotecallid[0] != '\0') {
             sessionid = OSPPCallIdNew(strlen(usage.remotecallid), (const unsigned char *)usage.remotecallid);
@@ -3212,8 +3245,8 @@ static int osp_get_usageinfo(
         OSP_GET_STRING(request, TRUE, OSP_STR_SUBTYPE, OSP_DEF_MUST, mapping->subtype, usage->subtype);
         DEBUG2("rlm_osp: sub status type = '%s'", usage->subtype);
 
-        if (!strcasecmp(usage->subtype, OSP_BWTYPE_START) || 
-            !strcasecmp(usage->subtype, OSP_BWTYPE_END) || 
+        if (!strcasecmp(usage->subtype, OSP_BWTYPE_START) ||
+            !strcasecmp(usage->subtype, OSP_BWTYPE_END) ||
             !strcasecmp(usage->subtype, OSP_BWTYPE_FAILOVER))
         {
             DEBUG2("rlm_osp: ignore sub status type '%s' record.", usage->subtype);
@@ -3350,7 +3383,7 @@ static int osp_get_usageinfo(
             case PW_STATUS_ALIVE:
                 if (!strcasecmp(usage->destination, OSP_BWDEV_GROUP) || !strcasecmp(usage->destination, OSP_BWDEV_ENTERPRISE)) {
                     strncpy(usage->destination, proxy, sizeof(usage->destination));
-                } 
+                }
                 break;
             case PW_STATUS_START:
                 if (usage->destination[0] == '\0') {
@@ -3369,7 +3402,7 @@ static int osp_get_usageinfo(
             case PW_STATUS_ALIVE:
                 if (!strcasecmp(usage->srcdev, OSP_BWDEV_GROUP) || !strcasecmp(usage->srcdev, OSP_BWDEV_ENTERPRISE)) {
                     strncpy(usage->srcdev, proxy, sizeof(usage->srcdev));
-                } 
+                }
                 break;
             default:
                 break;
@@ -3384,7 +3417,7 @@ static int osp_get_usageinfo(
             case PW_STATUS_ALIVE:
                 if (usage->destination[0] == '\0') {
                     strncpy(usage->destination, proxy, sizeof(usage->destination));
-                } 
+                }
                 break;
             default:
                 break;
@@ -3831,6 +3864,13 @@ static int osp_get_usageinfo(
         OSP_GET_STRING(request, parse, OSP_STR_CALLEDUSERGROUP, OSP_DEF_MAY, mapping->calledusergroup, usage->calledusergroup);
         break;
     }
+
+    /* Get network translated called number */
+    OSP_GET_CALLNUM(request, TRUE, OSP_STR_NETTRANSCALLED, OSP_DEF_MAY, mapping->nettranscalled, mapping->nettranscalledformat, buffer, ptr, size, usage->nettranscalled);
+
+    /* Get service provider ID */
+    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+    OSP_GET_STRING(request, parse, OSP_STR_SVCPROVIDERID, OSP_DEF_MAY, mapping->svcproviderid, usage->svcproviderid);
 
     /* Get statistics */
     osp_get_statsinfo(mapping, request, type, usage);
