@@ -39,7 +39,7 @@ RCSID("$Id$")
  */
 #define OSP_MODULE_VERSION_MAJOR    2
 #define OSP_MODULE_VERSION_MINOR    0
-#define OSP_MODULE_VERSION_BUGFIX   2
+#define OSP_MODULE_VERSION_BUGFIX   3
 
 /*
  * OSP module buffer size constants.
@@ -4194,7 +4194,7 @@ static int osp_get_uriuser(
     } else if ((start = strstr(uri, "tel:")) != NULL) {
         start += 4;
         /* Check if there is a parameter */
-        if ((end = strchr(start, ';')) != NULL) {
+        if ((end = strpbrk(start, ";>")) != NULL) {
             size = end - start;
         } else {
             size = strlen(start);
