@@ -4194,7 +4194,7 @@ static int osp_get_uriuser(
     } else if ((start = strstr(uri, "tel:")) != NULL) {
         start += 4;
         /* Check if there is a parameter */
-        if ((end = strchr(start, ';')) != NULL) {
+        if ((end = strpbrk(start, ";>")) != NULL) {
             size = end - start;
         } else {
             size = strlen(start);
