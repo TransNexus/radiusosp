@@ -59,3 +59,9 @@ Version 2.0.2 - 2013-05-22
 
 Version 2.0.3 - 2013-09-11
 *Fixed tel-URI issue. 
+----------------------------------------------------------------------
+
+Version 2.1.0 - 2013-11-04
+*Added support for BroadWorks related Call-ID reason and system ID.
+*Added support for video QoS.
+*Fixed BroadWorks multiple media issues.
