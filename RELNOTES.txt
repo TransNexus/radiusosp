@@ -65,3 +65,6 @@ Version 2.1.0 - 2013-11-04
 *Added support for BroadWorks related Call-ID reason and system ID.
 *Added support for video QoS.
 *Fixed BroadWorks multiple media issues.
+----------------------------------------------------------------------
+
+Version 2.1.1 - 
