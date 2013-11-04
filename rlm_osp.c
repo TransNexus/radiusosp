@@ -30,6 +30,10 @@ RCSID("$Id$")
 #include <freeradius-devel/radiusd.h>
 #include <freeradius-devel/modules.h>
 
+#ifdef HAVE_REGEX_H
+#include <regex.h>
+#endif
+
 #include "osp/osp.h"
 #include "osp/osputils.h"
 #include "osp/ospb64.h"
@@ -38,8 +42,8 @@ RCSID("$Id$")
  * OSP module version
  */
 #define OSP_MODULE_VERSION_MAJOR    2
-#define OSP_MODULE_VERSION_MINOR    0
-#define OSP_MODULE_VERSION_BUGFIX   3
+#define OSP_MODULE_VERSION_MINOR    1
+#define OSP_MODULE_VERSION_BUGFIX   0
 
 /*
  * OSP module buffer size constants.
@@ -157,6 +161,8 @@ RCSID("$Id$")
 #define OSP_MAP_CALLPARTYINFO   NULL                            /* Call party info */
 #define OSP_MAP_NETTRANSCALLED  NULL                            /* Network translated called number */
 #define OSP_MAP_SVCPROVIDERID   NULL                            /* Service provider ID */
+#define OSP_MAP_RELATEDREASON   NULL                            /* Related Call-ID reason */
+#define OSP_MAP_RECORDID        NULL                            /* Record ID */
 #define OSP_MAP_STATS           NULL                            /* Statistics */
 #define OSP_MAP_SCALE           "4"                             /* Scale, 1 */
 
@@ -261,6 +267,8 @@ RCSID("$Id$")
 #define OSP_STR_REMOTECALLID            "remotecallid"
 #define OSP_STR_SRCCODEC                "sourcecodec"
 #define OSP_STR_DESTCODEC               "destinationcodec"
+#define OSP_STR_SRCVIDEOCODEC           "sourcevideocodec"
+#define OSP_STR_DESTVIDEOCODEC          "destinationvideocodec"
 #define OSP_STR_CONFID                  "conferenceid"
 #define OSP_STR_CUSTOMINFO              "custominfo"
 #define OSP_STR_CUSTOMINFO1             "custominfo1"
@@ -283,39 +291,61 @@ RCSID("$Id$")
 #define OSP_STR_NETTRANSCALLEDFORMAT    "networktranslatedcallednumberformat"
 #define OSP_STR_NETTRANSCALLED          "networktranslatedcallednumber"
 #define OSP_STR_SVCPROVIDERID           "serviceproviderid"
+#define OSP_STR_RELATEDREASON           "relatedcallidreason"
+#define OSP_STR_RECORDID                "recordid"
 
 /* Statistics parameter names */
-#define OSP_STR_REPORTSTATS            "reportstatistics"
-#define OSP_STR_SLOSTPACKETS           "sendlostpackets"
-#define OSP_STR_SLOSTFRACTION          "sendlostfraction"
-#define OSP_STR_RLOSTPACKETS           "receivelostpackets"
-#define OSP_STR_RLOSTFRACTION          "receivelostfraction"
-#define OSP_STR_RTPSRCREPOCTETS        "rtpsourcetoreporteroctets"
-#define OSP_STR_RTPDESTREPOCTETS       "rtpdestinationtoreporteroctets"
-#define OSP_STR_RTPSRCREPPACKETS       "rtpsourcetoreporterpackets"
-#define OSP_STR_RTPDESTREPPACKETS      "rtpdestinationtoreporterpackets"
-#define OSP_STR_RTPSRCREPLOST          "rtpsourcetoreporterlost"
-#define OSP_STR_RTPDESTREPLOST         "rtpdestinationtoreporterlost"
-#define OSP_STR_RTPSRCREPJITTERMEAN    "rtpsourcetoreporterjittermean"
-#define OSP_STR_RTPDESTREPJITTERMEAN   "rtpdestinationtoreporterjittermean"
-#define OSP_STR_RTPSRCREPJITTERMAX     "rtpsourcetoreporterjittermax"
-#define OSP_STR_RTPDESTREPJITTERMAX    "rtpdestinationtoreporterjittermax"
-#define OSP_STR_RTCPSRCDESTLOST        "rtcpsourcetodestinationlost"
-#define OSP_STR_RTCPDESTSRCLOST        "rtcpdestinationtosourcelost"
-#define OSP_STR_RTCPSRCDESTJITTERMEAN  "rtcpsourcetodestinationjittermean"
-#define OSP_STR_RTCPDESTSRCJITTERMEAN  "rtcpdestinationtosourcejittermean"
-#define OSP_STR_RTCPSRCDESTJITTERMAX   "rtcpsourcetodestinationjittermax"
-#define OSP_STR_RTCPDESTSRCJITTERMAX   "rtcpdestinationtosourcejittermax"
-#define OSP_STR_RTCPSRCRTDELAYMEAN     "rtcpsourceroundtripdelaymean"
-#define OSP_STR_RTCPDESTRTDELAYMEAN    "rtcpdestinationroundtripdelaymean"
-#define OSP_STR_RTCPSRCRTDELAYMAX      "rtcpsourceroundtripdelaymax"
-#define OSP_STR_RTCPDESTRTDELAYMAX     "rtcpdestinationroundtripdelaymax"
-#define OSP_STR_RFACTORSCALE           "rfactorscaleindex"
-#define OSP_STR_SRCREPRFACTOR          "sourcetoreporterrfactor"
-#define OSP_STR_DESTREPRFACTOR         "destinationtoreporterrfactor"
-#define OSP_STR_MOSSCALE               "mosscaleindex"
-#define OSP_STR_SRCREPMOS              "sourcetoreportermos"
-#define OSP_STR_DESTREPMOS             "destinationtoreportermos"
+#define OSP_STR_REPORTSTATS                 "reportstatistics"
+#define OSP_STR_SLOSTPACKETS                "sendlostpackets"
+#define OSP_STR_SLOSTFRACTION               "sendlostfraction"
+#define OSP_STR_RLOSTPACKETS                "receivelostpackets"
+#define OSP_STR_RLOSTFRACTION               "receivelostfraction"
+#define OSP_STR_RTPSRCREPOCTETS             "rtpsourcetoreporteroctets"
+#define OSP_STR_RTPDESTREPOCTETS            "rtpdestinationtoreporteroctets"
+#define OSP_STR_RTPSRCREPPACKETS            "rtpsourcetoreporterpackets"
+#define OSP_STR_RTPDESTREPPACKETS           "rtpdestinationtoreporterpackets"
+#define OSP_STR_RTPSRCREPLOST               "rtpsourcetoreporterlost"
+#define OSP_STR_RTPDESTREPLOST              "rtpdestinationtoreporterlost"
+#define OSP_STR_RTPSRCREPJITTERMEAN         "rtpsourcetoreporterjittermean"
+#define OSP_STR_RTPDESTREPJITTERMEAN        "rtpdestinationtoreporterjittermean"
+#define OSP_STR_RTPSRCREPJITTERMAX          "rtpsourcetoreporterjittermax"
+#define OSP_STR_RTPDESTREPJITTERMAX         "rtpdestinationtoreporterjittermax"
+#define OSP_STR_RTCPSRCDESTLOST             "rtcpsourcetodestinationlost"
+#define OSP_STR_RTCPDESTSRCLOST             "rtcpdestinationtosourcelost"
+#define OSP_STR_RTCPSRCDESTJITTERMEAN       "rtcpsourcetodestinationjittermean"
+#define OSP_STR_RTCPDESTSRCJITTERMEAN       "rtcpdestinationtosourcejittermean"
+#define OSP_STR_RTCPSRCDESTJITTERMAX        "rtcpsourcetodestinationjittermax"
+#define OSP_STR_RTCPDESTSRCJITTERMAX        "rtcpdestinationtosourcejittermax"
+#define OSP_STR_RTCPSRCRTDELAYMEAN          "rtcpsourceroundtripdelaymean"
+#define OSP_STR_RTCPDESTRTDELAYMEAN         "rtcpdestinationroundtripdelaymean"
+#define OSP_STR_RTCPSRCRTDELAYMAX           "rtcpsourceroundtripdelaymax"
+#define OSP_STR_RTCPDESTRTDELAYMAX          "rtcpdestinationroundtripdelaymax"
+#define OSP_STR_RFACTORSCALE                "rfactorscaleindex"
+#define OSP_STR_SRCREPRFACTOR               "sourcetoreporterrfactor"
+#define OSP_STR_DESTREPRFACTOR              "destinationtoreporterrfactor"
+#define OSP_STR_MOSSCALE                    "mosscaleindex"
+#define OSP_STR_SRCREPMOS                   "sourcetoreportermos"
+#define OSP_STR_DESTREPMOS                  "destinationtoreportermos"
+#define OSP_STR_RTPSRCREPVIDEOOCTETS        "rtpsourcetoreportervideooctets"
+#define OSP_STR_RTPDESTREPVIDEOOCTETS       "rtpdestinationtoreportervideooctets"
+#define OSP_STR_RTPSRCREPVIDEOPACKETS       "rtpsourcetoreportervideopackets"
+#define OSP_STR_RTPDESTREPVIDEOPACKETS      "rtpdestinationtoreportervideopackets"
+#define OSP_STR_RTPSRCREPVIDEOLOST          "rtpsourcetoreportervideolost"
+#define OSP_STR_RTPDESTREPVIDEOLOST         "rtpdestinationtoreportervideolost"
+#define OSP_STR_RTPSRCREPVIDEOJITTERMEAN    "rtpsourcetoreportervideojittermean"
+#define OSP_STR_RTPDESTREPVIDEOJITTERMEAN   "rtpdestinationtoreportervideojittermean"
+#define OSP_STR_RTPSRCREPVIDEOJITTERMAX     "rtpsourcetoreportervideojittermax"
+#define OSP_STR_RTPDESTREPVIDEOJITTERMAX    "rtpdestinationtoreportervideojittermax"
+#define OSP_STR_RTCPSRCDESTVIDEOLOST        "rtcpsourcetodestinationvideolost"
+#define OSP_STR_RTCPDESTSRCVIDEOLOST        "rtcpdestinationtosourcevideolost"
+#define OSP_STR_RTCPSRCDESTVIDEOJITTERMEAN  "rtcpsourcetodestinationvideojittermean"
+#define OSP_STR_RTCPDESTSRCVIDEOJITTERMEAN  "rtcpdestinationtosourcevideojittermean"
+#define OSP_STR_RTCPSRCDESTVIDEOJITTERMAX   "rtcpsourcetodestinationvideojittermax"
+#define OSP_STR_RTCPDESTSRCVIDEOJITTERMAX   "rtcpdestinationtosourcevideojittermax"
+#define OSP_STR_RTCPSRCVIDEORTDELAYMEAN     "rtcpsourcevideoroundtripdelaymean"
+#define OSP_STR_RTCPDESTVIDEORTDELAYMEAN    "rtcpdestinationvideoroundtripdelaymean"
+#define OSP_STR_RTCPSRCVIDEORTDELAYMAX      "rtcpsourcevideoroundtripdelaymax"
+#define OSP_STR_RTCPDESTVIDEORTDELAYMAX     "rtcpdestinationvideoroundtripdelaymax"
 
 /*
  * OSP log level
@@ -420,6 +450,17 @@ typedef enum {
 } osp_callnum_e;
 
 /*
+ * Media stream type
+ */
+typedef enum {
+    OSP_MEDIA_MIN = 0,
+    OSP_MEDIA_VOICE = OSP_MEDIA_MIN,    /* Voice */
+    OSP_MEDIA_VIDEO,                    /* Video */
+    OSP_MEDIA_MAX = OSP_MEDIA_VIDEO,
+    OSP_MEDIA_NUMBER
+} osp_media_e;
+
+/*
  * Cisco h323-call-origin value strings
  */
 #define OSP_CISCOCALL_IN    "answer"    /* Call answer, inbound */
@@ -467,6 +508,12 @@ typedef enum {
     OSP_CISCOREL_EXTAPPL,
     OSP_CISCOREL_EXTAGENT
 } osp_ciscorelease_e;
+
+/*
+ * BroadWorks record ID regular expression
+ */
+#define OSP_BWRID_NMATCH    3
+#define OSP_BWRID_PATTERN   "([0-9]{10})(.*)([0-9]{14}\\.[0-9]{3})(.*)"
 
 /*
  * BroadWorks release source
@@ -520,6 +567,7 @@ typedef struct {
     char* tzfile;
     int tzlist_size;
     osp_timezone_t tzlist[OSP_TZ_MAX];
+    regex_t bwrid;
 } osp_running_t;
 
 /*
@@ -568,35 +616,35 @@ typedef struct {
 } osp_packmap_t;
 
 typedef struct {
-    int reportstats;                    /* If to report statistics */
-    osp_packmap_t slost;                /* Lost send mapping */
-    osp_packmap_t rlost;                /* Lost receive mapping */
-    char* rtp_src_rep_octets;           /* RTP source-to-reporter octets */
-    char* rtp_dest_rep_octets;          /* RTP destination-to-reporter octets */
-    char* rtp_src_rep_packets;          /* RTP source-to-reporter packets */
-    char* rtp_dest_rep_packets;         /* RTP destination-to-reporter packets */
-    char* rtp_src_rep_lost;             /* RTP source-to-reporter lost packets */
-    char* rtp_dest_rep_lost;            /* RTP destination-to-reporter lost packets */
-    char* rtp_src_rep_jitter_mean;      /* RTP source-to-reporter jitter mean */
-    char* rtp_dest_rep_jitter_mean;     /* RTP destination-to-reporter jitter mean */
-    char* rtp_src_rep_jitter_max;       /* RTP source-to-reporter jitter max */
-    char* rtp_dest_rep_jitter_max;      /* RTP destination-to-reporter jitter max */
-    char* rtcp_src_dest_lost;           /* RTCP source-to-destination lost packets */
-    char* rtcp_dest_src_lost;           /* RTCP destination-to-source lost packets */
-    char* rtcp_src_dest_jitter_mean;    /* RTCP source-to-destination jitter mean */
-    char* rtcp_dest_src_jitter_mean;    /* RTCP destination-to-source jitter mean */
-    char* rtcp_src_dest_jitter_max;     /* RTCP source-to-destination jitter max */
-    char* rtcp_dest_src_jitter_max;     /* RTCP destination-to-source jitter max */
-    char* rtcp_src_rtdelay_mean;        /* RTCP source round trip delay mean */
-    char* rtcp_dest_rtdelay_mean;       /* RTCP destination round trip delay mean */
-    char* rtcp_src_rtdelay_max;         /* RTCP source round trip delay max */
-    char* rtcp_dest_rtdelay_max;        /* RTCP destination round trip delay max */
-    int rfactorscale;                   /* R-Factor scale index */
-    char* src_rep_rfactor;              /* Source-to-reporter R-Factor */
-    char* dest_rep_rfactor;             /* Destination-to-reporter R-Factor */
-    int mosscale;                       /* MOS scale index */
-    char* src_rep_mos;                  /* Source-to-reporter MOS */
-    char* dest_rep_mos;                 /* Destination-to-reporter MOS */
+    int reportstats;                                    /* If to report statistics */
+    osp_packmap_t slost;                                /* Lost send mapping */
+    osp_packmap_t rlost;                                /* Lost receive mapping */
+    char* rtp_src_rep_octets[OSP_MEDIA_NUMBER];         /* RTP source-to-reporter octets */
+    char* rtp_dest_rep_octets[OSP_MEDIA_NUMBER];        /* RTP destination-to-reporter octets */
+    char* rtp_src_rep_packets[OSP_MEDIA_NUMBER];        /* RTP source-to-reporter packets */
+    char* rtp_dest_rep_packets[OSP_MEDIA_NUMBER];       /* RTP destination-to-reporter packets */
+    char* rtp_src_rep_lost[OSP_MEDIA_NUMBER];           /* RTP source-to-reporter lost packets */
+    char* rtp_dest_rep_lost[OSP_MEDIA_NUMBER];          /* RTP destination-to-reporter lost packets */
+    char* rtp_src_rep_jitter_mean[OSP_MEDIA_NUMBER];    /* RTP source-to-reporter jitter mean */
+    char* rtp_dest_rep_jitter_mean[OSP_MEDIA_NUMBER];   /* RTP destination-to-reporter jitter mean */
+    char* rtp_src_rep_jitter_max[OSP_MEDIA_NUMBER];     /* RTP source-to-reporter jitter max */
+    char* rtp_dest_rep_jitter_max[OSP_MEDIA_NUMBER];    /* RTP destination-to-reporter jitter max */
+    char* rtcp_src_dest_lost[OSP_MEDIA_NUMBER];         /* RTCP source-to-destination lost packets */
+    char* rtcp_dest_src_lost[OSP_MEDIA_NUMBER];         /* RTCP destination-to-source lost packets */
+    char* rtcp_src_dest_jitter_mean[OSP_MEDIA_NUMBER];  /* RTCP source-to-destination jitter mean */
+    char* rtcp_dest_src_jitter_mean[OSP_MEDIA_NUMBER];  /* RTCP destination-to-source jitter mean */
+    char* rtcp_src_dest_jitter_max[OSP_MEDIA_NUMBER];   /* RTCP source-to-destination jitter max */
+    char* rtcp_dest_src_jitter_max[OSP_MEDIA_NUMBER];   /* RTCP destination-to-source jitter max */
+    char* rtcp_src_rtdelay_mean[OSP_MEDIA_NUMBER];      /* RTCP source round trip delay mean */
+    char* rtcp_dest_rtdelay_mean[OSP_MEDIA_NUMBER];     /* RTCP destination round trip delay mean */
+    char* rtcp_src_rtdelay_max[OSP_MEDIA_NUMBER];       /* RTCP source round trip delay max */
+    char* rtcp_dest_rtdelay_max[OSP_MEDIA_NUMBER];      /* RTCP destination round trip delay max */
+    int rfactorscale;                                   /* R-Factor scale index */
+    char* src_rep_rfactor;                              /* Source-to-reporter R-Factor */
+    char* dest_rep_rfactor;                             /* Destination-to-reporter R-Factor */
+    int mosscale;                                       /* MOS scale index */
+    char* src_rep_mos;                                  /* Source-to-reporter MOS */
+    char* dest_rep_mos;                                 /* Destination-to-reporter MOS */
 } osp_statsmap_t;
 
 /*
@@ -661,8 +709,8 @@ typedef struct {
     char* routecallid;                  /* Route call ID */
     char* localcallid;                  /* Local call ID */
     char* remotecallid;                 /* Remote call ID */
-    char* srccodec;                     /* Source codec */
-    char* destcodec;                    /* Destination codec */
+    char* srccodec[OSP_MEDIA_NUMBER];   /* Source codec */
+    char* destcodec[OSP_MEDIA_NUMBER];  /* Destination codec */
     char* confid;                       /* Conference ID */
     char* custinfo[OSP_CUSTOMINFO_MAX]; /* Custom info */
     char* srcrealm;                     /* Source realm */
@@ -677,6 +725,8 @@ typedef struct {
     int nettranscalledformat;           /* Network translated called number format */
     char* nettranscalled;               /* Network translated called number */
     char* svcproviderid;                /* Service provider ID */
+    char* relatedreason;                /* Related Call-ID reason */
+    char* recordid;                     /* Record ID */
     osp_statsmap_t stats;               /* Statistics */
 } osp_mapping_t;
 
@@ -695,32 +745,32 @@ typedef struct {
 } osp_pack_t;
 
 typedef struct {
-    osp_pack_t slost;               /* Send packets lost */
-    osp_pack_t rlost;               /* Receive packets lost */
-    int rtp_src_rep_octets;         /* RTP source-to-reporter octets */
-    int rtp_dest_rep_octets;        /* RTP destination-to-reporter octets */
-    int rtp_src_rep_packets;        /* RTP source-to-reporter packets */
-    int rtp_dest_rep_packets;       /* RTP destination-to-reporter packets */
-    int rtp_src_rep_lost;           /* RTP source-to-reporter lost packets */
-    int rtp_dest_rep_lost;          /* RTP destination-to-reporter lost packets */
-    int rtp_src_rep_jitter_mean;    /* RTP source-to-reporter jitter mean */
-    int rtp_dest_rep_jitter_mean;   /* RTP destination-to-reporter jitter mean */
-    int rtp_src_rep_jitter_max;     /* RTP source-to-reporter jitter max */
-    int rtp_dest_rep_jitter_max;    /* RTP destination-to-reporter jitter max */
-    int rtcp_src_dest_lost;         /* RTCP source-to-destination lost packets */
-    int rtcp_dest_src_lost;         /* RTCP destination-to-source lost packets */
-    int rtcp_src_dest_jitter_mean;  /* RTCP source-to-destination jitter mean */
-    int rtcp_dest_src_jitter_mean;  /* RTCP destination-to-source jitter mean */
-    int rtcp_src_dest_jitter_max;   /* RTCP source-to-destination jitter max */
-    int rtcp_dest_src_jitter_max;   /* RTCP destination-to-source jitter max */
-    int rtcp_src_rtdelay_mean;      /* RTCP source round trip delay mean */
-    int rtcp_dest_rtdelay_mean;     /* RTCP destination round trip delay mean */
-    int rtcp_src_rtdelay_max;       /* RTCP source round trip delay max */
-    int rtcp_dest_rtdelay_max;      /* RTCP destination round trip delay max */
-    float src_rep_rfactor;          /* Source-to-reporter R-Factor */
-    float dest_rep_rfactor;         /* Destination-to-reporter R-Factor */
-    float src_rep_mos;              /* Source-to-reporter MOS */
-    float dest_rep_mos;             /* Destination-to-reporter MOS */
+    osp_pack_t slost;                                   /* Send packets lost */
+    osp_pack_t rlost;                                   /* Receive packets lost */
+    int rtp_src_rep_octets[OSP_MEDIA_NUMBER];           /* RTP source-to-reporter octets */
+    int rtp_dest_rep_octets[OSP_MEDIA_NUMBER];          /* RTP destination-to-reporter octets */
+    int rtp_src_rep_packets[OSP_MEDIA_NUMBER];          /* RTP source-to-reporter packets */
+    int rtp_dest_rep_packets[OSP_MEDIA_NUMBER];         /* RTP destination-to-reporter packets */
+    int rtp_src_rep_lost[OSP_MEDIA_NUMBER];             /* RTP source-to-reporter lost packets */
+    int rtp_dest_rep_lost[OSP_MEDIA_NUMBER];            /* RTP destination-to-reporter lost packets */
+    int rtp_src_rep_jitter_mean[OSP_MEDIA_NUMBER];      /* RTP source-to-reporter jitter mean */
+    int rtp_dest_rep_jitter_mean[OSP_MEDIA_NUMBER];     /* RTP destination-to-reporter jitter mean */
+    int rtp_src_rep_jitter_max[OSP_MEDIA_NUMBER];       /* RTP source-to-reporter jitter max */
+    int rtp_dest_rep_jitter_max[OSP_MEDIA_NUMBER];      /* RTP destination-to-reporter jitter max */
+    int rtcp_src_dest_lost[OSP_MEDIA_NUMBER];           /* RTCP source-to-destination lost packets */
+    int rtcp_dest_src_lost[OSP_MEDIA_NUMBER];           /* RTCP destination-to-source lost packets */
+    int rtcp_src_dest_jitter_mean[OSP_MEDIA_NUMBER];    /* RTCP source-to-destination jitter mean */
+    int rtcp_dest_src_jitter_mean[OSP_MEDIA_NUMBER];    /* RTCP destination-to-source jitter mean */
+    int rtcp_src_dest_jitter_max[OSP_MEDIA_NUMBER];     /* RTCP source-to-destination jitter max */
+    int rtcp_dest_src_jitter_max[OSP_MEDIA_NUMBER];     /* RTCP destination-to-source jitter max */
+    int rtcp_src_rtdelay_mean[OSP_MEDIA_NUMBER];        /* RTCP source round trip delay mean */
+    int rtcp_dest_rtdelay_mean[OSP_MEDIA_NUMBER];       /* RTCP destination round trip delay mean */
+    int rtcp_src_rtdelay_max[OSP_MEDIA_NUMBER];         /* RTCP source round trip delay max */
+    int rtcp_dest_rtdelay_max[OSP_MEDIA_NUMBER];        /* RTCP destination round trip delay max */
+    float src_rep_rfactor;                              /* Source-to-reporter R-Factor */
+    float dest_rep_rfactor;                             /* Destination-to-reporter R-Factor */
+    float src_rep_mos;                                  /* Source-to-reporter MOS */
+    float dest_rep_mos;                                 /* Destination-to-reporter MOS */
 } osp_stats_t;
 
 /*
@@ -763,8 +813,8 @@ typedef struct {
     osp_string_t corrsessionid;                 /* Correlation session ID */
     osp_string_t localcallid;                   /* Local call ID */
     osp_string_t remotecallid;                  /* Remote call ID */
-    osp_string_t srccodec;                      /* Source codec */
-    osp_string_t destcodec;                     /* Destination codec */
+    osp_string_t srccodec[OSP_MEDIA_NUMBER];    /* Source codec */
+    osp_string_t destcodec[OSP_MEDIA_NUMBER];   /* Destination codec */
     osp_string_t confid;                        /* Conference ID */
     osp_string_t custinfo[OSP_CUSTOMINFO_MAX];  /* Custom info */
     osp_string_t srcrealm;                      /* Source realm */
@@ -778,6 +828,8 @@ typedef struct {
     osp_string_t calledusergroup;               /* Called party user group */
     osp_string_t nettranscalled;                /* Network translated called number */
     osp_string_t svcproviderid;                 /* Service provider ID */
+    osp_string_t relatedreason;                 /* Related Call-ID reason */
+    osp_string_t recordid;                      /* Record ID */
     osp_stats_t stats;                          /* Statistics */
 } osp_usage_t;
 
@@ -1029,6 +1081,102 @@ typedef struct {
 }
 
 /*
+ * Get 1st string
+ *
+ * param _req FreeRADIUS request
+ * param _flag Parse flag
+ * param _name Item name
+ * param _lev Must or may be defined
+ * param _map Item mapping string
+ * param _buf Buffer
+ * param _val Item string
+ */
+#define OSP_GET_1stSTR(_req, _flag, _name, _lev, _map, _buf, _val) { \
+    if (_flag) { \
+        if (OSP_CHECK_STRING(_map)) { \
+            radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
+            if (_buf[0] == '\0') { \
+                /* Has checked string NULL */ \
+                if (_lev == OSP_DEF_MUST) { \
+                   radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                   return -1; \
+                } else { \
+                   DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", _map, _name); \
+                   _val[0] = '\0'; \
+                } \
+            } else { \
+                osp_get_1st(_buf, _val, sizeof(_val)); \
+            } \
+        } else { \
+            if (_lev == OSP_DEF_MUST) { \
+                radlog(L_ERR, "rlm_osp: '%s' mapping undefined.", _name); \
+                return -1; \
+            } else { \
+                DEBUG("rlm_osp: '%s' mapping undefined.", _name); \
+                _val[0] = '\0'; \
+            } \
+        } \
+    } else { \
+        DEBUG2("rlm_osp: do not parse '%s'.", _name); \
+        _val[0] = '\0'; \
+    } \
+    /* Do not have to check string NULL */ \
+    DEBUG2("rlm_osp: '%s' = '%s'", _name, _val); \
+}
+
+/*
+ * Get 2nd string
+ *
+ * param _req FreeRADIUS request
+ * param _flag Parse flag
+ * param _name Item name
+ * param _lev Must or may be defined
+ * param _map Item mapping string
+ * param _buf Buffer
+ * param _val Item string
+ */
+#define OSP_GET_2ndSTR(_req, _flag, _name, _lev, _map, _buf, _val) { \
+    if (_flag) { \
+        if (OSP_CHECK_STRING(_map)) { \
+            radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
+            if (_buf[0] == '\0') { \
+                if (_lev == OSP_DEF_MUST) { \
+                   radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                   return -1; \
+                } else { \
+                   DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", _map, _name); \
+                   _val[0] = '\0'; \
+                } \
+            } else { \
+                osp_get_2nd(_buf, _val, sizeof(_val)); \
+                if (_val[0] == '\0') { \
+                    /* Has checked string NULL */ \
+                    if (_lev == OSP_DEF_MUST) { \
+                       radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                       return -1; \
+                    } else { \
+                       DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", _map, _name); \
+                    } \
+                } \
+            } \
+        } else { \
+            if (_lev == OSP_DEF_MUST) { \
+                radlog(L_ERR, "rlm_osp: '%s' mapping undefined.", _name); \
+                return -1; \
+            } else { \
+                DEBUG("rlm_osp: '%s' mapping undefined.", _name); \
+                _val[0] = '\0'; \
+            } \
+        } \
+    } else { \
+        DEBUG2("rlm_osp: do not parse '%s'.", _name); \
+        _val[0] = '\0'; \
+    } \
+    /* Do not have to check string NULL */ \
+    DEBUG2("rlm_osp: '%s' = '%s'", _name, _val); \
+}
+
+/*
  * Get called/calling number
  *
  * param _req FreeRADIUS request
@@ -1147,6 +1295,57 @@ typedef struct {
             } else { \
                 osp_format_device(_buf, _val, sizeof(_val)); \
                 osp_get_iphost(_buf, _host, sizeof(_host)); \
+            } \
+        } else { \
+            if (_lev == OSP_DEF_MUST) { \
+                radlog(L_ERR, "rlm_osp: '%s' mapping undefined.", _name); \
+                return -1; \
+            } else { \
+                DEBUG("rlm_osp: '%s' mapping undefined.", _name); \
+                osp_create_device(_ip, _port, _val, sizeof(_val)); \
+            } \
+        } \
+    } else { \
+        DEBUG2("rlm_osp: do not parse '%s'.", _name); \
+        osp_create_device(_ip, _port, _val, sizeof(_val)); \
+    } \
+    /* Do not have to check string NULL */ \
+    DEBUG2("rlm_osp: '%s' = '%s'", _name, _val); \
+}
+
+/*
+ * Get 1st IP address
+ *
+ * param _req FreeRADIUS request
+ * param _flag Parse flag
+ * param _name Item name
+ * param _lev Must or may be defined
+ * param _map Item mapping string
+ * param _ip Default IP address
+ * param _port Default port
+ * param _buf1 Buffer 1
+ * param _buf2 Buffer 2
+ * param _val Item value
+ * param _host Host of IP
+ */
+#define OSP_GET_1stIP(_req, _flag, _name, _lev, _map, _ip, _port, _buf1, _buf2, _val, _host) { \
+    _host[0] = '\0'; \
+    if (_flag) { \
+        if (OSP_CHECK_STRING(_map)) { \
+            radius_xlat(_buf1, sizeof(_buf1), _map, _req, NULL); \
+            if (_buf1[0] == '\0') { \
+                /* Has checked string NULL */ \
+                if (_lev == OSP_DEF_MUST) { \
+                    radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    return -1; \
+                } else { \
+                    DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", _map, _name); \
+                    osp_create_device(_ip, _port, _val, sizeof(_val)); \
+                } \
+            } else { \
+                osp_get_1st(_buf1, _buf2, sizeof(_buf2)); \
+                osp_format_device(_buf2, _val, sizeof(_val)); \
+                osp_get_iphost(_buf2, _host, sizeof(_host)); \
             } \
         } else { \
             if (_lev == OSP_DEF_MUST) { \
@@ -1293,6 +1492,8 @@ static void osp_report_statsinfo(OSPTTRANHANDLE transaction, osp_statsmap_t* map
 static int osp_get_usageinfo(rlm_osp_t* data, REQUEST* request, int type, osp_usage_t* usage);
 static int osp_match_subnet(osp_netlist_t* list, uint32_t ip);
 static int osp_get_statsinfo(osp_mapping_t* mapping, REQUEST* request, int type, osp_usage_t* usage);
+static void osp_get_1st(char* items, char* buffer, int buffersize);
+static void osp_get_2nd(char* items, char* buffer, int buffersize);
 static void osp_get_iphost(char* ip, char* buffer, int buffersize);
 static void osp_create_device(uint32_t ip, int port, char* buffer, int buffersize);
 static void osp_format_device(char* device, char* buffer, int buffersize);
@@ -1303,6 +1504,8 @@ static time_t osp_format_time(osp_running_t* running, char* timestamp, osp_times
 static int osp_remove_timezone(osp_running_t* running, char* timestamp, char* buffer, int buffersize, long int* toffset);
 static int osp_cal_timeoffset(osp_running_t* running, char* tzone, long int* toffset);
 static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
+static int osp_check_recordid(osp_running_t* running, char* recordid);
+static int osp_get_systemid(osp_running_t* running, char* recordid, char* buffer, int buffersize);
 
 /* OSP instance flag */
 static int instance_count = 0;
@@ -1427,8 +1630,10 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_ROUTECALLID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.routecallid), NULL, OSP_MAP_SESSIONID },
     { OSP_STR_LOCALCALLID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.localcallid), NULL, OSP_MAP_SESSIONID },
     { OSP_STR_REMOTECALLID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.remotecallid), NULL, OSP_MAP_SESSIONID },
-    { OSP_STR_SRCCODEC, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srccodec), NULL, OSP_MAP_CODEC },
-    { OSP_STR_DESTCODEC, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destcodec), NULL, OSP_MAP_CODEC },
+    { OSP_STR_SRCCODEC, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srccodec[OSP_MEDIA_VOICE]), NULL, OSP_MAP_CODEC },
+    { OSP_STR_DESTCODEC, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destcodec[OSP_MEDIA_VOICE]), NULL, OSP_MAP_CODEC },
+    { OSP_STR_SRCVIDEOCODEC, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srccodec[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_CODEC },
+    { OSP_STR_DESTVIDEOCODEC, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destcodec[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_CODEC },
     { OSP_STR_CONFID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.confid), NULL, OSP_MAP_CONFID },
     { OSP_STR_CUSTOMINFO1, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[0]), NULL, OSP_MAP_CUSTOMINFO },
     { OSP_STR_CUSTOMINFO2, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.custinfo[1]), NULL, OSP_MAP_CUSTOMINFO },
@@ -1450,6 +1655,8 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_NETTRANSCALLEDFORMAT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.nettranscalledformat), NULL, OSP_MAP_NUMFORMAT },
     { OSP_STR_NETTRANSCALLED, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.nettranscalled), NULL, OSP_MAP_NETTRANSCALLED },
     { OSP_STR_SVCPROVIDERID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.svcproviderid), NULL, OSP_MAP_SVCPROVIDERID },
+    { OSP_STR_RELATEDREASON, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.relatedreason), NULL, OSP_MAP_RELATEDREASON },
+    { OSP_STR_RECORDID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.recordid), NULL, OSP_MAP_RECORDID },
     /* Statistics mapping */
 #define mSMAP   mapping.stats
     { OSP_STR_REPORTSTATS, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mSMAP.reportstats), NULL, OSP_MAP_REPORT },
@@ -1457,32 +1664,52 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_SLOSTFRACTION, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.slost.fract), NULL, OSP_MAP_STATS },
     { OSP_STR_RLOSTPACKETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rlost.pack), NULL, OSP_MAP_STATS },
     { OSP_STR_RLOSTFRACTION, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rlost.fract), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTPSRCREPOCTETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_octets), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTPDESTREPOCTETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_octets), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTPSRCREPPACKETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_packets), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTPDESTREPPACKETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_packets), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTPSRCREPLOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_lost), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTPDESTREPLOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_lost), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTPSRCREPJITTERMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_jitter_mean), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTPDESTREPJITTERMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_jitter_mean), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTPSRCREPJITTERMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_jitter_max), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTPDESTREPJITTERMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_jitter_max), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTCPSRCDESTLOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_dest_lost), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTCPDESTSRCLOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_src_lost), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTCPSRCDESTJITTERMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_dest_jitter_mean), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTCPDESTSRCJITTERMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_src_jitter_mean), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTCPSRCDESTJITTERMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_dest_jitter_max), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTCPDESTSRCJITTERMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_src_jitter_max), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTCPSRCRTDELAYMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_rtdelay_mean), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTCPDESTRTDELAYMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_rtdelay_mean), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTCPSRCRTDELAYMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_rtdelay_max), NULL, OSP_MAP_STATS },
-    { OSP_STR_RTCPDESTRTDELAYMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_rtdelay_max), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPSRCREPOCTETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_octets[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPDESTREPOCTETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_octets[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPSRCREPPACKETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_packets[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPDESTREPPACKETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_packets[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPSRCREPLOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_lost[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPDESTREPLOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_lost[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPSRCREPJITTERMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_jitter_mean[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPDESTREPJITTERMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_jitter_mean[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPSRCREPJITTERMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_jitter_max[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPDESTREPJITTERMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_jitter_max[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPSRCDESTLOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_dest_lost[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPDESTSRCLOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_src_lost[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPSRCDESTJITTERMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_dest_jitter_mean[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPDESTSRCJITTERMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_src_jitter_mean[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPSRCDESTJITTERMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_dest_jitter_max[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPDESTSRCJITTERMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_src_jitter_max[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPSRCRTDELAYMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_rtdelay_mean[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPDESTRTDELAYMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_rtdelay_mean[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPSRCRTDELAYMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_rtdelay_max[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPDESTRTDELAYMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_rtdelay_max[OSP_MEDIA_VOICE]), NULL, OSP_MAP_STATS },
     { OSP_STR_RFACTORSCALE, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mSMAP.rfactorscale), NULL, OSP_MAP_SCALE },
     { OSP_STR_SRCREPRFACTOR, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.src_rep_rfactor), NULL, OSP_MAP_STATS },
     { OSP_STR_DESTREPRFACTOR, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.dest_rep_rfactor), NULL, OSP_MAP_STATS },
     { OSP_STR_MOSSCALE, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mSMAP.mosscale), NULL, OSP_MAP_SCALE },
     { OSP_STR_SRCREPMOS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.src_rep_mos), NULL, OSP_MAP_STATS },
     { OSP_STR_DESTREPMOS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.dest_rep_mos), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPSRCREPVIDEOOCTETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_octets[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPDESTREPVIDEOOCTETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_octets[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPSRCREPVIDEOPACKETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_packets[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPDESTREPVIDEOPACKETS, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_packets[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPSRCREPVIDEOLOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_lost[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPDESTREPVIDEOLOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_lost[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPSRCREPVIDEOJITTERMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_jitter_mean[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPDESTREPVIDEOJITTERMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_jitter_mean[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPSRCREPVIDEOJITTERMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_src_rep_jitter_max[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTPDESTREPVIDEOJITTERMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtp_dest_rep_jitter_max[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPSRCDESTVIDEOLOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_dest_lost[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPDESTSRCVIDEOLOST, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_src_lost[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPSRCDESTVIDEOJITTERMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_dest_jitter_mean[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPDESTSRCVIDEOJITTERMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_src_jitter_mean[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPSRCDESTVIDEOJITTERMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_dest_jitter_max[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPDESTSRCVIDEOJITTERMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_src_jitter_max[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPSRCVIDEORTDELAYMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_rtdelay_mean[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPDESTVIDEORTDELAYMEAN, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_rtdelay_mean[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPSRCVIDEORTDELAYMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_src_rtdelay_max[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
+    { OSP_STR_RTCPDESTVIDEORTDELAYMAX, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mSMAP.rtcp_dest_rtdelay_max[OSP_MEDIA_VIDEO]), NULL, OSP_MAP_STATS },
 #undef mSMAP
     /* Statistics group mapping end */
     /* End */
@@ -1597,6 +1824,12 @@ static int osp_check_running(
     /* If failed to load time zone configuration, then fail. */
     if (osp_load_tzlist(running) < 0) {
         radlog(L_ERR, "rlm_osp: Failed to load time zone configuration.");
+        return -1;
+    }
+
+    /* If failed to compile BroadWorks record ID regular expression, then fail. */
+    if (regcomp(&running->bwrid, OSP_BWRID_PATTERN, REG_EXTENDED) != 0) {
+        radlog(L_ERR, "rlm_osp: Failed to compile BroadWorks record ID regular expression.");
         return -1;
     }
 
@@ -2063,11 +2296,13 @@ static int osp_check_mapping(
         break;
     }
 
-    /* If source codec is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP(OSP_STR_SRCCODEC, OSP_DEF_MAY, mapping->srccodec);
+    /* If source codec are incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_SRCCODEC, OSP_DEF_MAY, mapping->srccodec[OSP_MEDIA_VOICE]);
+    OSP_CHECK_ITEMMAP(OSP_STR_SRCVIDEOCODEC, OSP_DEF_MAY, mapping->srccodec[OSP_MEDIA_VIDEO]);
 
-    /* If destination codec is incorrect, then fail. */
-    OSP_CHECK_ITEMMAP(OSP_STR_DESTCODEC, OSP_DEF_MAY, mapping->destcodec);
+    /* If destination codec are incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_DESTCODEC, OSP_DEF_MAY, mapping->destcodec[OSP_MEDIA_VOICE]);
+    OSP_CHECK_ITEMMAP(OSP_STR_DESTVIDEOCODEC, OSP_DEF_MAY, mapping->destcodec[OSP_MEDIA_VIDEO]);
 
     /* If conference ID is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_CONFID, OSP_DEF_MAY, mapping->confid);
@@ -2113,6 +2348,22 @@ static int osp_check_mapping(
 
     /* If service provider ID is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_SVCPROVIDERID, OSP_DEF_MAY, mapping->svcproviderid);
+
+    /* If related Call-ID reason is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_RELATEDREASON, OSP_DEF_MAY, mapping->relatedreason);
+
+    /* If record ID is incorrect, then fail. */
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        OSP_CHECK_ITEMMAP(OSP_STR_RECORDID, OSP_DEF_MUST, mapping->recordid);
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+    default:
+        break;
+    }
 
     /* If statistics are incorrect, then fail. */
     if (osp_check_statsmap(&mapping->stats) < 0) {
@@ -2205,65 +2456,85 @@ static int osp_check_statsmap(
         /* If lost receive packet fraction is incorrect, then fail. */
         OSP_CHECK_ITEMMAP(OSP_STR_RLOSTFRACTION, OSP_DEF_MAY, stats->rlost.fract);
 
-        /* If RTP source-to-reporter octets is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPOCTETS, OSP_DEF_MAY, stats->rtp_src_rep_octets);
+        /* If RTP source-to-reporter octets are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPOCTETS, OSP_DEF_MAY, stats->rtp_src_rep_octets[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPVIDEOOCTETS, OSP_DEF_MAY, stats->rtp_src_rep_octets[OSP_MEDIA_VIDEO]);
 
-        /* If RTP destination-to-reporter octets is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPOCTETS, OSP_DEF_MAY, stats->rtp_dest_rep_octets);
+        /* If RTP destination-to-reporter octets are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPOCTETS, OSP_DEF_MAY, stats->rtp_dest_rep_octets[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPVIDEOOCTETS, OSP_DEF_MAY, stats->rtp_dest_rep_octets[OSP_MEDIA_VIDEO]);
 
-        /* If RTP source-to-reporter packets is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPPACKETS, OSP_DEF_MAY, stats->rtp_src_rep_packets);
+        /* If RTP source-to-reporter packets are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPPACKETS, OSP_DEF_MAY, stats->rtp_src_rep_packets[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPVIDEOPACKETS, OSP_DEF_MAY, stats->rtp_src_rep_packets[OSP_MEDIA_VIDEO]);
 
-        /* If RTP destination-to-reporter packets is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPPACKETS, OSP_DEF_MAY, stats->rtp_dest_rep_packets);
+        /* If RTP destination-to-reporter packets are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPPACKETS, OSP_DEF_MAY, stats->rtp_dest_rep_packets[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPVIDEOPACKETS, OSP_DEF_MAY, stats->rtp_dest_rep_packets[OSP_MEDIA_VIDEO]);
 
-        /* If RTP source-to-reporter lost packets is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPLOST, OSP_DEF_MAY, stats->rtp_src_rep_lost);
+        /* If RTP source-to-reporter lost packets are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPLOST, OSP_DEF_MAY, stats->rtp_src_rep_lost[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPVIDEOLOST, OSP_DEF_MAY, stats->rtp_src_rep_lost[OSP_MEDIA_VIDEO]);
 
-        /* If RTP destination-to-reporter lost packets is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPLOST, OSP_DEF_MAY, stats->rtp_dest_rep_lost);
+        /* If RTP destination-to-reporter lost packets are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPLOST, OSP_DEF_MAY, stats->rtp_dest_rep_lost[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPVIDEOLOST, OSP_DEF_MAY, stats->rtp_dest_rep_lost[OSP_MEDIA_VIDEO]);
 
-        /* If RTP source-to-reporter jitter mean is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPJITTERMEAN, OSP_DEF_MAY, stats->rtp_src_rep_jitter_mean);
+        /* If RTP source-to-reporter jitter mean are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPJITTERMEAN, OSP_DEF_MAY, stats->rtp_src_rep_jitter_mean[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPVIDEOJITTERMEAN, OSP_DEF_MAY, stats->rtp_src_rep_jitter_mean[OSP_MEDIA_VIDEO]);
 
-        /* If RTP destination-to-reporter jitter mean is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPJITTERMEAN, OSP_DEF_MAY, stats->rtp_dest_rep_jitter_mean);
+        /* If RTP destination-to-reporter jitter mean are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPJITTERMEAN, OSP_DEF_MAY, stats->rtp_dest_rep_jitter_mean[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPVIDEOJITTERMEAN, OSP_DEF_MAY, stats->rtp_dest_rep_jitter_mean[OSP_MEDIA_VIDEO]);
 
-        /* If RTP source-to-reporter jitter max is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPJITTERMAX, OSP_DEF_MAY, stats->rtp_src_rep_jitter_max);
+        /* If RTP source-to-reporter jitter max are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPJITTERMAX, OSP_DEF_MAY, stats->rtp_src_rep_jitter_max[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPSRCREPVIDEOJITTERMAX, OSP_DEF_MAY, stats->rtp_src_rep_jitter_max[OSP_MEDIA_VIDEO]);
 
-        /* If RTP destination-to-reporter jitter max is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPJITTERMAX, OSP_DEF_MAY, stats->rtp_dest_rep_jitter_max);
+        /* If RTP destination-to-reporter jitter max are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPJITTERMAX, OSP_DEF_MAY, stats->rtp_dest_rep_jitter_max[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTPDESTREPVIDEOJITTERMAX, OSP_DEF_MAY, stats->rtp_dest_rep_jitter_max[OSP_MEDIA_VIDEO]);
 
-        /* If RTCP source-to-destination lost packets is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCDESTLOST, OSP_DEF_MAY, stats->rtcp_src_dest_lost);
+        /* If RTCP source-to-destination lost packets are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCDESTLOST, OSP_DEF_MAY, stats->rtcp_src_dest_lost[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCDESTVIDEOLOST, OSP_DEF_MAY, stats->rtcp_src_dest_lost[OSP_MEDIA_VIDEO]);
 
-        /* If RTCP destination-to-source lost packets is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTSRCLOST, OSP_DEF_MAY, stats->rtcp_dest_src_lost);
+        /* If RTCP destination-to-source lost packets are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTSRCLOST, OSP_DEF_MAY, stats->rtcp_dest_src_lost[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTSRCVIDEOLOST, OSP_DEF_MAY, stats->rtcp_dest_src_lost[OSP_MEDIA_VIDEO]);
 
-        /* If RTCP source-to-destination jitter mean is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCDESTJITTERMEAN, OSP_DEF_MAY, stats->rtcp_src_dest_jitter_mean);
+        /* If RTCP source-to-destination jitter mean are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCDESTJITTERMEAN, OSP_DEF_MAY, stats->rtcp_src_dest_jitter_mean[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCDESTVIDEOJITTERMEAN, OSP_DEF_MAY, stats->rtcp_src_dest_jitter_mean[OSP_MEDIA_VIDEO]);
 
-        /* If RTCP destination-to-source jitter mean is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTSRCJITTERMEAN, OSP_DEF_MAY, stats->rtcp_dest_src_jitter_mean);
+        /* If RTCP destination-to-source jitter mean are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTSRCJITTERMEAN, OSP_DEF_MAY, stats->rtcp_dest_src_jitter_mean[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTSRCVIDEOJITTERMEAN, OSP_DEF_MAY, stats->rtcp_dest_src_jitter_mean[OSP_MEDIA_VIDEO]);
 
-        /* If RTCP source-to-destination jitter max is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCDESTJITTERMAX, OSP_DEF_MAY, stats->rtcp_src_dest_jitter_max);
+        /* If RTCP source-to-destination jitter max are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCDESTJITTERMAX, OSP_DEF_MAY, stats->rtcp_src_dest_jitter_max[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCDESTVIDEOJITTERMAX, OSP_DEF_MAY, stats->rtcp_src_dest_jitter_max[OSP_MEDIA_VIDEO]);
 
-        /* If RTCP destination-to-source jitter max is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTSRCJITTERMAX, OSP_DEF_MAY, stats->rtcp_dest_src_jitter_max);
+        /* If RTCP destination-to-source jitter max are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTSRCJITTERMAX, OSP_DEF_MAY, stats->rtcp_dest_src_jitter_max[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTSRCVIDEOJITTERMAX, OSP_DEF_MAY, stats->rtcp_dest_src_jitter_max[OSP_MEDIA_VIDEO]);
 
-        /* If RTCP source round trip delay mean is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCRTDELAYMEAN, OSP_DEF_MAY, stats->rtcp_src_rtdelay_mean);
+        /* If RTCP source round trip delay mean are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCRTDELAYMEAN, OSP_DEF_MAY, stats->rtcp_src_rtdelay_mean[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCVIDEORTDELAYMEAN, OSP_DEF_MAY, stats->rtcp_src_rtdelay_mean[OSP_MEDIA_VIDEO]);
 
-        /* If RTCP destination round trip delay mean is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTRTDELAYMEAN, OSP_DEF_MAY, stats->rtcp_dest_rtdelay_mean);
+        /* If RTCP destination round trip delay mean are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTRTDELAYMEAN, OSP_DEF_MAY, stats->rtcp_dest_rtdelay_mean[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTVIDEORTDELAYMEAN, OSP_DEF_MAY, stats->rtcp_dest_rtdelay_mean[OSP_MEDIA_VIDEO]);
 
-        /* If RTCP source round trip delay max is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCRTDELAYMAX, OSP_DEF_MAY, stats->rtcp_src_rtdelay_max);
+        /* If RTCP source round trip delay max are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCRTDELAYMAX, OSP_DEF_MAY, stats->rtcp_src_rtdelay_max[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPSRCVIDEORTDELAYMAX, OSP_DEF_MAY, stats->rtcp_src_rtdelay_max[OSP_MEDIA_VIDEO]);
 
-        /* If RTCP destination round trip delay max is incorrect, then fail. */
-        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTRTDELAYMAX, OSP_DEF_MAY, stats->rtcp_dest_rtdelay_max);
+        /* If RTCP destination round trip delay max are incorrect, then fail. */
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTRTDELAYMAX, OSP_DEF_MAY, stats->rtcp_dest_rtdelay_max[OSP_MEDIA_VOICE]);
+        OSP_CHECK_ITEMMAP(OSP_STR_RTCPDESTVIDEORTDELAYMAX, OSP_DEF_MAY, stats->rtcp_dest_rtdelay_max[OSP_MEDIA_VIDEO]);
 
         /* If R-Factor scale index is wrong, then fail. */
         OSP_CHECK_RANGE(OSP_STR_RFACTORSCALE, stats->rfactorscale, OSP_SCALE_MIN, OSP_SCALE_MAX);
@@ -2786,6 +3057,17 @@ static int osp_accounting(
         transaction,            /* Transaction handle */
         usage.svcproviderid);   /* Service provider ID */
 
+    /* Report related Call-ID reason */
+    OSPPTransactionSetRelatedReason(
+        transaction,            /* Transaction handle */
+        usage.relatedreason);   /* Related Call-ID reason */
+
+    /* Report system ID */
+    osp_get_systemid(running, usage.recordid, buffer, sizeof(buffer));
+    OSPPTransactionSetSystemId(
+        transaction,    /* Transaction handle */
+        buffer);        /* System ID */
+
     /* Report Q850 release code */
     if (usage.q850cause != OSP_CAUSE_UNKNOWN) {
         OSPPTransactionSetTermCause(
@@ -2914,15 +3196,27 @@ static int osp_accounting(
 
     /* Report source codec */
     OSPPTransactionSetCodec(
-        transaction,        /* Transaction handle */
-        OSPC_CODEC_SOURCE,  /* Source */
-        usage.srccodec);    /* Source codec */
+        transaction,                        /* Transaction handle */
+        OSPC_CODEC_SOURCE,                  /* Source */
+        usage.srccodec[OSP_MEDIA_VOICE]);   /* Source codec */
 
     /* Report destination codec */
     OSPPTransactionSetCodec(
-        transaction,            /* Transaction handle */
-        OSPC_CODEC_DESTINATION, /* Destination */
-        usage.destcodec);       /* Destination codec */
+        transaction,                        /* Transaction handle */
+        OSPC_CODEC_DESTINATION,             /* Destination */
+        usage.destcodec[OSP_MEDIA_VOICE]);  /* Destination codec */
+
+    /* Report source video codec */
+    OSPPTransactionSetVideoCodec(
+        transaction,                        /* Transaction handle */
+        OSPC_CODEC_SOURCE,                  /* Source */
+        usage.srccodec[OSP_MEDIA_VIDEO]);   /* Source video codec */
+
+    /* Report destination video codec */
+    OSPPTransactionSetVideoCodec(
+        transaction,                        /* Transaction handle */
+        OSPC_CODEC_DESTINATION,             /* Destination */
+        usage.destcodec[OSP_MEDIA_VIDEO]);  /* Destination video codec */
 
     /* Report statistics */
     osp_report_statsinfo(transaction, &mapping->stats, &usage.stats);
@@ -2985,170 +3279,170 @@ static void osp_report_statsinfo(
 
     if (mapping->reportstats) {
         /* Report RTP source-to-reporter octets */
-        if (stats->rtp_src_rep_octets != OSP_STATSINT_DEF) {
+        if (stats->rtp_src_rep_octets[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF) {
             OSPPTransactionSetOctets(
-                transaction,                /* Transaction handle */
-                OSPC_SMETRIC_RTP,           /* Metric */
-                OSPC_SDIR_SRCREP,           /* Direction */
-                stats->rtp_src_rep_octets); /* Octets */
+                transaction,                                    /* Transaction handle */
+                OSPC_SMETRIC_RTP,                               /* Metric */
+                OSPC_SDIR_SRCREP,                               /* Direction */
+                stats->rtp_src_rep_octets[OSP_MEDIA_VOICE]);    /* Octets */
         }
 
         /* Report RTP destiantion-to-reporter octets */
-        if (stats->rtp_dest_rep_octets != OSP_STATSINT_DEF) {
+        if (stats->rtp_dest_rep_octets[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF) {
             OSPPTransactionSetOctets(
-                transaction,                    /* Transaction handle */
-                OSPC_SMETRIC_RTP,               /* Metric */
-                OSPC_SDIR_DESTREP,              /* Direction */
-                stats->rtp_dest_rep_octets);    /* Octets */
+                transaction,                                    /* Transaction handle */
+                OSPC_SMETRIC_RTP,                               /* Metric */
+                OSPC_SDIR_DESTREP,                              /* Direction */
+                stats->rtp_dest_rep_octets[OSP_MEDIA_VOICE]);   /* Octets */
         }
 
         /* Report RTP source-to-reporter packets */
-        if (stats->rtp_src_rep_packets != OSP_STATSINT_DEF) {
+        if (stats->rtp_src_rep_packets[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF) {
             OSPPTransactionSetPackets(
-                transaction,                    /* Transaction handle */
-                OSPC_SMETRIC_RTP,               /* Metric */
-                OSPC_SDIR_SRCREP,               /* Direction */
-                stats->rtp_src_rep_packets);    /* Packets */
+                transaction,                                    /* Transaction handle */
+                OSPC_SMETRIC_RTP,                               /* Metric */
+                OSPC_SDIR_SRCREP,                               /* Direction */
+                stats->rtp_src_rep_packets[OSP_MEDIA_VOICE]);   /* Packets */
         }
 
         /* Report RTP destination-to-reporter packets */
-        if (stats->rtp_dest_rep_packets != OSP_STATSINT_DEF) {
+        if (stats->rtp_dest_rep_packets[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF) {
             OSPPTransactionSetPackets(
-                transaction,                    /* Transaction handle */
-                OSPC_SMETRIC_RTP,               /* Metric */
-                OSPC_SDIR_DESTREP,              /* Direction */
-                stats->rtp_dest_rep_packets);   /* Packets */
+                transaction,                                    /* Transaction handle */
+                OSPC_SMETRIC_RTP,                               /* Metric */
+                OSPC_SDIR_DESTREP,                              /* Direction */
+                stats->rtp_dest_rep_packets[OSP_MEDIA_VOICE]);  /* Packets */
         }
 
         /* Report RTP source-to-reporter lost packets */
-        if (stats->rtp_src_rep_lost != OSP_STATSINT_DEF) {
+        if (stats->rtp_src_rep_lost[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF) {
             OSPPTransactionSetLost(
-                transaction,                /* Transaction handle */
-                OSPC_SMETRIC_RTP,           /* Metric */
-                OSPC_SDIR_SRCREP,           /* Direction */
-                stats->rtp_src_rep_lost,    /* Packets lost packets */
-                OSP_STATSINT_DEF);          /* Packets lost fraction */
+                transaction,                                /* Transaction handle */
+                OSPC_SMETRIC_RTP,                           /* Metric */
+                OSPC_SDIR_SRCREP,                           /* Direction */
+                stats->rtp_src_rep_lost[OSP_MEDIA_VOICE],   /* Packets lost packets */
+                OSP_STATSINT_DEF);                          /* Packets lost fraction */
         }
 
         /* Report RTP destination-to-reporter lost packets */
-        if (stats->rtp_dest_rep_lost != OSP_STATSINT_DEF) {
+        if (stats->rtp_dest_rep_lost[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF) {
             OSPPTransactionSetLost(
-                transaction,                /* Transaction handle */
-                OSPC_SMETRIC_RTP,           /* Metric */
-                OSPC_SDIR_DESTREP,          /* Direction */
-                stats->rtp_dest_rep_lost,   /* Packets lost packets */
-                OSP_STATSINT_DEF);          /* Packets lost fraction */
+                transaction,                                /* Transaction handle */
+                OSPC_SMETRIC_RTP,                           /* Metric */
+                OSPC_SDIR_DESTREP,                          /* Direction */
+                stats->rtp_dest_rep_lost[OSP_MEDIA_VOICE],  /* Packets lost packets */
+                OSP_STATSINT_DEF);                          /* Packets lost fraction */
         }
 
         /* Report RTP source-to-reporter jitter mean and max */
-        if ((stats->rtp_src_rep_jitter_mean != OSP_STATSINT_DEF) ||
-            (stats->rtp_src_rep_jitter_max != OSP_STATSINT_DEF))
+        if ((stats->rtp_src_rep_jitter_mean[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF) ||
+            (stats->rtp_src_rep_jitter_max[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF))
         {
             OSPPTransactionSetJitter(
-                transaction,                    /* Transaction handle */
-                OSPC_SMETRIC_RTP,               /* Metric */
-                OSPC_SDIR_SRCREP,               /* Direction */
-                OSP_STATSINT_DEF,               /* Jitter samples */
-                OSP_STATSINT_DEF,               /* Jitter minimum */
-                stats->rtp_src_rep_jitter_max,  /* Jitter maximum */
-                stats->rtp_src_rep_jitter_mean, /* Jitter mean */
-                OSP_STATSFLOAT_DEF);            /* Jitter variance */
+                transaction,                                        /* Transaction handle */
+                OSPC_SMETRIC_RTP,                                   /* Metric */
+                OSPC_SDIR_SRCREP,                                   /* Direction */
+                OSP_STATSINT_DEF,                                   /* Jitter samples */
+                OSP_STATSINT_DEF,                                   /* Jitter minimum */
+                stats->rtp_src_rep_jitter_max[OSP_MEDIA_VOICE],     /* Jitter maximum */
+                stats->rtp_src_rep_jitter_mean[OSP_MEDIA_VOICE],    /* Jitter mean */
+                OSP_STATSFLOAT_DEF);                                /* Jitter variance */
         }
 
         /* Report RTP destination-to-reporter jitter mean and max */
-        if ((stats->rtp_dest_rep_jitter_mean != OSP_STATSINT_DEF) ||
-            (stats->rtp_dest_rep_jitter_max != OSP_STATSINT_DEF))
+        if ((stats->rtp_dest_rep_jitter_mean[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF) ||
+            (stats->rtp_dest_rep_jitter_max[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF))
         {
             OSPPTransactionSetJitter(
-                transaction,                        /* Transaction handle */
-                OSPC_SMETRIC_RTP,                   /* Metric */
-                OSPC_SDIR_DESTREP,                  /* Direction */
-                OSP_STATSINT_DEF,                   /* Jitter samples */
-                OSP_STATSINT_DEF,                   /* Jitter minimum */
-                stats->rtp_dest_rep_jitter_max,     /* Jitter maximum */
-                stats->rtp_dest_rep_jitter_mean,    /* Jitter mean */
-                OSP_STATSFLOAT_DEF);                /* Jitter variance */
+                transaction,                                        /* Transaction handle */
+                OSPC_SMETRIC_RTP,                                   /* Metric */
+                OSPC_SDIR_DESTREP,                                  /* Direction */
+                OSP_STATSINT_DEF,                                   /* Jitter samples */
+                OSP_STATSINT_DEF,                                   /* Jitter minimum */
+                stats->rtp_dest_rep_jitter_max[OSP_MEDIA_VOICE],    /* Jitter maximum */
+                stats->rtp_dest_rep_jitter_mean[OSP_MEDIA_VOICE],   /* Jitter mean */
+                OSP_STATSFLOAT_DEF);                                /* Jitter variance */
         }
 
         /* Report RTCP source-to-destination lost packets */
-        if (stats->rtcp_src_dest_lost != OSP_STATSINT_DEF) {
+        if (stats->rtcp_src_dest_lost[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF) {
             OSPPTransactionSetLost(
-                transaction,                /* Transaction handle */
-                OSPC_SMETRIC_RTCP,          /* Metric */
-                OSPC_SDIR_SRCDEST,          /* Direction */
-                stats->rtcp_src_dest_lost,  /* Packets lost packets */
-                OSP_STATSINT_DEF);          /* Packets lost fraction */
+                transaction,                                /* Transaction handle */
+                OSPC_SMETRIC_RTCP,                          /* Metric */
+                OSPC_SDIR_SRCDEST,                          /* Direction */
+                stats->rtcp_src_dest_lost[OSP_MEDIA_VOICE], /* Packets lost packets */
+                OSP_STATSINT_DEF);                          /* Packets lost fraction */
         }
 
         /* Report RTCP destination-to-source lost packets */
-        if (stats->rtcp_dest_src_lost != OSP_STATSINT_DEF) {
+        if (stats->rtcp_dest_src_lost[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF) {
             OSPPTransactionSetLost(
-                transaction,                /* Transaction handle */
-                OSPC_SMETRIC_RTCP,          /* Metric */
-                OSPC_SDIR_DESTSRC,          /* Direction */
-                stats->rtcp_dest_src_lost,  /* Packets lost packets */
-                OSP_STATSINT_DEF);          /* Packets lost fraction */
+                transaction,                                /* Transaction handle */
+                OSPC_SMETRIC_RTCP,                          /* Metric */
+                OSPC_SDIR_DESTSRC,                          /* Direction */
+                stats->rtcp_dest_src_lost[OSP_MEDIA_VOICE], /* Packets lost packets */
+                OSP_STATSINT_DEF);                          /* Packets lost fraction */
         }
 
 
         /* Report RTCP source-to-destination jitter mean and max */
-        if ((stats->rtcp_src_dest_jitter_mean != OSP_STATSINT_DEF) ||
-            (stats->rtcp_src_dest_jitter_max != OSP_STATSINT_DEF))
+        if ((stats->rtcp_src_dest_jitter_mean[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF) ||
+            (stats->rtcp_src_dest_jitter_max[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF))
         {
             OSPPTransactionSetJitter(
-                transaction,                        /* Transaction handle */
-                OSPC_SMETRIC_RTCP,                  /* Metric */
-                OSPC_SDIR_SRCDEST,                  /* Direction */
-                OSP_STATSINT_DEF,                   /* Jitter samples */
-                OSP_STATSINT_DEF,                   /* Jitter minimum */
-                stats->rtcp_src_dest_jitter_max,    /* Jitter maximum */
-                stats->rtcp_src_dest_jitter_mean,   /* Jitter mean */
-                OSP_STATSFLOAT_DEF);                /* Jitter variance */
+                transaction,                                        /* Transaction handle */
+                OSPC_SMETRIC_RTCP,                                  /* Metric */
+                OSPC_SDIR_SRCDEST,                                  /* Direction */
+                OSP_STATSINT_DEF,                                   /* Jitter samples */
+                OSP_STATSINT_DEF,                                   /* Jitter minimum */
+                stats->rtcp_src_dest_jitter_max[OSP_MEDIA_VOICE],   /* Jitter maximum */
+                stats->rtcp_src_dest_jitter_mean[OSP_MEDIA_VOICE],  /* Jitter mean */
+                OSP_STATSFLOAT_DEF);                                /* Jitter variance */
         }
 
         /* Report RTCP destination-to-source jitter mean and max */
-        if ((stats->rtcp_dest_src_jitter_mean != OSP_STATSINT_DEF) ||
-            (stats->rtcp_dest_src_jitter_max != OSP_STATSINT_DEF))
+        if ((stats->rtcp_dest_src_jitter_mean[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF) ||
+            (stats->rtcp_dest_src_jitter_max[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF))
         {
             OSPPTransactionSetJitter(
-                transaction,                        /* Transaction handle */
-                OSPC_SMETRIC_RTCP,                  /* Metric */
-                OSPC_SDIR_DESTSRC,                  /* Direction */
-                OSP_STATSINT_DEF,                   /* Jitter samples */
-                OSP_STATSINT_DEF,                   /* Jitter minimum */
-                stats->rtcp_dest_src_jitter_max,    /* Jitter maximum */
-                stats->rtcp_dest_src_jitter_mean,   /* Jitter mean */
-                OSP_STATSFLOAT_DEF);                /* Jitter variance */
+                transaction,                                        /* Transaction handle */
+                OSPC_SMETRIC_RTCP,                                  /* Metric */
+                OSPC_SDIR_DESTSRC,                                  /* Direction */
+                OSP_STATSINT_DEF,                                   /* Jitter samples */
+                OSP_STATSINT_DEF,                                   /* Jitter minimum */
+                stats->rtcp_dest_src_jitter_max[OSP_MEDIA_VOICE],   /* Jitter maximum */
+                stats->rtcp_dest_src_jitter_mean[OSP_MEDIA_VOICE],  /* Jitter mean */
+                OSP_STATSFLOAT_DEF);                                /* Jitter variance */
         }
 
         /* Report RTCP source round trip delay */
-        if ((stats->rtcp_src_rtdelay_mean != OSP_STATSINT_DEF) ||
-            (stats->rtcp_src_rtdelay_max != OSP_STATSINT_DEF))
+        if ((stats->rtcp_src_rtdelay_mean[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF) ||
+            (stats->rtcp_src_rtdelay_max[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF))
         {
             OSPPTransactionSetRTDelay(
-                transaction,                    /* Transaction handle */
-                OSPC_SMETRIC_RTCP,              /* Metric */
-                OSPC_SLEG_SOURCE,               /* Session leg */
-                OSP_STATSINT_DEF,               /* Round trip delay samples */
-                OSP_STATSINT_DEF,               /* Round trip delay minimum */
-                stats->rtcp_src_rtdelay_max,    /* Round trip delay maximum */
-                stats->rtcp_src_rtdelay_mean,   /* Round trip delay mean */
-                OSP_STATSFLOAT_DEF);            /* Round trip delay variance */
+                transaction,                                    /* Transaction handle */
+                OSPC_SMETRIC_RTCP,                              /* Metric */
+                OSPC_SLEG_SOURCE,                               /* Session leg */
+                OSP_STATSINT_DEF,                               /* Round trip delay samples */
+                OSP_STATSINT_DEF,                               /* Round trip delay minimum */
+                stats->rtcp_src_rtdelay_max[OSP_MEDIA_VOICE],   /* Round trip delay maximum */
+                stats->rtcp_src_rtdelay_mean[OSP_MEDIA_VOICE],  /* Round trip delay mean */
+                OSP_STATSFLOAT_DEF);                            /* Round trip delay variance */
         }
 
         /* Report RTCP destination round trip delay */
-        if ((stats->rtcp_dest_rtdelay_mean != OSP_STATSINT_DEF) ||
-            (stats->rtcp_dest_rtdelay_max != OSP_STATSINT_DEF))
+        if ((stats->rtcp_dest_rtdelay_mean[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF) ||
+            (stats->rtcp_dest_rtdelay_max[OSP_MEDIA_VOICE] != OSP_STATSINT_DEF))
         {
             OSPPTransactionSetRTDelay(
-                transaction,                    /* Transaction handle */
-                OSPC_SMETRIC_RTCP,              /* Metric */
-                OSPC_SLEG_DESTINATION,          /* Session leg */
-                OSP_STATSINT_DEF,               /* Round trip delay samples */
-                OSP_STATSINT_DEF,               /* Round trip delay minimum */
-                stats->rtcp_dest_rtdelay_max,   /* Round trip delay maximum */
-                stats->rtcp_dest_rtdelay_mean,  /* Round trip delay mean */
-                OSP_STATSFLOAT_DEF);            /* Round trip delay variance */
+                transaction,                                    /* Transaction handle */
+                OSPC_SMETRIC_RTCP,                              /* Metric */
+                OSPC_SLEG_DESTINATION,                          /* Session leg */
+                OSP_STATSINT_DEF,                               /* Round trip delay samples */
+                OSP_STATSINT_DEF,                               /* Round trip delay minimum */
+                stats->rtcp_dest_rtdelay_max[OSP_MEDIA_VOICE],  /* Round trip delay maximum */
+                stats->rtcp_dest_rtdelay_mean[OSP_MEDIA_VOICE], /* Round trip delay mean */
+                OSP_STATSFLOAT_DEF);                            /* Round trip delay variance */
         }
 
         /* Report source-to_reporter R-Factor */
@@ -3182,6 +3476,173 @@ static void osp_report_statsinfo(
                 OSPC_SDIR_DESTREP,      /* Direction */
                 stats->dest_rep_mos);   /* MOS */
         }
+
+        /* Report RTP source-to-reporter video octets */
+        if (stats->rtp_src_rep_octets[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF) {
+            OSPPTransactionSetVideoOctets(
+                transaction,                                    /* Transaction handle */
+                OSPC_SMETRIC_RTP,                               /* Metric */
+                OSPC_SDIR_SRCREP,                               /* Direction */
+                stats->rtp_src_rep_octets[OSP_MEDIA_VIDEO]);    /* Octets */
+        }
+
+        /* Report RTP destiantion-to-reporter video octets */
+        if (stats->rtp_dest_rep_octets[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF) {
+            OSPPTransactionSetVideoOctets(
+                transaction,                                    /* Transaction handle */
+                OSPC_SMETRIC_RTP,                               /* Metric */
+                OSPC_SDIR_DESTREP,                              /* Direction */
+                stats->rtp_dest_rep_octets[OSP_MEDIA_VIDEO]);   /* Octets */
+        }
+
+        /* Report RTP source-to-reporter video packets */
+        if (stats->rtp_src_rep_packets[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF) {
+            OSPPTransactionSetVideoPackets(
+                transaction,                                    /* Transaction handle */
+                OSPC_SMETRIC_RTP,                               /* Metric */
+                OSPC_SDIR_SRCREP,                               /* Direction */
+                stats->rtp_src_rep_packets[OSP_MEDIA_VIDEO]);   /* Packets */
+        }
+
+        /* Report RTP destination-to-reporter video packets */
+        if (stats->rtp_dest_rep_packets[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF) {
+            OSPPTransactionSetVideoPackets(
+                transaction,                                    /* Transaction handle */
+                OSPC_SMETRIC_RTP,                               /* Metric */
+                OSPC_SDIR_DESTREP,                              /* Direction */
+                stats->rtp_dest_rep_packets[OSP_MEDIA_VIDEO]);  /* Packets */
+        }
+
+        /* Report RTP source-to-reporter video lost packets */
+        if (stats->rtp_src_rep_lost[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF) {
+            OSPPTransactionSetVideoLost(
+                transaction,                                /* Transaction handle */
+                OSPC_SMETRIC_RTP,                           /* Metric */
+                OSPC_SDIR_SRCREP,                           /* Direction */
+                stats->rtp_src_rep_lost[OSP_MEDIA_VIDEO],   /* Packets lost packets */
+                OSP_STATSINT_DEF);                          /* Packets lost fraction */
+        }
+
+        /* Report RTP destination-to-reporter video lost packets */
+        if (stats->rtp_dest_rep_lost[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF) {
+            OSPPTransactionSetVideoLost(
+                transaction,                                /* Transaction handle */
+                OSPC_SMETRIC_RTP,                           /* Metric */
+                OSPC_SDIR_DESTREP,                          /* Direction */
+                stats->rtp_dest_rep_lost[OSP_MEDIA_VIDEO],  /* Packets lost packets */
+                OSP_STATSINT_DEF);                          /* Packets lost fraction */
+        }
+
+        /* Report RTP source-to-reporter video jitter mean and max */
+        if ((stats->rtp_src_rep_jitter_mean[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF) ||
+            (stats->rtp_src_rep_jitter_max[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF))
+        {
+            OSPPTransactionSetVideoJitter(
+                transaction,                                        /* Transaction handle */
+                OSPC_SMETRIC_RTP,                                   /* Metric */
+                OSPC_SDIR_SRCREP,                                   /* Direction */
+                OSP_STATSINT_DEF,                                   /* Jitter samples */
+                OSP_STATSINT_DEF,                                   /* Jitter minimum */
+                stats->rtp_src_rep_jitter_max[OSP_MEDIA_VIDEO],     /* Jitter maximum */
+                stats->rtp_src_rep_jitter_mean[OSP_MEDIA_VIDEO],    /* Jitter mean */
+                OSP_STATSFLOAT_DEF);                                /* Jitter variance */
+        }
+
+        /* Report RTP destination-to-reporter video jitter mean and max */
+        if ((stats->rtp_dest_rep_jitter_mean[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF) ||
+            (stats->rtp_dest_rep_jitter_max[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF))
+        {
+            OSPPTransactionSetVideoJitter(
+                transaction,                                        /* Transaction handle */
+                OSPC_SMETRIC_RTP,                                   /* Metric */
+                OSPC_SDIR_DESTREP,                                  /* Direction */
+                OSP_STATSINT_DEF,                                   /* Jitter samples */
+                OSP_STATSINT_DEF,                                   /* Jitter minimum */
+                stats->rtp_dest_rep_jitter_max[OSP_MEDIA_VIDEO],    /* Jitter maximum */
+                stats->rtp_dest_rep_jitter_mean[OSP_MEDIA_VIDEO],   /* Jitter mean */
+                OSP_STATSFLOAT_DEF);                                /* Jitter variance */
+        }
+
+        /* Report RTCP source-to-destination video lost packets */
+        if (stats->rtcp_src_dest_lost[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF) {
+            OSPPTransactionSetVideoLost(
+                transaction,                                /* Transaction handle */
+                OSPC_SMETRIC_RTCP,                          /* Metric */
+                OSPC_SDIR_SRCDEST,                          /* Direction */
+                stats->rtcp_src_dest_lost[OSP_MEDIA_VIDEO], /* Packets lost packets */
+                OSP_STATSINT_DEF);                          /* Packets lost fraction */
+        }
+
+        /* Report RTCP destination-to-source video lost packets */
+        if (stats->rtcp_dest_src_lost[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF) {
+            OSPPTransactionSetVideoLost(
+                transaction,                                /* Transaction handle */
+                OSPC_SMETRIC_RTCP,                          /* Metric */
+                OSPC_SDIR_DESTSRC,                          /* Direction */
+                stats->rtcp_dest_src_lost[OSP_MEDIA_VIDEO], /* Packets lost packets */
+                OSP_STATSINT_DEF);                          /* Packets lost fraction */
+        }
+
+
+        /* Report RTCP source-to-destination video jitter mean and max */
+        if ((stats->rtcp_src_dest_jitter_mean[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF) ||
+            (stats->rtcp_src_dest_jitter_max[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF))
+        {
+            OSPPTransactionSetVideoJitter(
+                transaction,                                        /* Transaction handle */
+                OSPC_SMETRIC_RTCP,                                  /* Metric */
+                OSPC_SDIR_SRCDEST,                                  /* Direction */
+                OSP_STATSINT_DEF,                                   /* Jitter samples */
+                OSP_STATSINT_DEF,                                   /* Jitter minimum */
+                stats->rtcp_src_dest_jitter_max[OSP_MEDIA_VIDEO],   /* Jitter maximum */
+                stats->rtcp_src_dest_jitter_mean[OSP_MEDIA_VIDEO],  /* Jitter mean */
+                OSP_STATSFLOAT_DEF);                                /* Jitter variance */
+        }
+
+        /* Report RTCP destination-to-source video jitter mean and max */
+        if ((stats->rtcp_dest_src_jitter_mean[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF) ||
+            (stats->rtcp_dest_src_jitter_max[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF))
+        {
+            OSPPTransactionSetVideoJitter(
+                transaction,                                        /* Transaction handle */
+                OSPC_SMETRIC_RTCP,                                  /* Metric */
+                OSPC_SDIR_DESTSRC,                                  /* Direction */
+                OSP_STATSINT_DEF,                                   /* Jitter samples */
+                OSP_STATSINT_DEF,                                   /* Jitter minimum */
+                stats->rtcp_dest_src_jitter_max[OSP_MEDIA_VIDEO],   /* Jitter maximum */
+                stats->rtcp_dest_src_jitter_mean[OSP_MEDIA_VIDEO],  /* Jitter mean */
+                OSP_STATSFLOAT_DEF);                                /* Jitter variance */
+        }
+
+        /* Report RTCP source video round trip delay */
+        if ((stats->rtcp_src_rtdelay_mean[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF) ||
+            (stats->rtcp_src_rtdelay_max[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF))
+        {
+            OSPPTransactionSetVideoRTDelay(
+                transaction,                                    /* Transaction handle */
+                OSPC_SMETRIC_RTCP,                              /* Metric */
+                OSPC_SLEG_SOURCE,                               /* Session leg */
+                OSP_STATSINT_DEF,                               /* Round trip delay samples */
+                OSP_STATSINT_DEF,                               /* Round trip delay minimum */
+                stats->rtcp_src_rtdelay_max[OSP_MEDIA_VIDEO],   /* Round trip delay maximum */
+                stats->rtcp_src_rtdelay_mean[OSP_MEDIA_VIDEO],  /* Round trip delay mean */
+                OSP_STATSFLOAT_DEF);                            /* Round trip delay variance */
+        }
+
+        /* Report RTCP destination video round trip delay */
+        if ((stats->rtcp_dest_rtdelay_mean[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF) ||
+            (stats->rtcp_dest_rtdelay_max[OSP_MEDIA_VIDEO] != OSP_STATSINT_DEF))
+        {
+            OSPPTransactionSetVideoRTDelay(
+                transaction,                                    /* Transaction handle */
+                OSPC_SMETRIC_RTCP,                              /* Metric */
+                OSPC_SLEG_DESTINATION,                          /* Session leg */
+                OSP_STATSINT_DEF,                               /* Round trip delay samples */
+                OSP_STATSINT_DEF,                               /* Round trip delay minimum */
+                stats->rtcp_dest_rtdelay_max[OSP_MEDIA_VIDEO],  /* Round trip delay maximum */
+                stats->rtcp_dest_rtdelay_mean[OSP_MEDIA_VIDEO], /* Round trip delay mean */
+                OSP_STATSFLOAT_DEF);                            /* Round trip delay variance */
+        }
     }
 
     DEBUG3("rlm_osp: osp_report_statsinfo success");
@@ -3206,6 +3667,7 @@ static int osp_get_usageinfo(
     osp_provider_t* provider = &data->provider;
     osp_mapping_t* mapping = &data->mapping;
     osp_string_t buffer;
+    osp_string_t tmpbuf;
     osp_string_t tmphost;
     osp_string_t desthost;
     osp_string_t proxy;
@@ -3373,7 +3835,7 @@ static int osp_get_usageinfo(
         if (usage->direction == OSP_DIRECTION_IN) {
             /* Get access device/source */
             /* Special case, BWAS-Access-Device-Address may not be reported */
-            OSP_GET_IP(request, TRUE, OSP_STR_ACCESSDEVICE, OSP_DEF_MAY, mapping->accessdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->srcdev, tmphost);
+            OSP_GET_1stIP(request, TRUE, OSP_STR_ACCESSDEVICE, OSP_DEF_MAY, mapping->accessdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, tmpbuf, usage->srcdev, tmphost);
 
             /* Get route device/destination */
             /* Special case, BWAS-Route may not be reported */
@@ -3410,7 +3872,7 @@ static int osp_get_usageinfo(
 
             /* Get access device/destination */
             /* Special case, BWAS-Access-Device-Address may not be reported */
-            OSP_GET_IP(request, TRUE, OSP_STR_ACCESSDEVICE, OSP_DEF_MAY, mapping->accessdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->destination, tmphost);
+            OSP_GET_1stIP(request, TRUE, OSP_STR_ACCESSDEVICE, OSP_DEF_MAY, mapping->accessdev, OSP_IP_DEF, OSP_PORT_DEF, buffer, tmpbuf, usage->destination, tmphost);
             switch (type) {
             case PW_STATUS_START:
             case PW_STATUS_STOP:
@@ -3748,6 +4210,8 @@ static int osp_get_usageinfo(
     switch (mapping->clienttype) {
     case OSP_CLIENT_BROADWORKS:
         parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE)) && (usage->direction == OSP_DIRECTION_IN);
+        OSP_GET_1stSTR(request, parse, OSP_STR_SRCCODEC, OSP_DEF_MAY, mapping->srccodec[OSP_MEDIA_VOICE], buffer, usage->srccodec[OSP_MEDIA_VOICE]);
+        OSP_GET_2ndSTR(request, parse, OSP_STR_SRCVIDEOCODEC, OSP_DEF_MAY, mapping->srccodec[OSP_MEDIA_VIDEO], buffer, usage->srccodec[OSP_MEDIA_VIDEO]);
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
@@ -3755,14 +4219,17 @@ static int osp_get_usageinfo(
     case OSP_CLIENT_CISCO:
     default:
         parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
+        OSP_GET_STRING(request, parse, OSP_STR_SRCCODEC, OSP_DEF_MAY, mapping->srccodec[OSP_MEDIA_VOICE], usage->srccodec[OSP_MEDIA_VOICE]);
+        OSP_GET_STRING(request, parse, OSP_STR_SRCVIDEOCODEC, OSP_DEF_MAY, mapping->srccodec[OSP_MEDIA_VIDEO], usage->srccodec[OSP_MEDIA_VIDEO]);
         break;
     }
-    OSP_GET_STRING(request, parse, OSP_STR_SRCCODEC, OSP_DEF_MAY, mapping->srccodec, usage->srccodec);
 
     /* Get destination codec */
     switch (mapping->clienttype) {
     case OSP_CLIENT_BROADWORKS:
         parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE)) && (usage->direction == OSP_DIRECTION_OUT);
+        OSP_GET_1stSTR(request, parse, OSP_STR_DESTCODEC, OSP_DEF_MAY, mapping->destcodec[OSP_MEDIA_VOICE], buffer, usage->destcodec[OSP_MEDIA_VOICE]);
+        OSP_GET_2ndSTR(request, parse, OSP_STR_DESTVIDEOCODEC, OSP_DEF_MAY, mapping->destcodec[OSP_MEDIA_VIDEO], buffer, usage->destcodec[OSP_MEDIA_VIDEO]);
         break;
     case OSP_CLIENT_UNDEF:
     case OSP_CLIENT_ACME:
@@ -3770,9 +4237,10 @@ static int osp_get_usageinfo(
     case OSP_CLIENT_CISCO:
     default:
         parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
+        OSP_GET_STRING(request, parse, OSP_STR_DESTCODEC, OSP_DEF_MAY, mapping->destcodec[OSP_MEDIA_VOICE], usage->destcodec[OSP_MEDIA_VOICE]);
+        OSP_GET_STRING(request, parse, OSP_STR_DESTVIDEOCODEC, OSP_DEF_MAY, mapping->destcodec[OSP_MEDIA_VIDEO], usage->destcodec[OSP_MEDIA_VIDEO]);
         break;
     }
-    OSP_GET_STRING(request, parse, OSP_STR_DESTCODEC, OSP_DEF_MAY, mapping->destcodec, usage->destcodec);
 
     /* Get conference ID */
     parse = (type == PW_STATUS_STOP);
@@ -3872,6 +4340,27 @@ static int osp_get_usageinfo(
     parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
     OSP_GET_STRING(request, parse, OSP_STR_SVCPROVIDERID, OSP_DEF_MAY, mapping->svcproviderid, usage->svcproviderid);
 
+    /* Get related CAll-ID reason */
+    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+    OSP_GET_STRING(request, parse, OSP_STR_RELATEDREASON, OSP_DEF_MAY, mapping->relatedreason, usage->relatedreason);
+
+    /* Get record ID */
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP) || (type == PW_STATUS_ALIVE));
+        OSP_GET_STRING(request, parse, OSP_STR_RECORDID, OSP_DEF_MUST, mapping->recordid, usage->recordid);
+        if (parse && (osp_check_recordid(running, usage->recordid) < 0)) {
+            return -1;
+        }
+        break;
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+    default:
+        break;
+    }
+
     /* Get statistics */
     osp_get_statsinfo(mapping, request, type, usage);
 
@@ -3949,64 +4438,84 @@ static int osp_get_statsinfo(
         OSP_GET_INTEGER(request, parse, OSP_STR_RLOSTFRACTION, OSP_DEF_MAY, map->rlost.fract, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rlost.fract);
 
         /* Get RTP source-to-reporter octets */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPOCTETS, OSP_DEF_MAY, map->rtp_src_rep_octets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_octets);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPOCTETS, OSP_DEF_MAY, map->rtp_src_rep_octets[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_octets[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPVIDEOOCTETS, OSP_DEF_MAY, map->rtp_src_rep_octets[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_octets[OSP_MEDIA_VIDEO]);
 
         /* Get RTP destination-to-reporter octets */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPOCTETS, OSP_DEF_MAY, map->rtp_dest_rep_octets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_octets);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPOCTETS, OSP_DEF_MAY, map->rtp_dest_rep_octets[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_octets[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPVIDEOOCTETS, OSP_DEF_MAY, map->rtp_dest_rep_octets[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_octets[OSP_MEDIA_VIDEO]);
 
         /* Get RTP source-to-reporter packets */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPPACKETS, OSP_DEF_MAY, map->rtp_src_rep_packets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_packets);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPPACKETS, OSP_DEF_MAY, map->rtp_src_rep_packets[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_packets[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPVIDEOPACKETS, OSP_DEF_MAY, map->rtp_src_rep_packets[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_packets[OSP_MEDIA_VIDEO]);
 
         /* Get RTP destination-to-reporter packets */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPPACKETS, OSP_DEF_MAY, map->rtp_dest_rep_packets, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_packets);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPPACKETS, OSP_DEF_MAY, map->rtp_dest_rep_packets[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_packets[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPVIDEOPACKETS, OSP_DEF_MAY, map->rtp_dest_rep_packets[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_packets[OSP_MEDIA_VIDEO]);
 
         /* Get RTP source-to-reporter lost packets */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPLOST, OSP_DEF_MAY, map->rtp_src_rep_lost, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_lost);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPLOST, OSP_DEF_MAY, map->rtp_src_rep_lost[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_lost[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPVIDEOLOST, OSP_DEF_MAY, map->rtp_src_rep_lost[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_lost[OSP_MEDIA_VIDEO]);
 
         /* Get RTP destination-to-reporter lost packets */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPLOST, OSP_DEF_MAY, map->rtp_dest_rep_lost, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_lost);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPLOST, OSP_DEF_MAY, map->rtp_dest_rep_lost[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_lost[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPVIDEOLOST, OSP_DEF_MAY, map->rtp_dest_rep_lost[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_lost[OSP_MEDIA_VIDEO]);
 
         /* Get RTP source-to-reporter jitter mean */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPJITTERMEAN, OSP_DEF_MAY, map->rtp_src_rep_jitter_mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_jitter_mean);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPJITTERMEAN, OSP_DEF_MAY, map->rtp_src_rep_jitter_mean[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_jitter_mean[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPVIDEOJITTERMEAN, OSP_DEF_MAY, map->rtp_src_rep_jitter_mean[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_jitter_mean[OSP_MEDIA_VIDEO]);
 
         /* Get RTP destination-to-reporter jitter mean */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPJITTERMEAN, OSP_DEF_MAY, map->rtp_dest_rep_jitter_mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_jitter_mean);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPJITTERMEAN, OSP_DEF_MAY, map->rtp_dest_rep_jitter_mean[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_jitter_mean[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPVIDEOJITTERMEAN, OSP_DEF_MAY, map->rtp_dest_rep_jitter_mean[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_jitter_mean[OSP_MEDIA_VIDEO]);
 
         /* Get RTP source-to-reporter jitter max */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPJITTERMAX, OSP_DEF_MAY, map->rtp_src_rep_jitter_max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_jitter_max);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPJITTERMAX, OSP_DEF_MAY, map->rtp_src_rep_jitter_max[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_jitter_max[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPSRCREPVIDEOJITTERMAX, OSP_DEF_MAY, map->rtp_src_rep_jitter_max[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_src_rep_jitter_max[OSP_MEDIA_VIDEO]);
 
         /* Get RTP destination-to-reporter jitter max */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPJITTERMAX, OSP_DEF_MAY, map->rtp_dest_rep_jitter_max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_jitter_max);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPJITTERMAX, OSP_DEF_MAY, map->rtp_dest_rep_jitter_max[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_jitter_max[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTPDESTREPVIDEOJITTERMAX, OSP_DEF_MAY, map->rtp_dest_rep_jitter_max[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtp_dest_rep_jitter_max[OSP_MEDIA_VIDEO]);
 
         /* Get RTCP source-to-destination lost packets */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCDESTLOST, OSP_DEF_MAY, map->rtcp_src_dest_lost, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_dest_lost);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCDESTLOST, OSP_DEF_MAY, map->rtcp_src_dest_lost[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_dest_lost[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCDESTVIDEOLOST, OSP_DEF_MAY, map->rtcp_src_dest_lost[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_dest_lost[OSP_MEDIA_VIDEO]);
 
         /* Get RTCP destination-to-source lost packets */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTSRCLOST, OSP_DEF_MAY, map->rtcp_dest_src_lost, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_src_lost);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTSRCLOST, OSP_DEF_MAY, map->rtcp_dest_src_lost[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_src_lost[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTSRCVIDEOLOST, OSP_DEF_MAY, map->rtcp_dest_src_lost[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_src_lost[OSP_MEDIA_VIDEO]);
 
         /* Get RTCP source-to-destination jitter mean */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCDESTJITTERMEAN, OSP_DEF_MAY, map->rtcp_src_dest_jitter_mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_dest_jitter_mean);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCDESTJITTERMEAN, OSP_DEF_MAY, map->rtcp_src_dest_jitter_mean[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_dest_jitter_mean[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCDESTVIDEOJITTERMEAN, OSP_DEF_MAY, map->rtcp_src_dest_jitter_mean[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_dest_jitter_mean[OSP_MEDIA_VIDEO]);
 
         /* Get RTCP destination-to-source jitter mean */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTSRCJITTERMEAN, OSP_DEF_MAY, map->rtcp_dest_src_jitter_mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_src_jitter_mean);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTSRCJITTERMEAN, OSP_DEF_MAY, map->rtcp_dest_src_jitter_mean[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_src_jitter_mean[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTSRCVIDEOJITTERMEAN, OSP_DEF_MAY, map->rtcp_dest_src_jitter_mean[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_src_jitter_mean[OSP_MEDIA_VIDEO]);
 
         /* Get RTCP source-to-destination jitter max */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCDESTJITTERMAX, OSP_DEF_MAY, map->rtcp_src_dest_jitter_max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_dest_jitter_max);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCDESTJITTERMAX, OSP_DEF_MAY, map->rtcp_src_dest_jitter_max[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_dest_jitter_max[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCDESTVIDEOJITTERMAX, OSP_DEF_MAY, map->rtcp_src_dest_jitter_max[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_dest_jitter_max[OSP_MEDIA_VIDEO]);
 
         /* Get RTCP destination-to-source jitter max */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTSRCJITTERMAX, OSP_DEF_MAY, map->rtcp_dest_src_jitter_max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_src_jitter_max);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTSRCJITTERMAX, OSP_DEF_MAY, map->rtcp_dest_src_jitter_max[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_src_jitter_max[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTSRCVIDEOJITTERMAX, OSP_DEF_MAY, map->rtcp_dest_src_jitter_max[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_src_jitter_max[OSP_MEDIA_VIDEO]);
 
         /* Get RTCP source round trip delay mean */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCRTDELAYMEAN, OSP_DEF_MAY, map->rtcp_src_rtdelay_mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_rtdelay_mean);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCRTDELAYMEAN, OSP_DEF_MAY, map->rtcp_src_rtdelay_mean[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_rtdelay_mean[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCVIDEORTDELAYMEAN, OSP_DEF_MAY, map->rtcp_src_rtdelay_mean[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_rtdelay_mean[OSP_MEDIA_VIDEO]);
 
         /* Get RTCP destination round trip delay mean */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTRTDELAYMEAN, OSP_DEF_MAY, map->rtcp_dest_rtdelay_mean, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_rtdelay_mean);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTRTDELAYMEAN, OSP_DEF_MAY, map->rtcp_dest_rtdelay_mean[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_rtdelay_mean[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTVIDEORTDELAYMEAN, OSP_DEF_MAY, map->rtcp_dest_rtdelay_mean[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_rtdelay_mean[OSP_MEDIA_VIDEO]);
 
         /* Get RTCP source round trip delay max */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCRTDELAYMAX, OSP_DEF_MAY, map->rtcp_src_rtdelay_max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_rtdelay_max);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCRTDELAYMAX, OSP_DEF_MAY, map->rtcp_src_rtdelay_max[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_rtdelay_max[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPSRCVIDEORTDELAYMAX, OSP_DEF_MAY, map->rtcp_src_rtdelay_max[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_src_rtdelay_max[OSP_MEDIA_VIDEO]);
 
         /* Get RTCP destination round trip delay max */
-        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTRTDELAYMAX, OSP_DEF_MAY, map->rtcp_dest_rtdelay_max, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_rtdelay_max);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTRTDELAYMAX, OSP_DEF_MAY, map->rtcp_dest_rtdelay_max[OSP_MEDIA_VOICE], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_rtdelay_max[OSP_MEDIA_VOICE]);
+        OSP_GET_INTEGER(request, parse, OSP_STR_RTCPDESTVIDEORTDELAYMAX, OSP_DEF_MAY, map->rtcp_dest_rtdelay_max[OSP_MEDIA_VIDEO], OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, var->rtcp_dest_rtdelay_max[OSP_MEDIA_VIDEO]);
 
         /* Get source-to-reporter R-Factor */
         OSP_GET_FLOAT(request, parse, OSP_STR_SRCREPRFACTOR, OSP_DEF_MAY, map->src_rep_rfactor, map->rfactorscale, OSP_STATSFLOAT_DEF, buffer, var->src_rep_rfactor);
@@ -4030,6 +4539,70 @@ static int osp_get_statsinfo(
     DEBUG3("rlm_osp: osp_get_statsinfo success");
 
     return 0;
+}
+
+/*
+ * Get 1st item
+ *
+ * param items String with multiple items
+ * param buffer Buffer
+ * param buffersize Size of buffer
+ * return
+ */
+static void osp_get_1st(
+    char* items,
+    char* buffer,
+    int buffersize)
+{
+    int size;
+    char* tmpptr;
+
+    DEBUG3("rlm_osp: osp_get_1st start");
+
+    size = buffersize - 1;
+    strncpy(buffer, items, size);
+    buffer[size] = '\0';
+
+    if((tmpptr = strchr(buffer, ' ')) != NULL) {
+        *tmpptr = '\0';
+    }
+
+    DEBUG2("rlm_osp: item = '%s'", buffer);
+
+    DEBUG3("rlm_osp: osp_get_1st success");
+}
+
+/*
+ * Get 2nd item
+ *
+ * param items String with multiple items
+ * param buffer Buffer
+ * param buffersize Size of buffer
+ * return
+ */
+static void osp_get_2nd(
+    char* items,
+    char* buffer,
+    int buffersize)
+{
+    int size;
+    char* tmpptr;
+
+    DEBUG3("rlm_osp: osp_get_2nd start");
+
+    if ((tmpptr = index(items, ' ')) != NULL) {
+        tmpptr++;
+
+        size = buffersize - 1;
+        strncpy(buffer, tmpptr, size);
+        buffer[size] = '\0';
+    } else {
+        buffer[0] = '\0';
+    }
+
+    DEBUG2("rlm_osp: item = '%s'", buffer);
+
+    DEBUG3("rlm_osp: osp_get_2nd success");
 }
 
 /*
@@ -4562,6 +5135,64 @@ static int osp_cal_elapsed(
 }
 
 /*
+ * Check record ID
+ *
+ * param running Running parameters
+ * param recordid Record ID
+ * return 0 success, -1 failure
+ */
+static int osp_check_recordid(
+    osp_running_t* running,
+    char* recordid)
+{
+    DEBUG3("rlm_osp: osp_check_recordid start");
+
+    if (regexec(&running->bwrid, recordid, 0, NULL, 0) != 0) {
+        radlog(L_ERR, "rlm_osp: Failed to check record ID.");
+        return -1;
+    }
+
+    DEBUG3("rlm_osp: osp_check_recordid success");
+
+    return 0;
+}
+
+/*
+ * Get system ID
+ *
+ * param running Running parameters
+ * param recordid Record ID
+ * param buffer Buffer
+ * param buffersize Size of buffer
+ * return 0 success, -1 failure
+ */
+static int osp_get_systemid(
+    osp_running_t* running,
+    char* recordid,
+    char* buffer,
+    int buffersize)
+{
+    regmatch_t match[OSP_BWRID_NMATCH];
+    int size;
+
+    DEBUG3("rlm_osp: osp_get_systemid start");
+
+    if (regexec(&running->bwrid, recordid, OSP_BWRID_NMATCH, match, 0) == 0) {
+        size = match[2].rm_eo - match[2].rm_so;
+        strncpy(buffer, recordid + match[2].rm_so, size);
+        buffer[size] = '\0';
+    } else {
+        radlog(L_ERR, "rlm_osp: Failed to get system ID.");
+        buffer[0] = '\0';
+        return -1;
+    }
+
+    DEBUG3("rlm_osp: osp_get_systemid success");
+
+    return 0;
+}
+
+/*
  * Only free memory we allocated.  The strings allocated via
  * cf_section_parse() do not need to be freed.
  *
@@ -4572,9 +5203,13 @@ static int osp_detach(
     void* instance)
 {
     rlm_osp_t* data = (rlm_osp_t*)instance;
+    osp_running_t* running = &data->running;
     osp_provider_t* provider = &data->provider;
 
     DEBUG3("rlm_osp: osp_detach start");
+
+    /* Delete compiled BroadWorks record ID regular expression */
+    regfree(&running->bwrid);
 
     /* Delete provider handle */
     OSPPProviderDelete(provider->handle, 0);
