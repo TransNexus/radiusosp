@@ -42,7 +42,7 @@ RCSID("$Id$")
  * OSP module version
  */
 #define OSP_MODULE_VERSION_MAJOR    2
-#define OSP_MODULE_VERSION_MINOR    1
+#define OSP_MODULE_VERSION_MINOR    2
 #define OSP_MODULE_VERSION_BUGFIX   0
 
 /*
@@ -109,62 +109,64 @@ RCSID("$Id$")
 /*
  * Default RADIUS OSP mapping
  */
-#define OSP_MAP_NULL            "NULL"                          /* Empty map */
-#define OSP_MAP_IDITEM          NULL                            /* RADIUS record identity VSA name */
-#define OSP_MAP_IDVALUE         NULL                            /* RADIUS record identity VSA value */
-#define OSP_MAP_REPORT          "yes"                           /* Report Stop, Start or Interim-Update RADIUS records */
-#define OSP_MAP_CLIENTTYPE      "0"                             /* RADIUS client type, undefined */
-#define OSP_MAP_NETLIST         NULL                            /* Subnet list */
-#define OSP_MAP_SUBTYPE         NULL                            /* Sub status type */
-#define OSP_MAP_DIRECTION       NULL                            /* Call direction */
-#define OSP_MAP_IGNORERAD       "no"                            /* Ingore inbound or outbound RADIUS records */
-#define OSP_MAP_TRANSID         NULL                            /* Transaction ID */
-#define OSP_MAP_CALLID          "%{Acct-Session-Id}"            /* Call-ID, RFC 2866 */
-#define OSP_MAP_NUMFORMAT       "0"                             /* Calling/called number format, E.164 */
-#define OSP_MAP_CALLING         "%{Calling-Station-Id}"         /* Calling number, RFC 2865 */
-#define OSP_MAP_CALLED          "%{Called-Station-Id}"          /* Called number, RFC 2865 */
-#define OSP_MAP_PARSETRANSFER   "yes"                           /* Parse transfer VSAs in RADIUS records */
-#define OSP_MAP_TRANSFERCALLING NULL                            /* Transfer calling number */
-#define OSP_MAP_TRANSFERCALLED  NULL                            /* Transfer called called number */
-#define OSP_MAP_TRANSFERRET     NULL                            /* Transfer result */
-#define OSP_MAP_TRANSFERID      NULL                            /* Transfer ID */
-#define OSP_MAP_ANSWERIND       NULL                            /* Answer indicator */
-#define OSP_MAP_ASSERTEDID      NULL                            /* P-Asserted-Identity */
-#define OSP_MAP_RPID            NULL                            /* Remote-Party-ID */
-#define OSP_MAP_SOURCE          "%{NAS-IP-Address}"             /* Source, RFC 2865 */
-#define OSP_MAP_PROXY           NULL                            /* Proxy */
-#define OSP_MAP_SRCDEV          NULL                            /* Source device */
-#define OSP_MAP_DESTINATION     NULL                            /* Destination */
-#define OSP_MAP_DESTDEV         NULL                            /* Destination device */
-#define OSP_MAP_DESTCOUNT       NULL                            /* Destination count */
-#define OSP_MAP_DEVICE          NULL                            /* General device */
-#define OSP_MAP_NETWORKID       NULL                            /* Network ID */
-#define OSP_MAP_DIVUSER         NULL                            /* Diversion user */
-#define OSP_MAP_DIVHOST         NULL                            /* Diversion host */
-#define OSP_MAP_TIMEFORMAT      "0"                             /* Time string format, integer string */
-#define OSP_MAP_START           "%{Acct-Session-Start-Time}"    /* Call start time, FreeRADIUS internal */
-#define OSP_MAP_ALERT           NULL                            /* Call alert time */
-#define OSP_MAP_CONNECT         NULL                            /* Call connect time */
-#define OSP_MAP_END             NULL                            /* Call end time */
-#define OSP_MAP_DURATION        "%{Acct-Session-Time}"          /* Call duration, RFC 2866 */
-#define OSP_MAP_PDDUNIT         "1"                             /* PDD unit, millisecond */
-#define OSP_MAP_PDD             NULL                            /* Post dial delay */
-#define OSP_MAP_RELEASE         NULL                            /* Release source */
-#define OSP_MAP_CAUSE           NULL                            /* Release cause per protocol */
-#define OSP_MAP_Q850CAUSE       "%{Acct-Terminate-Cause}"       /* Release cause, RFC 2866 */
-#define OSP_MAP_PROTOCOL        NULL                            /* Signaling protocol */
-#define OSP_MAP_SESSIONID       NULL                            /* Session ID */
-#define OSP_MAP_CODEC           NULL                            /* Codec */
-#define OSP_MAP_CONFID          NULL                            /* Conference ID */
-#define OSP_MAP_CUSTOMINFO      NULL                            /* User-defined info */
-#define OSP_MAP_REALM           NULL                            /* Realm */
-#define OSP_MAP_CALLPARTYINFO   NULL                            /* Call party info */
-#define OSP_MAP_NETTRANSCALLED  NULL                            /* Network translated called number */
-#define OSP_MAP_SVCPROVIDERID   NULL                            /* Service provider ID */
-#define OSP_MAP_RELATEDREASON   NULL                            /* Related Call-ID reason */
-#define OSP_MAP_RECORDID        NULL                            /* Record ID */
-#define OSP_MAP_STATS           NULL                            /* Statistics */
-#define OSP_MAP_SCALE           "4"                             /* Scale, 1 */
+#define OSP_MAP_NULL                "NULL"                          /* Empty map */
+#define OSP_MAP_IDITEM              NULL                            /* RADIUS record identity VSA name */
+#define OSP_MAP_IDVALUE             NULL                            /* RADIUS record identity VSA value */
+#define OSP_MAP_REPORT              "yes"                           /* Report Stop, Start or Interim-Update RADIUS records */
+#define OSP_MAP_CLIENTTYPE          "0"                             /* RADIUS client type, undefined */
+#define OSP_MAP_NETLIST             NULL                            /* Subnet list */
+#define OSP_MAP_SUBTYPE             NULL                            /* Sub status type */
+#define OSP_MAP_DIRECTION           NULL                            /* Call direction */
+#define OSP_MAP_IGNORERAD           "no"                            /* Ingore inbound or outbound RADIUS records */
+#define OSP_MAP_TRANSID             NULL                            /* Transaction ID */
+#define OSP_MAP_CALLID              "%{Acct-Session-Id}"            /* Call-ID, RFC 2866 */
+#define OSP_MAP_NUMFORMAT           "0"                             /* Calling/called number format, E.164 */
+#define OSP_MAP_CALLING             "%{Calling-Station-Id}"         /* Calling number, RFC 2865 */
+#define OSP_MAP_CALLED              "%{Called-Station-Id}"          /* Called number, RFC 2865 */
+#define OSP_MAP_PARSETRANSFER       "yes"                           /* Parse transfer VSAs in RADIUS records */
+#define OSP_MAP_TRANSFERCALLING     NULL                            /* Transfer calling number */
+#define OSP_MAP_TRANSFERCALLED      NULL                            /* Transfer called called number */
+#define OSP_MAP_TRANSFERRET         NULL                            /* Transfer result */
+#define OSP_MAP_TRANSFERID          NULL                            /* Transfer ID */
+#define OSP_MAP_ANSWERIND           NULL                            /* Answer indicator */
+#define OSP_MAP_ASSERTEDID          NULL                            /* P-Asserted-Identity */
+#define OSP_MAP_RPID                NULL                            /* Remote-Party-ID */
+#define OSP_MAP_SOURCE              "%{NAS-IP-Address}"             /* Source, RFC 2865 */
+#define OSP_MAP_PROXY               NULL                            /* Proxy */
+#define OSP_MAP_SRCDEV              NULL                            /* Source device */
+#define OSP_MAP_DESTINATION         NULL                            /* Destination */
+#define OSP_MAP_DESTDEV             NULL                            /* Destination device */
+#define OSP_MAP_DESTCOUNT           NULL                            /* Destination count */
+#define OSP_MAP_DEVICE              NULL                            /* General device */
+#define OSP_MAP_NETWORKID           NULL                            /* Network ID */
+#define OSP_MAP_DIVUSER             NULL                            /* Diversion user */
+#define OSP_MAP_DIVHOST             NULL                            /* Diversion host */
+#define OSP_MAP_TIMEFORMAT          "0"                             /* Time string format, integer string */
+#define OSP_MAP_START               "%{Acct-Session-Start-Time}"    /* Call start time, FreeRADIUS internal */
+#define OSP_MAP_ALERT               NULL                            /* Call alert time */
+#define OSP_MAP_CONNECT             NULL                            /* Call connect time */
+#define OSP_MAP_END                 NULL                            /* Call end time */
+#define OSP_MAP_DURATION            "%{Acct-Session-Time}"          /* Call duration, RFC 2866 */
+#define OSP_MAP_PDDUNIT             "1"                             /* PDD unit, millisecond */
+#define OSP_MAP_PDD                 NULL                            /* Post dial delay */
+#define OSP_MAP_RELEASE             NULL                            /* Release source */
+#define OSP_MAP_CAUSE               NULL                            /* Release cause per protocol */
+#define OSP_MAP_Q850CAUSE           "%{Acct-Terminate-Cause}"       /* Release cause, RFC 2866 */
+#define OSP_MAP_PROTOCOL            NULL                            /* Signaling protocol */
+#define OSP_MAP_SESSIONID           NULL                            /* Session ID */
+#define OSP_MAP_CODEC               NULL                            /* Codec */
+#define OSP_MAP_CONFID              NULL                            /* Conference ID */
+#define OSP_MAP_CUSTOMINFO          NULL                            /* User-defined info */
+#define OSP_MAP_REALM               NULL                            /* Realm */
+#define OSP_MAP_CALLPARTYINFO       NULL                            /* Call party info */
+#define OSP_MAP_NETTRANSCALLED      NULL                            /* Network translated called number */
+#define OSP_MAP_SVCPROVIDERID       NULL                            /* Service provider ID */
+#define OSP_MAP_RELATEDREASON       NULL                            /* Related Call-ID reason */
+#define OSP_MAP_RECORDID            NULL                            /* Record ID */
+#define OSP_MAP_FROMDISPLAYFORMAT   "0"                             /* Display name format, string */
+#define OSP_MAP_FROMDISPLAY         NULL                            /* Display name */
+#define OSP_MAP_STATS               NULL                            /* Statistics */
+#define OSP_MAP_SCALE               "4"                             /* Scale, 1 */
 
 /* OSP module name */
 #define OSP_STR_OSP             "osp"
@@ -293,6 +295,8 @@ RCSID("$Id$")
 #define OSP_STR_SVCPROVIDERID           "serviceproviderid"
 #define OSP_STR_RELATEDREASON           "relatedcallidreason"
 #define OSP_STR_RECORDID                "recordid"
+#define OSP_STR_FROMDISPLAYFORMAT       "fromdisplaynameformat"
+#define OSP_STR_FROMDISPLAY             "fromdisplayname"
 
 /* Statistics parameter names */
 #define OSP_STR_REPORTSTATS                 "reportstatistics"
@@ -346,6 +350,10 @@ RCSID("$Id$")
 #define OSP_STR_RTCPDESTVIDEORTDELAYMEAN    "rtcpdestinationvideoroundtripdelaymean"
 #define OSP_STR_RTCPSRCVIDEORTDELAYMAX      "rtcpsourcevideoroundtripdelaymax"
 #define OSP_STR_RTCPDESTVIDEORTDELAYMAX     "rtcpdestinationvideoroundtripdelaymax"
+
+/* NAS */
+#define OSP_STR_NASIP   "NAS-IP-Address"
+#define OSP_MAP_NASIP   "%{NAS-IP-Address}"
 
 /*
  * OSP log level
@@ -421,6 +429,11 @@ typedef enum {
     OSP_CLIENT_NUMBER
 } osp_client_e;
 
+#define OSP_CLIENTNAME_ACME         "Acme"          /* Acme */
+#define OSP_CLIENTNAME_GENBANDS3    "GENBANDS3"     /* GENBAND S3 */
+#define OSP_CLIENTNAME_CISCO        "Cisco"         /* Cisco */
+#define OSP_CLIENTNAME_BROADWORKS   "BroadWorks"    /* BroadWorks */
+
 /*
  * OSP time string types
  */
@@ -448,6 +461,17 @@ typedef enum {
     OSP_CALLNUM_MAX = OSP_CALLNUM_CISCO,
     OSP_CALLNUM_NUMBER
 } osp_callnum_e;
+
+/*
+ * Display name format types
+ */
+typedef enum {
+    OSP_DISPLAY_MIN = 0,
+    OSP_DISPLAY_STRING = OSP_DISPLAY_MIN,   /* String */
+    OSP_DISPLAY_NAMEADDR,                   /* name-addr */
+    OSP_DISPLAY_MAX = OSP_DISPLAY_NAMEADDR,
+    OSP_DISPLAY_NUMBER
+} osp_display_e;
 
 /*
  * Media stream type
@@ -727,6 +751,8 @@ typedef struct {
     char* svcproviderid;                /* Service provider ID */
     char* relatedreason;                /* Related Call-ID reason */
     char* recordid;                     /* Record ID */
+    int fromdisplayformat;              /* From display name format */
+    char* fromdisplay;                  /* From display name */
     osp_statsmap_t stats;               /* Statistics */
 } osp_mapping_t;
 
@@ -777,6 +803,7 @@ typedef struct {
  * Usage information structure.
  */
 typedef struct {
+    osp_string_t nas;                           /* NAS-IP-Address */
     osp_string_t subtype;                       /* Sub status type */
     int direction;                              /* Call direction */
     OSPTUINT64 transid;                         /* Transaction ID */
@@ -830,6 +857,7 @@ typedef struct {
     osp_string_t svcproviderid;                 /* Service provider ID */
     osp_string_t relatedreason;                 /* Related Call-ID reason */
     osp_string_t recordid;                      /* Record ID */
+    osp_string_t fromdisplay;                   /* From display name */
     osp_stats_t stats;                          /* Statistics */
 } osp_usage_t;
 
@@ -1177,6 +1205,61 @@ typedef struct {
 }
 
 /*
+ * Get display name
+ *
+ * param _req FreeRADIUS request
+ * param _flag Parse flag
+ * param _name Item name
+ * param _lev Must or may be defined
+ * param _map Item mapping string
+ * param _type Display name format
+ * param _buf Buffer
+ * param _size Size
+ * param _val Item value
+ */
+#define OSP_GET_DISPLAYNAME(_req, _flag, _name, _lev, _map, _type, _buf, _val) { \
+    if (_flag) { \
+        if (OSP_CHECK_STRING(_map)) { \
+            radius_xlat(_buf, sizeof(_buf), _map, _req, NULL); \
+            if (_buf[0] == '\0') { \
+                /* Has checked string NULL */ \
+                if (_lev == OSP_DEF_MUST) { \
+                    radlog(L_ERR, "rlm_osp: Failed to parse '%s' in request for '%s'.", _map, _name); \
+                    return -1; \
+                } else { \
+                    DEBUG("rlm_osp: failed to parse '%s' in request for '%s'.", _map, _name); \
+                    _val[0] = '\0'; \
+                } \
+            } else  { \
+                switch (_type) { \
+                case OSP_DISPLAY_NAMEADDR: \
+                    osp_get_nameaddrdisplay(_buf, _val, sizeof(_val)); \
+                    break; \
+                case OSP_DISPLAY_STRING: \
+                default: \
+                    strncpy(_val, _buf, sizeof(_val)); \
+                    _val[sizeof(_val) - 1] = '\0'; \
+                    break; \
+                } \
+            } \
+        } else { \
+            if (_lev == OSP_DEF_MUST) { \
+                radlog(L_ERR, "rlm_osp: '%s' mapping undefined.", _name); \
+                return -1; \
+            } else { \
+                DEBUG("rlm_osp: '%s' mapping undefined.", _name); \
+                _val[0] = '\0'; \
+            } \
+        } \
+    } else { \
+        DEBUG2("rlm_osp: do not parse '%s'.", _name); \
+        _val[0] = '\0'; \
+    } \
+    /* Do not have to check string NULL */ \
+    DEBUG2("rlm_osp: '%s' = '%s'", _name, _val); \
+}
+
+/*
  * Get called/calling number
  *
  * param _req FreeRADIUS request
@@ -1497,6 +1580,7 @@ static void osp_get_2nd(char* items, char* buffer, int buffersize);
 static void osp_get_iphost(char* ip, char* buffer, int buffersize);
 static void osp_create_device(uint32_t ip, int port, char* buffer, int buffersize);
 static void osp_format_device(char* device, char* buffer, int buffersize);
+static void osp_get_nameaddrdisplay(char* nameaddr, char* buffer, int buffersize);
 static int osp_get_uriuser(char* uri, char* buffer, int buffersize, int logflag);
 static int osp_get_urihost(char* uri, char* buffer, int buffersize);
 static OSPE_PROTOCOL_NAME osp_parse_protocol(osp_mapping_t* mapping, char* protocol);
@@ -1506,6 +1590,7 @@ static int osp_cal_timeoffset(osp_running_t* running, char* tzone, long int* tof
 static int osp_cal_elapsed(struct tm* dt, long int toffset, time_t* elapsed);
 static int osp_check_recordid(osp_running_t* running, char* recordid);
 static int osp_get_systemid(osp_running_t* running, char* recordid, char* buffer, int buffersize);
+static void osp_trim_item(char* head, char* tail, char* buffer, int buffersize);
 
 /* OSP instance flag */
 static int instance_count = 0;
@@ -1657,6 +1742,8 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_SVCPROVIDERID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.svcproviderid), NULL, OSP_MAP_SVCPROVIDERID },
     { OSP_STR_RELATEDREASON, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.relatedreason), NULL, OSP_MAP_RELATEDREASON },
     { OSP_STR_RECORDID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.recordid), NULL, OSP_MAP_RECORDID },
+    { OSP_STR_FROMDISPLAYFORMAT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.fromdisplayformat), NULL, OSP_MAP_FROMDISPLAYFORMAT },
+    { OSP_STR_FROMDISPLAY, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.fromdisplay), NULL, OSP_MAP_FROMDISPLAY },
     /* Statistics mapping */
 #define mSMAP   mapping.stats
     { OSP_STR_REPORTSTATS, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mSMAP.reportstats), NULL, OSP_MAP_REPORT },
@@ -2365,6 +2452,12 @@ static int osp_check_mapping(
         break;
     }
 
+    /* If From display name format is incorrect, then fail. */
+    OSP_CHECK_RANGE(OSP_STR_FROMDISPLAYFORMAT, mapping->fromdisplayformat, OSP_DISPLAY_MIN, OSP_DISPLAY_MAX);
+
+    /* If From display name is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_FROMDISPLAY, OSP_DEF_MAY, mapping->fromdisplay);
+
     /* If statistics are incorrect, then fail. */
     if (osp_check_statsmap(&mapping->stats) < 0) {
         return -1;
@@ -2780,7 +2873,10 @@ static int osp_accounting(
     OSPT_CALL_ID* sessionid;
     osp_usage_t usage;
     const int MAX_RETRIES = 5;
+    struct in_addr ip;
     char buffer[OSP_LOGBUF_SIZE];
+    osp_string_t host;
+    char* client;
     int i, error;
 
     DEBUG3("rlm_osp: osp_accounting start");
@@ -2933,6 +3029,9 @@ static int osp_accounting(
         }
         rolevendor = OSPC_RVENDOR_GENBANDS3;
         break;
+    case OSP_CLIENT_CISCO:
+        rolevendor = OSPC_RVENDOR_CISCO;
+        break;
     case OSP_CLIENT_BROADWORKS:
         if (usage.direction == OSP_DIRECTION_IN) {
             switch (type) {
@@ -3067,6 +3166,36 @@ static int osp_accounting(
     OSPPTransactionSetSystemId(
         transaction,    /* Transaction handle */
         buffer);        /* System ID */
+
+    ip.s_addr = provider->deviceip;
+    inet_ntop(AF_INET, &ip, host, sizeof(host));
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_GENBANDS3:
+        client = OSP_CLIENTNAME_GENBANDS3;
+        break;
+    case OSP_CLIENT_CISCO:
+        client = OSP_CLIENTNAME_CISCO;
+        break;
+    case OSP_CLIENT_BROADWORKS:
+        client = OSP_CLIENTNAME_BROADWORKS;
+        break;
+    default:
+    case OSP_CLIENT_ACME:
+        client = OSP_CLIENTNAME_ACME;
+        break;
+    }
+    /* Report CDR proxy */
+    OSPPTransactionSetCDRProxy(
+        transaction,    /* Transaction handle */
+        host,           /* CDR proxy host */
+        client,         /* CDR proxy folder name */
+        usage.nas);     /* CDR proxy sub-folder name */
+
+    /* Report From display name */
+    OSPPTransactionSetFrom(
+        transaction,                /* Transaction handle */
+        OSPC_NFORMAT_DISPLAYNAME,   /* Format */
+        usage.fromdisplay);                    /* From display name */
 
     /* Report Q850 release code */
     if (usage.q850cause != OSP_CAUSE_UNKNOWN) {
@@ -3683,6 +3812,9 @@ static int osp_get_usageinfo(
 
     memset(usage, 0, sizeof(*usage));
     usage->transfer = OSPC_TSTATUS_UNKNOWN;
+
+    /* Get NAS-IP-Address */
+    OSP_GET_IP(request, TRUE, OSP_STR_NASIP, OSP_DEF_MAY, OSP_MAP_NASIP, 0, 0, buffer, tmpbuf, usage->nas);
 
     /* Get call direction */
     switch (mapping->clienttype) {
@@ -4361,6 +4493,9 @@ static int osp_get_usageinfo(
         break;
     }
 
+    /* Get From display name */
+    OSP_GET_DISPLAYNAME(request, TRUE, OSP_STR_FROMDISPLAY, OSP_DEF_MAY, mapping->fromdisplay, mapping->fromdisplayformat, buffer, usage->fromdisplay);
+
     /* Get statistics */
     osp_get_statsinfo(mapping, request, type, usage);
 
@@ -4720,7 +4855,37 @@ static void osp_format_device(
 }
 
 /*
- * Get userinfo from uri
+ * Get display name from name-addr
+ *
+ * name-addr = display-name <  addr-spec >
+ *
+ * param nameaddr name-addr
+ * param buffer Display name buffer
+ * param buffersize Display name buffer size
+ */
+static void osp_get_nameaddrdisplay(
+    char* nameaddr,
+    char* buffer,
+    int buffersize)
+{
+    char* end;
+
+    DEBUG3("rlm_osp: osp_get_nameaddrdisplay start");
+
+    if ((end = strchr(nameaddr, '<')) != NULL) {
+        osp_trim_item(nameaddr, end, buffer, buffersize);
+    } else {
+        buffer[0] = '\0';
+    }
+
+    /* Do not have to check string NULL */
+    DEBUG2("rlm_osp: name-addr display name = '%s'", buffer);
+
+    DEBUG3("rlm_osp: osp_get_nameaddrdisplay success");
+}
+
+/*
+ * Get userinfo from URI
  *
  * SIP-URI = "sip:" [ userinfo ] hostport uri-parameters [ headers ]
  * userinfo = ( user / telephone-subscriber ) [ ":" password ] "@"
@@ -4793,7 +4958,7 @@ static int osp_get_uriuser(
     }
 
     /* Do not have to check string NULL */
-    DEBUG2("rlm_osp: uri userinfo = '%s'", buffer);
+    DEBUG2("rlm_osp: URI userinfo = '%s'", buffer);
 
     DEBUG3("rlm_osp: osp_get_uriuser success");
 
@@ -4801,7 +4966,7 @@ static int osp_get_uriuser(
 }
 
 /*
- * Get hostport from uri
+ * Get hostport from URI
  *
  * SIP-URI = "sip:" [ userinfo ] hostport uri-parameters [ headers ]
  * userinfo = ( user / telephone-subscriber ) [ ":" password ] "@"
@@ -4855,7 +5020,7 @@ static int osp_get_urihost(
     buffer[size] = '\0';
 
     /* Do not have to check string NULL */
-    DEBUG2("rlm_osp: uri hostport = '%s'", buffer);
+    DEBUG2("rlm_osp: URI hostport = '%s'", buffer);
 
     DEBUG3("rlm_osp: osp_get_urihost success");
 
@@ -5190,6 +5355,47 @@ static int osp_get_systemid(
     DEBUG3("rlm_osp: osp_get_systemid success");
 
     return 0;
+}
+
+/*
+ * Trim spaces and quotation marks
+ *
+ * param head Head pointer
+ * param tail Tail pointer
+ * param buffer Buffer
+ * param buffersize Size of buffer
+ */
+static void osp_trim_item(
+    char* head,
+    char* tail,
+    char* buffer,
+    int buffersize)
+{
+	char* start;
+    char* end;
+    int size;
+
+    start = head;
+    size = tail - head;
+    while ((0 < size) && (*start == ' ')) {
+        start++;
+        size--;
+    }
+    end = tail - 1;
+    while ((0 < size) && (*end == ' ')) {
+       end--;
+       size--;
+    }
+    if ((1 < size) && (*start == '"') && (*end == '"')) {
+        start++;
+        end--;
+        size -= 2;
+    }
+    if (buffersize <= size) {
+        size = buffersize - 1;
+    }   
+    memcpy(buffer, start, size);
+    buffer[size] = '\0';
 }
 
 /*

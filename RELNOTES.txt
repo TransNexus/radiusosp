@@ -65,3 +65,10 @@ Version 2.1.0 - 2013-11-04
 *Added support for BroadWorks related Call-ID reason and system ID.
 *Added support for video QoS.
 *Fixed BroadWorks multiple media issues.
+----------------------------------------------------------------------
+
+Version 2.2.0 - 2014-12-01
+*Added support for Cisco role info vendor.
+*Added support for CDRProxy.
+*Added support for From display name.
+*Fixed GENBAND S3 and Cisco identity issue. 
