@@ -72,3 +72,10 @@ Version 2.2.0 - 2014-12-01
 *Added support for CDRProxy.
 *Added support for From display name.
 *Fixed GENBAND S3 and Cisco identity issue. 
+----------------------------------------------------------------------
+
+Version 2.3.0 - 2015-09-04
+* Added support for media addresses.
+* Added support for proxy local addresses.
+* Added support for provider post dial delay.
+* Added support for JIP.
