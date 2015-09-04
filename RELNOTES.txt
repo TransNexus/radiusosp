@@ -79,3 +79,6 @@ Version 2.3.0 - 2015-09-04
 * Added support for proxy local addresses.
 * Added support for provider post dial delay.
 * Added support for JIP.
+----------------------------------------------------------------------
+
+Version 2.3.1 - 
