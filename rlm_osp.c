@@ -42,8 +42,8 @@ RCSID("$Id$")
  * OSP module version
  */
 #define OSP_MODULE_VERSION_MAJOR    2
-#define OSP_MODULE_VERSION_MINOR    2
-#define OSP_MODULE_VERSION_BUGFIX   1
+#define OSP_MODULE_VERSION_MINOR    3
+#define OSP_MODULE_VERSION_BUGFIX   0
 
 /*
  * OSP module buffer size constants.
@@ -149,6 +149,7 @@ RCSID("$Id$")
 #define OSP_MAP_DURATION            "%{Acct-Session-Time}"          /* Call duration, RFC 2866 */
 #define OSP_MAP_PDDUNIT             "1"                             /* PDD unit, millisecond */
 #define OSP_MAP_PDD                 NULL                            /* Post dial delay */
+#define OSP_MAP_PROVIDERPDD         NULL                            /* Provider post dial delay */
 #define OSP_MAP_RELEASE             NULL                            /* Release source */
 #define OSP_MAP_CAUSE               NULL                            /* Release cause per protocol */
 #define OSP_MAP_Q850CAUSE           "%{Acct-Terminate-Cause}"       /* Release cause, RFC 2866 */
@@ -165,6 +166,13 @@ RCSID("$Id$")
 #define OSP_MAP_RECORDID            NULL                            /* Record ID */
 #define OSP_MAP_FROMDISPLAYFORMAT   "0"                             /* Display name format, string */
 #define OSP_MAP_FROMDISPLAY         NULL                            /* Display name */
+#define OSP_MAP_SRCAUDIOADDR        NULL                            /* Source audio address */
+#define OSP_MAP_SRCVIDEOADDR        NULL                            /* Source video address */
+#define OSP_MAP_DESTAUDIOADDR       NULL                            /* Destination audio address */
+#define OSP_MAP_DESTVIDEOADDR       NULL                            /* Destination video address */
+#define OSP_MAP_INGRESSADDR         NULL                            /* Proxy ingress address */
+#define OSP_MAP_EGRESSADDR          NULL                            /* Proxy egress address */
+#define OSP_MAP_JIP                 NULL                            /* JIP */
 #define OSP_MAP_STATS               NULL                            /* Statistics */
 #define OSP_MAP_SCALE               "4"                             /* Scale, 1 */
 
@@ -254,6 +262,7 @@ RCSID("$Id$")
 #define OSP_STR_DURATION                "duration"
 #define OSP_STR_PDDUNIT                 "postdialdelayunit"
 #define OSP_STR_PDD                     "postdialdelay"
+#define OSP_STR_PROVIDERPDD             "providerpostdialdelay"
 #define OSP_STR_RELEASE                 "releasesource"
 #define OSP_STR_Q850CAUSE               "q850releasecause"
 #define OSP_STR_SIPCAUSE                "sipreleasecause"
@@ -297,6 +306,13 @@ RCSID("$Id$")
 #define OSP_STR_RECORDID                "recordid"
 #define OSP_STR_FROMDISPLAYFORMAT       "fromdisplaynameformat"
 #define OSP_STR_FROMDISPLAY             "fromdisplayname"
+#define OSP_STR_SRCAUDIOADDR            "sourceaudioaddress"
+#define OSP_STR_SRCVIDEOADDR            "sourcevideoaddress"
+#define OSP_STR_DESTAUDIOADDR           "destinationaudioaddress"
+#define OSP_STR_DESTVIDEOADDR           "destinationvideoaddress"
+#define OSP_STR_INGRESSADDR             "proxyingressaddress"
+#define OSP_STR_EGRESSADDR              "proxyegressaddress"
+#define OSP_STR_JIP                     "jip"
 
 /* Statistics parameter names */
 #define OSP_STR_REPORTSTATS                 "reportstatistics"
@@ -753,6 +769,14 @@ typedef struct {
     char* recordid;                     /* Record ID */
     int fromdisplayformat;              /* From display name format */
     char* fromdisplay;                  /* From display name */
+    char* srcaudioaddr;                 /* Source audio address */
+    char* srcvideoaddr;                 /* Source video address */
+    char* destaudioaddr;                /* Destination audio address */
+    char* destvideoaddr;                /* Destination video address */
+    char* ingressaddr;                  /* Proxy ingress address */
+    char* egressaddr;                   /* Proxy egress address */
+    char* providerpdd;                  /* Provider post dial delay */
+    char* jip;                          /* JIP */
     osp_statsmap_t stats;               /* Statistics */
 } osp_mapping_t;
 
@@ -858,6 +882,14 @@ typedef struct {
     osp_string_t relatedreason;                 /* Related Call-ID reason */
     osp_string_t recordid;                      /* Record ID */
     osp_string_t fromdisplay;                   /* From display name */
+    osp_string_t srcaudioaddr;                  /* Source audio address */
+    osp_string_t srcvideoaddr;                  /* Source video address */
+    osp_string_t destaudioaddr;                 /* Destination audio address */
+    osp_string_t destvideoaddr;                 /* Destination video address */
+    osp_string_t ingressaddr;                   /* Proxy ingress address */
+    osp_string_t egressaddr;                    /* Proxy egress address */
+    int providerpdd;                            /* Provider post dial delay, in milliseconds */
+    osp_string_t jip;                           /* JIP */
     osp_stats_t stats;                          /* Statistics */
 } osp_usage_t;
 
@@ -1702,6 +1734,7 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_DURATION, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.duration), NULL, OSP_MAP_DURATION },
     { OSP_STR_PDDUNIT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.pddunit), NULL, OSP_MAP_PDDUNIT },
     { OSP_STR_PDD, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.pdd), NULL, OSP_MAP_PDD },
+    { OSP_STR_PROVIDERPDD, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.providerpdd), NULL, OSP_MAP_PROVIDERPDD },
     { OSP_STR_RELEASE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.release), NULL, OSP_MAP_RELEASE },
     { OSP_STR_Q850CAUSE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.q850cause), NULL, OSP_MAP_Q850CAUSE },
     { OSP_STR_SIPCAUSE, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.sipcause), NULL, OSP_MAP_CAUSE },
@@ -1744,6 +1777,13 @@ static const CONF_PARSER mapping_config[] = {
     { OSP_STR_RECORDID, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.recordid), NULL, OSP_MAP_RECORDID },
     { OSP_STR_FROMDISPLAYFORMAT, PW_TYPE_INTEGER, offsetof(rlm_osp_t, mapping.fromdisplayformat), NULL, OSP_MAP_FROMDISPLAYFORMAT },
     { OSP_STR_FROMDISPLAY, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.fromdisplay), NULL, OSP_MAP_FROMDISPLAY },
+    { OSP_STR_SRCAUDIOADDR, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcaudioaddr), NULL, OSP_MAP_SRCAUDIOADDR },
+    { OSP_STR_SRCVIDEOADDR, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.srcvideoaddr), NULL, OSP_MAP_SRCVIDEOADDR },
+    { OSP_STR_DESTAUDIOADDR, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destaudioaddr), NULL, OSP_MAP_DESTAUDIOADDR },
+    { OSP_STR_DESTVIDEOADDR, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.destvideoaddr), NULL, OSP_MAP_DESTVIDEOADDR },
+    { OSP_STR_INGRESSADDR, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.ingressaddr), NULL, OSP_MAP_INGRESSADDR },
+    { OSP_STR_EGRESSADDR, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.egressaddr), NULL, OSP_MAP_EGRESSADDR },
+    { OSP_STR_JIP, PW_TYPE_STRING_PTR, offsetof(rlm_osp_t, mapping.jip), NULL, OSP_MAP_JIP },
     /* Statistics mapping */
 #define mSMAP   mapping.stats
     { OSP_STR_REPORTSTATS, PW_TYPE_BOOLEAN, offsetof(rlm_osp_t, mSMAP.reportstats), NULL, OSP_MAP_REPORT },
@@ -2325,6 +2365,9 @@ static int osp_check_mapping(
     /* If pdd is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_PDD, OSP_DEF_MAY, mapping->pdd);
 
+    /* If provider post dial delay is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_PROVIDERPDD, OSP_DEF_MAY, mapping->providerpdd);
+
     /* If release source is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_RELEASE, OSP_DEF_MAY, mapping->release);
 
@@ -2457,6 +2500,27 @@ static int osp_check_mapping(
 
     /* If From display name is incorrect, then fail. */
     OSP_CHECK_ITEMMAP(OSP_STR_FROMDISPLAY, OSP_DEF_MAY, mapping->fromdisplay);
+
+    /* If source audio address is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_SRCAUDIOADDR, OSP_DEF_MAY, mapping->srcaudioaddr);
+
+    /* If source video address is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_SRCVIDEOADDR, OSP_DEF_MAY, mapping->srcvideoaddr);
+
+    /* If destination audio address is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_DESTAUDIOADDR, OSP_DEF_MAY, mapping->destaudioaddr);
+
+    /* If destination video address is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_DESTVIDEOADDR, OSP_DEF_MAY, mapping->destvideoaddr);
+
+    /* If proxy ingress address is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_INGRESSADDR, OSP_DEF_MAY, mapping->ingressaddr);
+
+    /* If proxy egress address is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_EGRESSADDR, OSP_DEF_MAY, mapping->egressaddr);
+
+    /* If JIP is incorrect, then fail. */
+    OSP_CHECK_ITEMMAP(OSP_STR_JIP, OSP_DEF_MAY, mapping->jip);
 
     /* If statistics are incorrect, then fail. */
     if (osp_check_statsmap(&mapping->stats) < 0) {
@@ -3195,7 +3259,47 @@ static int osp_accounting(
     OSPPTransactionSetFrom(
         transaction,                /* Transaction handle */
         OSPC_NFORMAT_DISPLAYNAME,   /* Format */
-        usage.fromdisplay);                    /* From display name */
+        usage.fromdisplay);         /* From display name */
+
+    /* Report source audio address */
+    OSPPTransactionSetSrcAudioAddr(
+        transaction,                /* Transaction handle */
+        usage.srcaudioaddr);        /* Source audio address */
+
+    /* Report source video address */
+    OSPPTransactionSetSrcVideoAddr(
+        transaction,                /* Transaction handle */
+        usage.srcvideoaddr);        /* Source video address */
+
+    /* Report destination audio address */
+    OSPPTransactionSetDestAudioAddr(
+        transaction,                /* Transaction handle */
+        usage.destaudioaddr);       /* Destination audio address */
+
+    /* Report destination video address */
+    OSPPTransactionSetDestVideoAddr(
+        transaction,                /* Transaction handle */
+        usage.destvideoaddr);       /* Destination video address */
+
+    /* Report proxy ingress address */
+    OSPPTransactionSetProxyIngressAddr(
+        transaction,                /* Transaction handle */
+        usage.ingressaddr);         /* Proxy ingress address */
+
+    /* Report proxy egress address */
+    OSPPTransactionSetProxyEgressAddr(
+        transaction,                /* Transaction handle */
+        usage.egressaddr);          /* Proxy egress address */
+
+    /* Report provider post dial delay */
+    OSPPTransactionSetProviderPDD(
+        transaction,                /* Transaction handle */
+        usage.providerpdd);         /* Provider post dial delay */
+
+    /* Report JIP */
+    OSPPTransactionSetJIP(
+        transaction,                /* Transaction handle */
+        usage.jip);                 /* JIP */
 
     /* Report Q850 release code */
     if (usage.q850cause != OSP_CAUSE_UNKNOWN) {
@@ -4133,6 +4237,14 @@ static int osp_get_usageinfo(
     }
     DEBUG2("rlm_osp: post dial delay = '%d'", usage->pdd);
 
+    /* Get provider post dial delay */
+    parse = ((type == PW_STATUS_START) || (type == PW_STATUS_STOP));
+    OSP_GET_INTEGER(request, parse, OSP_STR_PROVIDERPDD, OSP_DEF_MAY, mapping->providerpdd, OSP_INTSTR_DEC, OSP_STATSINT_DEF, buffer, usage->providerpdd);
+    if (usage->providerpdd != OSP_STATSINT_DEF) {
+        usage->providerpdd *= OSP_TIMEUNIT_SCALE[mapping->pddunit];
+    }
+    DEBUG2("rlm_osp: provider post dial delay = '%d'", usage->providerpdd);
+
     /* Get release source */
     if (type == PW_STATUS_START) {
         DEBUG2("rlm_osp: do not parse '%s'.", OSP_STR_RELEASE);
@@ -4495,6 +4607,34 @@ static int osp_get_usageinfo(
 
     /* Get From display name */
     OSP_GET_DISPLAYNAME(request, TRUE, OSP_STR_FROMDISPLAY, OSP_DEF_MAY, mapping->fromdisplay, mapping->fromdisplayformat, buffer, usage->fromdisplay);
+
+    /* Get media addresses */
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_UNDEF:
+    case OSP_CLIENT_ACME:
+        OSP_GET_IP(request, TRUE, OSP_STR_SRCAUDIOADDR, OSP_DEF_MAY, mapping->srcaudioaddr, 0, 0, buffer, tmpbuf, usage->srcaudioaddr);
+        OSP_GET_IP(request, TRUE, OSP_STR_SRCVIDEOADDR, OSP_DEF_MAY, mapping->srcvideoaddr, 0, 0, buffer, tmpbuf, usage->srcvideoaddr);
+        OSP_GET_IP(request, TRUE, OSP_STR_DESTAUDIOADDR, OSP_DEF_MAY, mapping->destaudioaddr, 0, 0, buffer, tmpbuf, usage->destaudioaddr);
+        OSP_GET_IP(request, TRUE, OSP_STR_DESTVIDEOADDR, OSP_DEF_MAY, mapping->destvideoaddr, 0, 0, buffer, tmpbuf, usage->destvideoaddr);
+        break;
+    case OSP_CLIENT_GENBANDS3:
+    case OSP_CLIENT_CISCO:
+        if (usage->direction == OSP_DIRECTION_IN) {
+            OSP_GET_IP(request, TRUE, OSP_STR_SRCAUDIOADDR, OSP_DEF_MAY, mapping->srcaudioaddr, 0, 0, buffer, tmpbuf, usage->srcaudioaddr);
+        } else if (usage->direction == OSP_DIRECTION_OUT) {
+            OSP_GET_IP(request, TRUE, OSP_STR_DESTAUDIOADDR, OSP_DEF_MAY, mapping->destaudioaddr, 0, 0, buffer, tmpbuf, usage->destaudioaddr);
+        }
+    case OSP_CLIENT_BROADWORKS:
+    default:
+        break;
+    }
+
+    /* Get proxy local addresses */
+    OSP_GET_IP(request, TRUE, OSP_STR_INGRESSADDR, OSP_DEF_MAY, mapping->ingressaddr, 0, 0, buffer, tmpbuf, usage->ingressaddr);
+    OSP_GET_IP(request, TRUE, OSP_STR_EGRESSADDR, OSP_DEF_MAY, mapping->egressaddr, 0, 0, buffer, tmpbuf, usage->egressaddr);
+
+    /* Get JIP */
+    OSP_GET_STRING(request, TRUE, OSP_STR_JIP, OSP_DEF_MAY, mapping->jip, usage->jip);
 
     /* Get statistics */
     osp_get_statsinfo(mapping, request, type, usage);
@@ -5371,7 +5511,7 @@ static void osp_trim_item(
     char* buffer,
     int buffersize)
 {
-	char* start;
+    char* start;
     char* end;
     int size;
 
