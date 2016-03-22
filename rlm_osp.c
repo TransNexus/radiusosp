@@ -3225,11 +3225,17 @@ static int osp_accounting(
         transaction,            /* Transaction handle */
         usage.relatedreason);   /* Related Call-ID reason */
 
-    /* Report system ID */
-    osp_get_systemid(running, usage.recordid, buffer, sizeof(buffer));
-    OSPPTransactionSetSystemId(
-        transaction,    /* Transaction handle */
-        buffer);        /* System ID */
+    switch (mapping->clienttype) {
+    case OSP_CLIENT_BROADWORKS:
+        /* Report system ID */
+        osp_get_systemid(running, usage.recordid, buffer, sizeof(buffer));
+        OSPPTransactionSetSystemId(
+            transaction,    /* Transaction handle */
+            buffer);        /* System ID */
+        break;
+    default:
+        break;
+    }
 
     ip.s_addr = provider->deviceip;
     inet_ntop(AF_INET, &ip, host, sizeof(host));
