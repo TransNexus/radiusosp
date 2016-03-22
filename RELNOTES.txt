@@ -84,3 +84,6 @@ Version 2.3.0 - 2015-09-04
 Version 2.3.1 - 2016-03-22
 * Fixed system ID error message.
 * Note: Works with OSP Toolkit 4.6.0 or later versions.
+----------------------------------------------------------------------
+
+Version 2.3.2 - 
