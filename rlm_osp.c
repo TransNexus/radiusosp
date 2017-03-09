@@ -43,7 +43,7 @@ RCSID("$Id$")
  */
 #define OSP_MODULE_VERSION_MAJOR    2
 #define OSP_MODULE_VERSION_MINOR    3
-#define OSP_MODULE_VERSION_BUGFIX   1
+#define OSP_MODULE_VERSION_BUGFIX   2
 
 /*
  * OSP module buffer size constants.
@@ -3216,7 +3216,7 @@ static int osp_accounting(
         usage.nettranscalled);  /* Network translated called number */
 
     /* Report service provider ID */
-    OSPPTransactionSetServiceProviderId(
+    OSPPTransactionSetSrcServiceProvider(
         transaction,            /* Transaction handle */
         usage.svcproviderid);   /* Service provider ID */
 
