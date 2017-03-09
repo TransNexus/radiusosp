@@ -86,4 +86,6 @@ Version 2.3.1 - 2016-03-22
 * Note: Works with OSP Toolkit 4.6.0 or later versions.
 ----------------------------------------------------------------------
 
-Version 2.3.2 - 
+Version 2.3.2 - 2017-03-09 
+* Fixed set source service provider API issue.
+* Note: Works with OSP Toolkit 4.13.0 or later versions.

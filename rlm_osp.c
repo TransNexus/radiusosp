@@ -3216,7 +3216,7 @@ static int osp_accounting(
         usage.nettranscalled);  /* Network translated called number */
 
     /* Report service provider ID */
-    OSPPTransactionSetServiceProviderId(
+    OSPPTransactionSetSrcServiceProvider(
         transaction,            /* Transaction handle */
         usage.svcproviderid);   /* Service provider ID */
 
