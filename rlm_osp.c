@@ -42,8 +42,8 @@ RCSID("$Id$")
  * OSP module version
  */
 #define OSP_MODULE_VERSION_MAJOR    2
-#define OSP_MODULE_VERSION_MINOR    3
-#define OSP_MODULE_VERSION_BUGFIX   2
+#define OSP_MODULE_VERSION_MINOR    4
+#define OSP_MODULE_VERSION_BUGFIX   0
 
 /*
  * OSP module buffer size constants.
@@ -3162,14 +3162,16 @@ static int osp_accounting(
         usage.divhost);
 
     /* Report asserted ID */
-    OSPPTransactionSetAssertedId(
+    OSPPTransactionSetSIPHeader(
         transaction,        /* Transaction handle */
+        OSPC_SIPHEADER_PAI, /* P-Asserted-Identity */
         OSPC_NFORMAT_E164,  /* Format */
         usage.assertedid);  /* Asserted ID */
 
     /* Report RPID */
-    OSPPTransactionSetRemotePartyId(
+    OSPPTransactionSetSIPHeader(
         transaction,        /* Transaction handle */
+        OSPC_SIPHEADER_RPID,/* Remote-Party-ID */
         OSPC_NFORMAT_E164,  /* Format */
         usage.rpid);        /* RPID */
 
@@ -3262,8 +3264,9 @@ static int osp_accounting(
         usage.nas);     /* CDR proxy sub-folder name */
 
     /* Report From display name */
-    OSPPTransactionSetFrom(
+    OSPPTransactionSetSIPHeader(
         transaction,                /* Transaction handle */
+        OSPC_SIPHEADER_FROM,        /* From */
         OSPC_NFORMAT_DISPLAYNAME,   /* Format */
         usage.fromdisplay);         /* From display name */
 
