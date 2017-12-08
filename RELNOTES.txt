@@ -96,5 +96,6 @@ Version 2.4.0 - 2017-10-31
 * Note: Works with OSP Toolkit 4.14.1 or later versions.
 ----------------------------------------------------------------------
 
-Version 2.4.1 - 
-* Note: Works with OSP Toolkit 4.14.1 or later versions.
+Version 2.5.0 - 2017-12-08
+* Updated for OSP Toolkit 4.15.0.
+* Note: Works with OSP Toolkit 4.15.0 or later versions.
