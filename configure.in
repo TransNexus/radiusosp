@@ -40,6 +40,12 @@ if test x$with_[]modname != xno; then
 		fail="$fail OpenSSL"
 	fi
 
+	dnl # Check for utf8proc libraries
+	FR_SMART_CHECK_LIB(utf8proc, utf8proc_NFKD)
+	if test "x$ac_cv_lib_utf8proc_utf8proc_NFKD" != "xyes"; then
+		fail="$fail libutf8proc"
+	fi
+
 	dnl # Check for OSPToolkit headers
 	smart_try_dir="$osptk_inc_dir"
 	FR_SMART_CHECK_INCLUDE(osp/osp.h)
