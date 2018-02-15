@@ -101,5 +101,6 @@ Version 2.5.0 - 2017-12-08
 * Note: Works with OSP Toolkit 4.15.0 or later versions.
 ----------------------------------------------------------------------
 
-Version 2.5.1 - 
+Version 2.5.1 - 2018-02-15
+* Fixed P-Asserted-Identity and Remote-Party-ID mapping issue.
 * Note: Works with OSP Toolkit 4.15.0 or later versions.

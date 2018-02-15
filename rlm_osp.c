@@ -4048,10 +4048,10 @@ static int osp_get_usageinfo(
     }
 
     /* Get asserted ID */
-    OSP_GET_CALLNUM(request, TRUE, OSP_STR_ASSERTEDID, OSP_DEF_MAY, mapping->assertedid, OSPC_NFORMAT_URL, buffer, ptr, size, usage->assertedid);
+    OSP_GET_CALLNUM(request, TRUE, OSP_STR_ASSERTEDID, OSP_DEF_MAY, mapping->assertedid, OSP_CALLNUM_SIPURI, buffer, ptr, size, usage->assertedid);
 
     /* Get RPID */
-    OSP_GET_CALLNUM(request, TRUE, OSP_STR_RPID, OSP_DEF_MAY, mapping->rpid, OSPC_NFORMAT_URL, buffer, ptr, size, usage->rpid);
+    OSP_GET_CALLNUM(request, TRUE, OSP_STR_RPID, OSP_DEF_MAY, mapping->rpid, OSP_CALLNUM_SIPURI, buffer, ptr, size, usage->rpid);
 
     /* Get source */
     OSP_GET_IP(request, TRUE, OSP_STR_SOURCE, OSP_DEF_MAY, mapping->source, provider->deviceip, provider->deviceport, buffer, usage->source, tmphost);
@@ -4164,7 +4164,7 @@ static int osp_get_usageinfo(
     OSP_GET_STRING(request, TRUE, OSP_STR_DESTNETWORKID, OSP_DEF_MAY, mapping->destnid, usage->destnid);
 
     /* Get diversion user */
-    OSP_GET_CALLNUM(request, TRUE, OSP_STR_DIVERSIONUSER, OSP_DEF_MAY, mapping->divuser, TRUE, buffer, ptr, size, usage->divuser);
+    OSP_GET_CALLNUM(request, TRUE, OSP_STR_DIVERSIONUSER, OSP_DEF_MAY, mapping->divuser, OSP_CALLNUM_SIPURI, buffer, ptr, size, usage->divuser);
 
     /* Get diversion host */
     OSP_GET_URIHOST(request, TRUE, OSP_STR_DIVERSIONHOST, OSP_DEF_MAY, mapping->divhost, OSP_IP_DEF, OSP_PORT_DEF, buffer, usage->divhost);
