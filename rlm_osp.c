@@ -5262,8 +5262,14 @@ static time_t osp_format_time(
     case OSP_TIMESTR_ACME:
         /* hh:mm:ss.kkk ZON MMM DD YYYY */
         if (osp_remove_timezone(running, timestr, buffer, sizeof(buffer), &toffset) == 0) {
-            strptime(buffer, "%T %b %d %Y", &dt);
-            osp_cal_elapsed(&dt, toffset, &tvalue);
+            if (strptime(buffer, "%T %b %d %Y", &dt) != NULL) {
+                osp_cal_elapsed(&dt, toffset, &tvalue);
+            } else {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s'.",
+                    timestr);
+            }
         }
         break;
     case OSP_TIMESTR_CISCO:
@@ -5279,8 +5285,14 @@ static time_t osp_format_time(
     case OSP_TIMESTR_NTP:
         /* hh:mm:ss.kkk ZON WWW MMM DD YYYY */
         if (osp_remove_timezone(running, timestr, buffer, sizeof(buffer), &toffset) == 0) {
-            strptime(buffer, "%T %a %b %d %Y", &dt);
-            osp_cal_elapsed(&dt, toffset, &tvalue);
+            if (strptime(buffer, "%T %a %b %d %Y", &dt) != NULL) {
+                osp_cal_elapsed(&dt, toffset, &tvalue);
+            } else {
+                /* Has checked string NULL */
+                radlog(L_INFO,
+                    "rlm_osp: Failed to parse '%s'.",
+                    timestr);
+            }
         }
         break;
     case OSP_TIMESTR_BW:
@@ -5335,25 +5347,18 @@ static int osp_remove_timezone(
     buffer[i] = '\0';
     tzlen = i;
 
-    if (osp_cal_timeoffset(running, buffer, toffset) == 0) {
-        size = buffersize - 1;
-        snprintf(buffer, size, "%s", timestr);
-        buffer[size] = '\0';
+    osp_cal_timeoffset(running, buffer, toffset);
 
-        size = buffersize - 8 - 1;
-        snprintf(buffer + 8, size, "%s", timestr + 13 + tzlen);
-        buffer[size + 8] = '\0';
-        DEBUG2("rlm_osp: timestr = '%s'", buffer);
-        DEBUG3("rlm_osp: osp_remove_timezone success");
-        return 0;
-    } else {
-        buffer[0] = '\0';
-        /* Has checked string NULL */
-        radlog(L_INFO,
-            "rlm_osp: Failed to remove time zone from '%s'.",
-            timestr);
-        return -1;
-    }
+    size = buffersize - 1;
+    snprintf(buffer, size, "%s", timestr);
+    buffer[size] = '\0';
+
+    size = buffersize - 8 - 1;
+    snprintf(buffer + 8, size, "%s", timestr + 13 + tzlen);
+    buffer[size + 8] = '\0';
+    DEBUG2("rlm_osp: timestr = '%s'", buffer);
+
+    return 0;
 }
 
 /*
@@ -5401,7 +5406,7 @@ static int osp_cal_timeoffset(
             *toffset = tmp.offset * 60;
        }
     }
-    DEBUG2("rlm_osp: time zine '%s' offset = '%ld'", tzone, *toffset);
+    DEBUG2("rlm_osp: time zone '%s' offset = '%ld'", tzone, *toffset);
 
     DEBUG3("rlm_osp: osp_get_timeoffset success");
 
